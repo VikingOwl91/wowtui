@@ -609,6 +609,41 @@ func TestSetInstallTitle(t *testing.T) {
 	}
 }
 
+func TestMapAndAdoptUnmanagedAddon(t *testing.T) {
+	fake := &fakeProvider{release: provider.Release{Kind: provider.KindRelease, ID: 1, Tag: "v1"}}
+	svc, install, _ := newTestService(t, fake)
+	reg := &registry.Registry{Version: 1, Installations: []registry.Installation{{
+		Path:   install.Path,
+		Flavor: "retail",
+		Folders: []registry.Folder{{Name: "MyAddon", Version: "1.0", Hints: map[string]string{
+			"x-source-repo": "https://github.com/Owner/MyAddon",
+		}}},
+	}}}
+	if err := reg.Save(svc.RegistryPath); err != nil {
+		t.Fatal(err)
+	}
+
+	candidates, err := svc.MapUnmanaged()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 1 || candidates[0].Provider != "github" || candidates[0].Reference != "Owner/MyAddon" {
+		t.Errorf("candidates = %+v", candidates)
+	}
+
+	if err := svc.Adopt(context.Background(), install.Path, "MyAddon", provider.Reference{Provider: "github", ID: "Owner/MyAddon"}); err != nil {
+		t.Fatal(err)
+	}
+	reg, err = registry.Load(svc.RegistryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	addon := reg.FindAddon("Owner/MyAddon", install.Path)
+	if addon == nil || addon.Version != "1.0" || addon.Folders[0] != "MyAddon" {
+		t.Errorf("adopted addon = %+v", addon)
+	}
+}
+
 func TestScanPreservesManagedAddons(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	svc, install, _ := newTestService(t, &fakeProvider{})

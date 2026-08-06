@@ -51,9 +51,9 @@ type ProviderConfig struct {
 }
 
 var defaultProviderOrder = []string{"wowuphub", "wago", "curseforge", "github", "gitlab", "git", "direct"}
-var retiredProviders = map[string]bool{"wago": true}
-var pausedProviders = map[string]bool{"wowuphub": true, "curseforge": true}
-var pausedProviderStates = map[string]string{"wowuphub": "pending-upstream", "curseforge": "pending-approval"}
+var retiredProviders = map[string]bool{}
+var pausedProviders = map[string]bool{"wowuphub": true, "wago": true, "curseforge": true}
+var pausedProviderStates = map[string]string{"wowuphub": "pending-upstream", "wago": "pending-approval", "curseforge": "pending-approval"}
 
 func (p Providers) Enabled(name string) bool {
 	if retiredProviders[name] || pausedProviders[name] {

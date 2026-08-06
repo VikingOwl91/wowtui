@@ -129,7 +129,7 @@ api_key = "wago"
 	if cfg.Providers.Enabled("wago") || !cfg.Providers.Enabled("direct") {
 		t.Error("wago should be retired and direct should be enabled")
 	}
-	if cfg.Providers.State("wago") != "retired" {
+	if cfg.Providers.State("wago") != "pending-approval" {
 		t.Errorf("wago state = %q", cfg.Providers.State("wago"))
 	}
 	if cfg.Providers.Enabled("curseforge") {

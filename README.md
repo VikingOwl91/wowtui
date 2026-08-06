@@ -24,7 +24,7 @@ provider catalog are still evolving.
 | GitLab | Available | Releases, tags, and branch archives |
 | Generic Git | Available | HTTPS/SSH repositories via tags or shallow branch clones |
 | Direct URL | Available | ZIP URLs with ETag, Last-Modified, or SHA-256 identity |
-| Wago | Retired | Kept as a planned integration; no stable public read/download API was verified |
+| Wago | Pending approval | Kept as a planned integration; no stable public read/download API was verified |
 | CurseForge | Pending approval | Adapter ready; activation requires approved third-party API access |
 | WowUpHub | Pending upstream approval | Adapter implemented, activation paused until WowUp confirms third-party use |
 
@@ -57,6 +57,7 @@ Scan installations and addons:
 ./wowtui scan
 ./wowtui list
 ./wowtui installs
+./wowtui map
 ```
 
 Start the TUI:
@@ -90,6 +91,14 @@ Check and update managed addons:
 ./wowtui update AddonName
 ./wowtui update --all
 ./wowtui update --all --dry-run
+```
+
+Map an unmanaged installed addon to an active provider without replacing its
+files:
+
+```bash
+./wowtui map
+./wowtui adopt "/path/to/_retail_" WeakAuras github:Owner/WeakAuras
 ```
 
 ## Configuration

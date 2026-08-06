@@ -30,6 +30,16 @@ type UpdateStatus struct {
 	Error     error
 }
 
+type MappingCandidate struct {
+	InstallPath string
+	Flavor      string
+	Folder      string
+	Version     string
+	Provider    string
+	Reference   string
+	Reason      string
+}
+
 var extractLimits = installer.Limits{
 	MaxFiles:     20000,
 	MaxTotalSize: 512 << 20,
@@ -124,6 +134,110 @@ func (s *Service) SetInstallTitle(path, title string) error {
 		}
 	}
 	return fmt.Errorf("installation %s not found in registry", path)
+}
+
+func (s *Service) MapUnmanaged() ([]MappingCandidate, error) {
+	reg, err := registry.Load(s.RegistryPath)
+	if err != nil {
+		return nil, err
+	}
+	managed := make(map[string]bool)
+	for _, addon := range reg.Addons {
+		for _, folder := range addon.Folders {
+			managed[addon.InstallPath+"\x00"+folder] = true
+		}
+	}
+
+	var candidates []MappingCandidate
+	for _, installation := range reg.Installations {
+		for _, folder := range installation.Folders {
+			if managed[installation.Path+"\x00"+folder.Name] {
+				continue
+			}
+			for _, candidate := range mapFolderHints(installation, folder) {
+				candidates = append(candidates, candidate)
+			}
+		}
+	}
+	return candidates, nil
+}
+
+func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref provider.Reference) error {
+	reg, err := registry.Load(s.RegistryPath)
+	if err != nil {
+		return err
+	}
+	var installation registry.Installation
+	var folder registry.Folder
+	found := false
+	for _, item := range reg.Installations {
+		if item.Path != installPath {
+			continue
+		}
+		installation = item
+		for _, candidate := range item.Folders {
+			if candidate.Name == folderName {
+				folder = candidate
+				found = true
+				break
+			}
+		}
+	}
+	if !found {
+		return fmt.Errorf("unmanaged folder %q not found in %s", folderName, installPath)
+	}
+	p, ok := s.Providers[ref.Provider]
+	if !ok {
+		return providerUnavailable(ref.Provider)
+	}
+	remote, err := p.Resolve(ctx, ref)
+	if err != nil {
+		return err
+	}
+	if reg.FindAddon(ref.ID, installPath) != nil {
+		return fmt.Errorf("%s is already managed in %s", ref.ID, installPath)
+	}
+	reg.UpsertAddon(registry.Addon{
+		Provider:    ref.Provider,
+		Ref:         ref.ID,
+		Name:        remote.Name,
+		Flavor:      installation.Flavor,
+		InstallPath: installPath,
+		Folders:     []string{folder.Name},
+		Version:     folder.Version,
+		Source:      "auto",
+		InstalledAt: time.Now(),
+	})
+	return reg.Save(s.RegistryPath)
+}
+
+func mapFolderHints(installation registry.Installation, folder registry.Folder) []MappingCandidate {
+	makeCandidate := func(providerName, ref, reason string) MappingCandidate {
+		return MappingCandidate{InstallPath: installation.Path, Flavor: installation.Flavor, Folder: folder.Name, Version: folder.Version, Provider: providerName, Reference: ref, Reason: reason}
+	}
+	var candidates []MappingCandidate
+	for key, providerName := range map[string]string{
+		"x-source-repo": "git",
+		"x-website":     "git",
+	} {
+		if value := folder.Hints[key]; value != "" {
+			if ref, err := provider.ParseReference(value); err == nil {
+				candidates = append(candidates, makeCandidate(ref.Provider, ref.ID, key))
+			} else {
+				candidates = append(candidates, makeCandidate(providerName, value, key))
+			}
+		}
+	}
+	if id := folder.Hints["x-wowi-id"]; id != "" {
+		candidates = append(candidates, makeCandidate("wowinterface", "wowinterface:"+id, "x-wowi-id"))
+	}
+	if id := folder.Hints["x-wago-id"]; id != "" {
+		candidates = append(candidates, makeCandidate("wago", "wago:"+id, "x-wago-id"))
+	}
+	if id := folder.Hints["x-curse-project-id"]; id != "" {
+		candidates = append(candidates, makeCandidate("curseforge", "curseforge:"+id, "x-curse-project-id"))
+	}
+	return candidates
 }
 
 func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.GameFlavor, install wow.Installation, source string) error {
@@ -433,7 +547,7 @@ func providerUnavailable(name string) error {
 		return fmt.Errorf("provider %q is paused pending approved third-party API access", name)
 	}
 	if name == "wago" {
-		return fmt.Errorf("provider %q is retired", name)
+		return fmt.Errorf("provider %q is paused pending approval", name)
 	}
 	return fmt.Errorf("provider %q is disabled or not configured; enable it with: wowtui providers enable %s", name, name)
 }

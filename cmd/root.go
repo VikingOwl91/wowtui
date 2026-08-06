@@ -23,7 +23,7 @@ func NewRootCmd() *cobra.Command {
 	}
 	root.PersistentFlags().String("config", "", "path to config file (default: XDG config path)")
 	root.PersistentFlags().String("registry", "", "path to registry file (default: XDG data path)")
-	root.AddCommand(newScanCmd(), newListCmd(), newAddCmd(), newCheckCmd(), newUpdateCmd(), newInstallsCmd(), newRenameCmd(), newProvidersCmd())
+	root.AddCommand(newScanCmd(), newListCmd(), newAddCmd(), newCheckCmd(), newUpdateCmd(), newInstallsCmd(), newRenameCmd(), newProvidersCmd(), newMapCmd(), newAdoptCmd())
 	return root
 }
 

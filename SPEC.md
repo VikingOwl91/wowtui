@@ -192,7 +192,8 @@ GitHub, GitLab, Generic Git, Direct, WowUpHub und CurseForge sind implementiert.
 GitHub, GitLab, Generic Git und Direct sind standardmäßig aktiv. CurseForge bleibt
 bis zur Genehmigung des Third-Party-Zugangs pausiert. WowUpHub bleibt bis zur Antwort
 der WowUp-Entwickler auf eine Anfrage zur Drittanbieter-Nutzung
-pausiert. Wago ist retired. CurseForge benötigt einen genehmigten
+pausiert. Wago bleibt bis zur Klärung der offiziellen Client-API auf
+pending-approval. CurseForge benötigt einen genehmigten
 API-Key für Drittanbieter-Clients.
 
 ### GitHub ohne Releases (Fallback-Kette)
@@ -217,6 +218,12 @@ Branch = Commit-SHA. Die Registry speichert die Quelle im
 `source`-Feld. Damit funktionieren auch Übergänge: per Tag
 installiert, das Repo bekommt später ein Release, der Check meldet
 das als Update.
+
+Unmanaged installierte Addons können über einen Mapping-Workflow einem
+Provider zugeordnet werden. Der Workflow nutzt TOC-Hints zuerst und
+verlangt eine explizite Bestätigung über `adopt`, bevor ein Addon als
+verwaltet gespeichert wird. Die vorhandenen Dateien werden dabei nicht
+ersetzt; das passiert erst beim folgenden Update.
 
 `add --source release|tag|branch` pinnt die Quelle. Updates folgen
 dann dem Pin statt der Kette.

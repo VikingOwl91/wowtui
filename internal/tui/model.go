@@ -20,6 +20,7 @@ type screen int
 
 const (
 	screenAddons screen = iota
+	screenExplore
 	screenDetails
 	screenAdd
 	screenSettings
@@ -35,6 +36,7 @@ const (
 	opUpdateAll
 	opAdd
 	opRename
+	opSearch
 )
 
 const (
@@ -60,6 +62,7 @@ type addonRow struct {
 	Provider    string
 	Latest      string
 	Status      string
+	Author      string
 }
 
 type registryLoadedMsg struct {
@@ -73,6 +76,7 @@ type opClosedMsg struct{}
 
 type opResult struct {
 	statuses []service.UpdateStatus
+	remote   []provider.RemoteAddon
 	err      error
 }
 
@@ -84,15 +88,19 @@ type Model struct {
 
 	screen screen
 
-	table   table.Model
-	spinner spinner.Model
-	input   textinput.Model
+	table        table.Model
+	exploreTable table.Model
+	spinner      spinner.Model
+	input        textinput.Model
+	searchInput  textinput.Model
+	exploreInput textinput.Model
 
 	addInstall int
 	addSource  int
 	addField   int
 
 	installFilter int
+	gameFilter    string
 	installLabels []string
 
 	settingsCursor int
@@ -102,17 +110,23 @@ type Model struct {
 	width  int
 	height int
 
-	busy    bool
-	busyMsg string
-	errMsg  string
-	filter  int
+	busy           bool
+	busyMsg        string
+	errMsg         string
+	filter         int
+	searching      bool
+	filterQuery    string
+	exploreQuery   string
+	exploreResults []provider.RemoteAddon
+	exploreCursor  int
 
 	opKind     opKind
 	eventChan  chan service.Event
 	resultChan chan opResult
 
-	detailRow   addonRow
-	autoScanned bool
+	detailRow    addonRow
+	detailRemote *provider.RemoteAddon
+	autoScanned  bool
 }
 
 func New(deps Deps) *Model {
@@ -123,6 +137,15 @@ func New(deps Deps) *Model {
 	ti.Placeholder = "github:Owner/Repo oder https://..."
 	ti.Width = 60
 
+	search := textinput.New()
+	search.Prompt = "/ "
+	search.Placeholder = "search addons"
+	search.Width = 42
+	exploreInput := textinput.New()
+	exploreInput.Prompt = "> "
+	exploreInput.Placeholder = "search provider catalogs"
+	exploreInput.Width = 52
+
 	ri := textinput.New()
 	ri.Placeholder = "display title"
 	ri.Width = 40
@@ -131,10 +154,13 @@ func New(deps Deps) *Model {
 		deps:          deps,
 		spinner:       sp,
 		input:         ti,
+		searchInput:   search,
+		exploreInput:  exploreInput,
 		renameInput:   ri,
 		installFilter: -1,
 	}
 	m.initTable()
+	m.initExploreTable()
 	return m
 }
 
@@ -164,6 +190,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.resizeTable()
+		m.resizeExploreTable()
 		return m, nil
 
 	case tea.KeyMsg:
@@ -214,6 +241,8 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.screen {
 	case screenAddons:
 		return m.handleAddonsKey(msg)
+	case screenExplore:
+		return m.handleExploreKey(msg)
 	case screenDetails:
 		return m.handleDetailsKey(msg)
 	case screenAdd:
@@ -233,6 +262,8 @@ func (m *Model) View() string {
 	switch m.screen {
 	case screenAddons:
 		body = m.addonsView()
+	case screenExplore:
+		body = m.exploreView()
 	case screenDetails:
 		body = m.detailsView()
 	case screenAdd:
@@ -241,18 +272,21 @@ func (m *Model) View() string {
 		body = m.settingsView()
 	}
 
-	return m.headerView() + "\n" + body + "\n" + m.footerView()
+	return m.headerView() + "\n" + contentPanel.Render(body) + "\n" + footerBar.Render(m.footerView())
 }
 
 func (m *Model) headerView() string {
-	tabs := []string{"Addons", "Settings"}
+	tabs := []string{"Addons", "Explore", "Settings"}
 	var rendered string
 	for i, t := range tabs {
 		active := false
 		if m.screen == screenAddons && i == 0 {
 			active = true
 		}
-		if m.screen == screenSettings && i == 1 {
+		if m.screen == screenExplore && i == 1 {
+			active = true
+		}
+		if m.screen == screenSettings && i == 2 {
 			active = true
 		}
 		if active {
@@ -262,7 +296,7 @@ func (m *Model) headerView() string {
 		}
 	}
 	title := titleStyle.Render("wowtui")
-	return title + "  " + rendered
+	return title + rendered
 }
 
 func (m *Model) footerView() string {
@@ -278,13 +312,18 @@ func (m *Model) footerView() string {
 func (m *Model) helpText() string {
 	switch m.screen {
 	case screenAddons:
-		return "r check · u update · U update all · a add · s scan · i install · f filter · d details · tab settings · q quit"
+		if m.searching {
+			return "enter apply · esc cancel · type to search"
+		}
+		return "↑/↓ navigate · f search · i game version · I installation · d details · a add · r check · u update · tab explore · q quit"
+	case screenExplore:
+		return "enter search · ↑/↓ select · a install selected · esc clear · tab settings · q quit"
 	case screenDetails:
 		return "esc back"
 	case screenAdd:
 		return "enter submit · esc cancel"
 	case screenSettings:
-		return "esc/tab back"
+		return "esc/tab addons · ↑/↓ select installation · r rename"
 	}
 	return ""
 }
@@ -335,6 +374,10 @@ func (m *Model) finishOp() (tea.Model, tea.Cmd) {
 	switch kind {
 	case opCheck:
 		m.mergeStatuses(result.statuses)
+	case opSearch:
+		m.exploreResults = result.remote
+		m.exploreCursor = 0
+		return m, nil
 	default:
 		return m, m.loadRegistryCmd()
 	}
@@ -397,6 +440,34 @@ func (m *Model) startScan() tea.Cmd {
 		_, err := svc.Scan(context.Background(), paths)
 		return opResult{err: err}
 	})
+}
+
+func (m *Model) startSearch(query string) tea.Cmd {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		m.exploreResults = nil
+		return nil
+	}
+	m.busyMsg = "searching providers..."
+	return m.startOp(opSearch, func(svc *service.Service) opResult {
+		enabled := make(map[string]bool)
+		for _, name := range m.deps.Config.Providers.Order() {
+			enabled[name] = m.deps.Config.Providers.Enabled(name)
+		}
+		manager := provider.NewManager(m.deps.Providers, m.deps.Config.Providers.Order(), enabled)
+		results, err := manager.Search(context.Background(), query, m.selectedFlavor())
+		return opResult{remote: results, err: err}
+	})
+}
+
+func (m *Model) selectedFlavor() wow.GameFlavor {
+	if m.gameFilter != "" && m.gameFilter != "all" {
+		return wow.GameFlavor(m.gameFilter)
+	}
+	if m.reg != nil && len(m.reg.Installations) > 0 {
+		return wow.GameFlavor(m.reg.Installations[0].Flavor)
+	}
+	return wow.Retail
 }
 
 func (m *Model) startUpdate(ref string) tea.Cmd {

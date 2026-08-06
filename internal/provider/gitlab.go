@@ -53,6 +53,10 @@ type gitLabProject struct {
 	PathWithNS    string `json:"path_with_namespace"`
 	WebURL        string `json:"web_url"`
 	DefaultBranch string `json:"default_branch"`
+	Namespace     struct {
+		Name string `json:"name"`
+	} `json:"namespace"`
+	Description string `json:"description"`
 }
 
 func (g *GitLab) Resolve(ctx context.Context, ref Reference) (RemoteAddon, error) {
@@ -67,7 +71,23 @@ func (g *GitLab) Resolve(ctx context.Context, ref Reference) (RemoteAddon, error
 	if status != http.StatusOK {
 		return RemoteAddon{}, fmt.Errorf("gitlab api returned %s", http.StatusText(status))
 	}
-	return RemoteAddon{Provider: "gitlab", ID: ref.ID, Name: project.PathWithNS, URL: project.WebURL}, nil
+	return RemoteAddon{Provider: "gitlab", ID: ref.ID, Name: project.PathWithNS, URL: project.WebURL, Author: project.Namespace.Name, Summary: project.Description}, nil
+}
+
+func (g *GitLab) Search(ctx context.Context, query string, _ wow.GameFlavor) ([]RemoteAddon, error) {
+	var projects []gitLabProject
+	status, err := g.get(ctx, g.apiBase+"/projects?search="+url.QueryEscape(query)+"&per_page=50", &projects)
+	if err != nil {
+		return nil, err
+	}
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("gitlab search returned %s", http.StatusText(status))
+	}
+	results := make([]RemoteAddon, 0, len(projects))
+	for _, project := range projects {
+		results = append(results, RemoteAddon{Provider: "gitlab", ID: project.PathWithNS, Name: project.PathWithNS, URL: project.WebURL, Author: project.Namespace.Name, Summary: project.Description})
+	}
+	return results, nil
 }
 
 func (g *GitLab) Latest(ctx context.Context, addon RemoteAddon, flavor wow.GameFlavor, source string) (Release, error) {

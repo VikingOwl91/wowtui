@@ -128,7 +128,7 @@ func (c *CurseForge) Search(ctx context.Context, query string, _ wow.GameFlavor)
 	}
 	results := make([]RemoteAddon, 0, len(response.Data))
 	for _, mod := range response.Data {
-		results = append(results, RemoteAddon{Provider: "curseforge", ID: strconv.FormatInt(mod.ID, 10), Name: mod.Name, URL: "https://www.curseforge.com/wow/addons/" + mod.Slug})
+		results = append(results, RemoteAddon{Provider: "curseforge", ID: strconv.FormatInt(mod.ID, 10), Name: mod.Name, URL: "https://www.curseforge.com/wow/addons/" + mod.Slug, Summary: mod.Summary})
 	}
 	return results, nil
 }

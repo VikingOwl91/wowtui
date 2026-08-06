@@ -34,6 +34,7 @@ type Addon struct {
 	Provider    string    `json:"provider"`
 	Ref         string    `json:"ref"`
 	Name        string    `json:"name"`
+	Author      string    `json:"author,omitempty"`
 	Flavor      string    `json:"flavor"`
 	InstallPath string    `json:"install_path"`
 	Folders     []string  `json:"folders"`

@@ -8,10 +8,14 @@ import (
 )
 
 type RemoteAddon struct {
-	Provider string
-	ID       string
-	Name     string
-	URL      string
+	Provider  string
+	ID        string
+	Name      string
+	URL       string
+	Author    string
+	Summary   string
+	Downloads int64
+	IconURL   string
 }
 
 type MatchHint struct {

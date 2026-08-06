@@ -131,3 +131,22 @@ func TestInstallationFilter(t *testing.T) {
 		t.Errorf("install filter 1 rows = %+v", rows)
 	}
 }
+
+func TestFuzzyScore(t *testing.T) {
+	if fuzzyScore("waks", "WeakAuras") < 0 {
+		t.Fatal("expected subsequence match")
+	}
+	if fuzzyScore("zzz", "WeakAuras") >= 0 {
+		t.Fatal("unexpected fuzzy match")
+	}
+}
+
+func TestGameFilterCyclesVersions(t *testing.T) {
+	rows := []addonRow{{Flavor: "retail"}, {Flavor: "classic"}, {Flavor: "retail"}}
+	if got := cycleGameFilter("all", rows); got != "retail" {
+		t.Fatalf("first game filter = %q, want retail", got)
+	}
+	if got := cycleGameFilter("retail", rows); got != "classic" {
+		t.Fatalf("second game filter = %q, want classic", got)
+	}
+}

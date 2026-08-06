@@ -3,6 +3,8 @@ package tui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"somegit.dev/vikingowl/wowtui/internal/provider"
 )
 
 func (m *Model) handleDetailsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -10,13 +12,24 @@ func (m *Model) handleDetailsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	case "esc", "backspace", "d", "enter":
+		m.detailRemote = nil
 		m.screen = screenAddons
 		return m, nil
+	case "a":
+		if m.detailRemote != nil && m.installCount() > 0 && !m.busy {
+			remote := *m.detailRemote
+			m.detailRemote = nil
+			m.screen = screenAddons
+			return m, m.startAdd(remote.Provider+":"+remote.ID, 0, "")
+		}
 	}
 	return m, nil
 }
 
 func (m *Model) detailsView() string {
+	if m.detailRemote != nil {
+		return m.remoteDetailsView(*m.detailRemote)
+	}
 	r := m.detailRow
 
 	lines := []string{
@@ -25,6 +38,9 @@ func (m *Model) detailsView() string {
 		labelStyle.Render("Flavor:     ") + r.Flavor,
 		labelStyle.Render("Status:     ") + r.Status,
 		labelStyle.Render("Installed:  ") + r.Installed,
+	}
+	if r.Author != "" {
+		lines = append(lines, labelStyle.Render("Author:     ")+r.Author)
 	}
 
 	if r.Managed {
@@ -54,6 +70,29 @@ func (m *Model) detailsView() string {
 	lines = append(lines, "  "+r.InstallPath)
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
+}
+
+func (m *Model) remoteDetailsView(r provider.RemoteAddon) string {
+	lines := []string{
+		headerStyle.Render(r.Name),
+		labelStyle.Render("Provider:   ") + r.Provider,
+		labelStyle.Render("Author:     ") + valueOrUnknown(r.Author),
+		labelStyle.Render("Reference:  ") + r.ID,
+		labelStyle.Render("URL:        ") + valueOrUnknown(r.URL),
+		"",
+		sectionTitle.Render("About"),
+		valueOrUnknown(r.Summary),
+		"",
+		dimStyle.Render("d back · a install this result"),
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
+}
+
+func valueOrUnknown(value string) string {
+	if value == "" {
+		return "unknown"
+	}
+	return value
 }
 
 func joinStrings(parts []string) string {

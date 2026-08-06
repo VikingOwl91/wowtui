@@ -22,6 +22,10 @@ func (m *Model) handleSettingsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc", "tab", "1":
 		m.screen = screenAddons
 		return m, nil
+	case "2":
+		m.screen = screenExplore
+		m.exploreInput.Focus()
+		return m, nil
 	case "up", "k":
 		if m.settingsCursor > 0 {
 			m.settingsCursor--

@@ -3,11 +3,11 @@ package tui
 import (
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-
 	"somegit.dev/vikingowl/wowtui/internal/provider"
 	"somegit.dev/vikingowl/wowtui/internal/service"
 )
@@ -25,12 +25,13 @@ func (m *Model) initTable() {
 
 func addonColumns() []table.Column {
 	return []table.Column{
-		{Title: "Name", Width: 26},
-		{Title: "Status", Width: 13},
-		{Title: "Installed", Width: 16},
-		{Title: "Latest", Width: 16},
-		{Title: "Provider", Width: 9},
-		{Title: "Flavor", Width: 11},
+		{Title: "Addon", Width: 24},
+		{Title: "Status", Width: 12},
+		{Title: "Installed", Width: 13},
+		{Title: "Latest", Width: 13},
+		{Title: "Provider", Width: 10},
+		{Title: "Author", Width: 16},
+		{Title: "Game", Width: 10},
 	}
 }
 
@@ -68,6 +69,7 @@ func (m *Model) buildRows() {
 				row.Managed = true
 				row.Ref = a.Ref
 				row.Provider = a.Provider
+				row.Author = a.Author
 				row.Installed = a.Version
 				row.Status = "managed"
 			}
@@ -84,23 +86,45 @@ func (m *Model) buildRows() {
 }
 
 func (m *Model) filteredRows() []addonRow {
-	var out []addonRow
+	type scoredRow struct {
+		row   addonRow
+		score int
+	}
+	var scored []scoredRow
 	for _, r := range m.rows {
 		if !m.matchesInstallFilter(r) {
+			continue
+		}
+		if m.gameFilter != "" && m.gameFilter != "all" && r.Flavor != m.gameFilter {
+			continue
+		}
+		if m.filterQuery != "" {
+			score := fuzzyScore(m.filterQuery, strings.Join([]string{r.Name, r.Provider, r.Flavor, r.Author}, " "))
+			if score < 0 {
+				continue
+			}
+			scored = append(scored, scoredRow{row: r, score: score})
 			continue
 		}
 		switch m.filter {
 		case filterManaged:
 			if r.Managed {
-				out = append(out, r)
+				scored = append(scored, scoredRow{row: r})
 			}
 		case filterUnmanaged:
 			if !r.Managed {
-				out = append(out, r)
+				scored = append(scored, scoredRow{row: r})
 			}
 		default:
-			out = append(out, r)
+			scored = append(scored, scoredRow{row: r})
 		}
+	}
+	if m.filterQuery != "" {
+		sort.SliceStable(scored, func(i, j int) bool { return scored[i].score > scored[j].score })
+	}
+	out := make([]addonRow, 0, len(scored))
+	for _, item := range scored {
+		out = append(out, item.row)
 	}
 	return out
 }
@@ -119,7 +143,7 @@ func (m *Model) rebuildTable() {
 	visible := m.filteredRows()
 	rows := make([]table.Row, 0, len(visible))
 	for _, r := range visible {
-		rows = append(rows, table.Row{r.Name, r.Status, r.Installed, r.Latest, r.Provider, r.Flavor})
+		rows = append(rows, table.Row{r.Name, r.Status, r.Installed, r.Latest, r.Provider, r.Author, r.Flavor})
 	}
 	m.table.SetRows(rows)
 }
@@ -162,10 +186,32 @@ func shortVersion(release provider.Release) string {
 }
 
 func (m *Model) handleAddonsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.searching {
+		switch msg.String() {
+		case "esc":
+			m.searching = false
+			m.searchInput.Blur()
+			return m, nil
+		case "enter":
+			m.filterQuery = strings.TrimSpace(m.searchInput.Value())
+			m.searching = false
+			m.searchInput.Blur()
+			m.rebuildTable()
+			return m, nil
+		default:
+			var cmd tea.Cmd
+			m.searchInput, cmd = m.searchInput.Update(msg)
+			return m, cmd
+		}
+	}
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	case "tab", "2":
+		m.screen = screenExplore
+		m.exploreInput.Focus()
+		return m, nil
+	case "3":
 		m.screen = screenSettings
 		return m, nil
 	case "1":
@@ -204,10 +250,15 @@ func (m *Model) handleAddonsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.input.Focus()
 		return m, textinput.Blink
 	case "f":
-		m.filter = (m.filter + 1) % 3
+		m.searching = true
+		m.searchInput.SetValue(m.filterQuery)
+		m.searchInput.Focus()
+		return m, textinput.Blink
+	case "i":
+		m.gameFilter = cycleGameFilter(m.gameFilter, m.rows)
 		m.rebuildTable()
 		return m, nil
-	case "i":
+	case "I":
 		if m.reg != nil && len(m.reg.Installations) > 0 {
 			m.installFilter++
 			if m.installFilter >= len(m.reg.Installations) {
@@ -215,6 +266,10 @@ func (m *Model) handleAddonsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			m.rebuildTable()
 		}
+		return m, nil
+	case "backspace":
+		m.filterQuery = ""
+		m.rebuildTable()
 		return m, nil
 	case "d", "enter":
 		row, ok := m.selectedRow()
@@ -241,15 +296,46 @@ func (m *Model) addonsView() string {
 	if m.installFilter >= 0 && m.installFilter < len(m.installLabels) {
 		installName = m.installLabels[m.installFilter]
 	}
+	gameName := m.gameFilter
+	if gameName == "" || gameName == "all" {
+		gameName = "all game versions"
+	}
 	counts := m.countRows()
+	search := ""
+	if m.filterQuery != "" {
+		search = " · search: " + m.filterQuery
+	}
 	summary := dimStyle.Render(
-		"install: " + installName + " · " +
-			"filter: " + filterName + " · " +
+		"game: " + gameName + " · install: " + installName + " · " +
+			"status: " + filterName + search + " · " +
 			strconv.Itoa(counts.total) + " addons · " +
 			strconv.Itoa(counts.managed) + " managed · " +
 			strconv.Itoa(counts.updates) + " updates")
 
-	return summary + "\n" + m.table.View()
+	searchBar := ""
+	if m.searching {
+		searchBar = searchBox.Render(m.searchInput.View()) + "\n"
+	}
+	return searchBar + summary + "\n" + m.table.View()
+}
+
+func cycleGameFilter(current string, rows []addonRow) string {
+	versions := []string{"all"}
+	seen := map[string]bool{"all": true}
+	for _, row := range rows {
+		if !seen[row.Flavor] {
+			seen[row.Flavor] = true
+			versions = append(versions, row.Flavor)
+		}
+	}
+	idx := 0
+	for i, version := range versions {
+		if version == current {
+			idx = i
+			break
+		}
+	}
+	return versions[(idx+1)%len(versions)]
 }
 
 type rowCounts struct {

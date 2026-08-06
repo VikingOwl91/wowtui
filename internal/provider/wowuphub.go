@@ -110,7 +110,7 @@ func (h *WowUpHub) Search(ctx context.Context, query string, flavor wow.GameFlav
 	}
 	results := make([]RemoteAddon, 0, len(response.Addons))
 	for _, addon := range response.Addons {
-		results = append(results, RemoteAddon{Provider: "wowuphub", ID: strconv.FormatInt(addon.ID, 10), Name: addon.RepositoryName, URL: "https://wowup.io/addons/" + strconv.FormatInt(addon.ID, 10)})
+		results = append(results, RemoteAddon{Provider: "wowuphub", ID: strconv.FormatInt(addon.ID, 10), Name: addon.RepositoryName, URL: "https://wowup.io/addons/" + strconv.FormatInt(addon.ID, 10), Summary: addon.Description})
 	}
 	return results, nil
 }

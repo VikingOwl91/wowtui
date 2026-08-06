@@ -56,6 +56,11 @@ type ghRepo struct {
 	FullName      string `json:"full_name"`
 	HTMLURL       string `json:"html_url"`
 	DefaultBranch string `json:"default_branch"`
+	Owner         struct {
+		Login string `json:"login"`
+	} `json:"owner"`
+	Description string `json:"description"`
+	Stars       int64  `json:"stargazers_count"`
 }
 
 func (g *GitHub) Resolve(ctx context.Context, ref Reference) (RemoteAddon, error) {
@@ -70,7 +75,25 @@ func (g *GitHub) Resolve(ctx context.Context, ref Reference) (RemoteAddon, error
 	if status != http.StatusOK {
 		return RemoteAddon{}, fmt.Errorf("github api returned %s for %s", http.StatusText(status), ref.ID)
 	}
-	return RemoteAddon{Provider: "github", ID: ref.ID, Name: repo.FullName, URL: repo.HTMLURL}, nil
+	return RemoteAddon{Provider: "github", ID: ref.ID, Name: repo.FullName, URL: repo.HTMLURL, Author: repo.Owner.Login, Summary: repo.Description, Downloads: repo.Stars}, nil
+}
+
+func (g *GitHub) Search(ctx context.Context, query string, _ wow.GameFlavor) ([]RemoteAddon, error) {
+	var response struct {
+		Items []ghRepo `json:"items"`
+	}
+	status, err := g.get(ctx, g.apiBase+"/search/repositories?q="+url.QueryEscape(query+" wow addon")+"&per_page=50", &response)
+	if err != nil {
+		return nil, err
+	}
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("github search returned %s", http.StatusText(status))
+	}
+	results := make([]RemoteAddon, 0, len(response.Items))
+	for _, repo := range response.Items {
+		results = append(results, RemoteAddon{Provider: "github", ID: repo.FullName, Name: repo.FullName, URL: repo.HTMLURL, Author: repo.Owner.Login, Summary: repo.Description, Downloads: repo.Stars})
+	}
+	return results, nil
 }
 
 func (g *GitHub) Latest(ctx context.Context, addon RemoteAddon, flavor wow.GameFlavor, source string) (Release, error) {

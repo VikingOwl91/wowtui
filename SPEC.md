@@ -171,6 +171,28 @@ Regeln:
   Rate-Limits
 - Direct-URL braucht keinen Key
 
+Provider können zusätzlich aktiviert/deaktiviert und priorisiert werden:
+
+```toml
+[providers]
+order = ["wowuphub", "wago", "curseforge", "github", "gitlab", "direct"]
+
+[providers.wago]
+enabled = true
+api_key = "..."
+```
+
+Die CLI stellt dafür `wowtui providers`,
+`wowtui providers enable <name>`,
+`wowtui providers disable <name>` und
+`wowtui providers order <name>...` bereit. Die TUI zeigt dieselbe
+Reihenfolge und den Aktivierungsstatus in den Settings.
+
+GitHub und Direct sind implementiert und standardmäßig aktiv. Wago,
+CurseForge, WowUpHub und GitLab sind als Provider-IDs und
+Konfigurationsstellen vorbereitet; ihre Adapter werden separat gegen
+ihre aktuellen APIs implementiert.
+
 ### GitHub ohne Releases (Fallback-Kette)
 
 Viele Repos haben keine Releases oder keine ZIP-Artefakte. Der

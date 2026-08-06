@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -83,6 +84,15 @@ func (m *Model) settingsView() string {
 		token = "set"
 	}
 	lines = append(lines, labelStyle.Render("GitHub token: ")+token)
+
+	lines = append(lines, "", labelStyle.Render("Providers (priority order):"))
+	for i, name := range m.deps.Config.Providers.Order() {
+		state := "disabled"
+		if m.deps.Config.Providers.Enabled(name) {
+			state = "enabled"
+		}
+		lines = append(lines, "  "+strconv.Itoa(i+1)+". "+name+"  "+state)
+	}
 
 	lines = append(lines, "", labelStyle.Render("Installations:")+" "+dimStyle.Render("up/down select · r rename"))
 	if m.reg == nil || len(m.reg.Installations) == 0 {

@@ -14,6 +14,25 @@ type RemoteAddon struct {
 	URL      string
 }
 
+type MatchHint struct {
+	FolderName string
+	Title      string
+	Website    string
+	SourceRepo string
+	Wago       string
+	Curse      string
+}
+
+type SearchProvider interface {
+	Provider
+	Search(ctx context.Context, query string, flavor wow.GameFlavor) ([]RemoteAddon, error)
+}
+
+type MatchProvider interface {
+	Provider
+	Match(ctx context.Context, hint MatchHint, flavor wow.GameFlavor) (RemoteAddon, bool, error)
+}
+
 type ReleaseKind string
 
 const (

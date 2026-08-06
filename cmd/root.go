@@ -23,7 +23,7 @@ func NewRootCmd() *cobra.Command {
 	}
 	root.PersistentFlags().String("config", "", "path to config file (default: XDG config path)")
 	root.PersistentFlags().String("registry", "", "path to registry file (default: XDG data path)")
-	root.AddCommand(newScanCmd(), newListCmd(), newAddCmd(), newCheckCmd(), newUpdateCmd(), newInstallsCmd(), newRenameCmd())
+	root.AddCommand(newScanCmd(), newListCmd(), newAddCmd(), newCheckCmd(), newUpdateCmd(), newInstallsCmd(), newRenameCmd(), newProvidersCmd())
 	return root
 }
 
@@ -54,10 +54,17 @@ func buildProviders(cfg *config.Config) map[string]provider.Provider {
 	if base := os.Getenv("WOWTUI_GITHUB_API"); base != "" {
 		gh.SetAPIBase(base)
 	}
-	return map[string]provider.Provider{
+	all := map[string]provider.Provider{
 		"github": gh,
 		"direct": provider.NewDirect(),
 	}
+	active := make(map[string]provider.Provider)
+	for name, p := range all {
+		if cfg.Providers.Enabled(name) {
+			active[name] = p
+		}
+	}
+	return active
 }
 
 func newService(cmd *cobra.Command, cfg *config.Config) *service.Service {

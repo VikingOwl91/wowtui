@@ -14,6 +14,24 @@ type Folder struct {
 	Tocs []*Toc
 }
 
+func (f *Folder) Hints() map[string]string {
+	hints := make(map[string]string)
+	for _, toc := range f.Tocs {
+		for key, value := range toc.Fields {
+			if value == "" {
+				continue
+			}
+			if key == "x-website" || key == "x-source-repo" || key == "x-sourcerepo" || key == "x-wago" || key == "x-curse" || key == "x-curseforge" {
+				if key == "x-sourcerepo" {
+					key = "x-source-repo"
+				}
+				hints[key] = value
+			}
+		}
+	}
+	return hints
+}
+
 func (f *Folder) Version() string {
 	for _, toc := range f.Tocs {
 		if v := toc.Version(); v != "" {

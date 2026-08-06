@@ -75,6 +75,7 @@ func (s *Service) Scan(ctx context.Context, configPaths []string) ([]registry.In
 				Version:    f.Version(),
 				Interfaces: f.Interfaces(),
 				TocFiles:   tocNames(f.Tocs),
+				Hints:      f.Hints(),
 			})
 		}
 		reg.Installations = append(reg.Installations, rec)

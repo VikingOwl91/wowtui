@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -19,21 +20,115 @@ type WoW struct {
 }
 
 type Providers struct {
-	GitHub     GitHub     `toml:"github"`
-	Wago       Wago       `toml:"wago"`
-	CurseForge CurseForge `toml:"curseforge"`
+	PriorityOrder []string       `toml:"order"`
+	GitHub        GitHub         `toml:"github"`
+	GitLab        ProviderConfig `toml:"gitlab"`
+	WowUpHub      ProviderConfig `toml:"wowuphub"`
+	Wago          Wago           `toml:"wago"`
+	CurseForge    CurseForge     `toml:"curseforge"`
+	Direct        ProviderConfig `toml:"direct"`
 }
 
 type GitHub struct {
-	Token string `toml:"token"`
+	Enabled *bool  `toml:"enabled"`
+	Token   string `toml:"token"`
 }
 
 type Wago struct {
-	APIKey string `toml:"api_key"`
+	Enabled *bool  `toml:"enabled"`
+	APIKey  string `toml:"api_key"`
 }
 
 type CurseForge struct {
-	APIKey string `toml:"api_key"`
+	Enabled *bool  `toml:"enabled"`
+	APIKey  string `toml:"api_key"`
+}
+
+type ProviderConfig struct {
+	Enabled *bool  `toml:"enabled"`
+	APIKey  string `toml:"api_key"`
+}
+
+var defaultProviderOrder = []string{"wowuphub", "wago", "curseforge", "github", "gitlab", "direct"}
+
+func (p Providers) Enabled(name string) bool {
+	var configured *bool
+	switch name {
+	case "github":
+		configured = p.GitHub.Enabled
+	case "wago":
+		configured = p.Wago.Enabled
+	case "curseforge":
+		configured = p.CurseForge.Enabled
+	case "gitlab":
+		configured = p.GitLab.Enabled
+	case "wowuphub":
+		configured = p.WowUpHub.Enabled
+	case "direct":
+		configured = p.Direct.Enabled
+	default:
+		return false
+	}
+	if configured != nil {
+		return *configured
+	}
+	return name == "github" || name == "direct"
+}
+
+func (p Providers) Order() []string {
+	seen := make(map[string]bool)
+	order := make([]string, 0, len(defaultProviderOrder))
+	for _, name := range append(p.PriorityOrder, defaultProviderOrder...) {
+		if !seen[name] {
+			seen[name] = true
+			order = append(order, name)
+		}
+	}
+	return order
+}
+
+func KnownProviders() []string {
+	return append([]string(nil), defaultProviderOrder...)
+}
+
+func (p *Providers) SetEnabled(name string, enabled bool) error {
+	value := enabled
+	switch name {
+	case "github":
+		p.GitHub.Enabled = &value
+	case "gitlab":
+		p.GitLab.Enabled = &value
+	case "wowuphub":
+		p.WowUpHub.Enabled = &value
+	case "wago":
+		p.Wago.Enabled = &value
+	case "curseforge":
+		p.CurseForge.Enabled = &value
+	case "direct":
+		p.Direct.Enabled = &value
+	default:
+		return fmt.Errorf("unknown provider %q", name)
+	}
+	return nil
+}
+
+func (p *Providers) SetOrder(order []string) error {
+	known := make(map[string]bool)
+	for _, name := range defaultProviderOrder {
+		known[name] = true
+	}
+	seen := make(map[string]bool)
+	for _, name := range order {
+		if !known[name] {
+			return fmt.Errorf("unknown provider %q", name)
+		}
+		if seen[name] {
+			return fmt.Errorf("provider %q appears more than once", name)
+		}
+		seen[name] = true
+	}
+	p.PriorityOrder = append([]string(nil), order...)
+	return nil
 }
 
 func Load(path string) (*Config, error) {
@@ -50,6 +145,21 @@ func Load(path string) (*Config, error) {
 	}
 	applyEnv(cfg)
 	return cfg, nil
+}
+
+func Save(path string, cfg *Config) error {
+	data, err := toml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 func applyEnv(cfg *Config) {

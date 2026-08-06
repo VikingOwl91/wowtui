@@ -105,3 +105,56 @@ func TestDefaultPathFallsBackToHome(t *testing.T) {
 		t.Errorf("DefaultPath = %q", got)
 	}
 }
+
+func TestProviderOrderAndDefaults(t *testing.T) {
+	path := writeConfig(t, `
+[providers]
+order = ["github", "wago"]
+
+[providers.github]
+enabled = false
+token = "token"
+
+[providers.wago]
+enabled = true
+api_key = "wago"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Providers.Enabled("github") {
+		t.Error("github should be disabled explicitly")
+	}
+	if !cfg.Providers.Enabled("wago") || !cfg.Providers.Enabled("direct") {
+		t.Error("wago and direct should be enabled")
+	}
+	if cfg.Providers.Enabled("curseforge") {
+		t.Error("curseforge should be disabled by default")
+	}
+	order := cfg.Providers.Order()
+	if order[0] != "github" || order[1] != "wago" {
+		t.Errorf("order = %v", order)
+	}
+}
+
+func TestSaveProviderSettings(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "nested", "config.toml")
+	cfg := &Config{}
+	if err := cfg.Providers.SetEnabled("wago", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := cfg.Providers.SetOrder([]string{"wago", "github", "direct"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !loaded.Providers.Enabled("wago") || loaded.Providers.Order()[0] != "wago" {
+		t.Errorf("provider settings = %+v", loaded.Providers)
+	}
+}

@@ -23,10 +23,11 @@ type Installation struct {
 }
 
 type Folder struct {
-	Name       string   `json:"name"`
-	Version    string   `json:"version"`
-	Interfaces []int    `json:"interfaces,omitempty"`
-	TocFiles   []string `json:"toc_files"`
+	Name       string            `json:"name"`
+	Version    string            `json:"version"`
+	Interfaces []int             `json:"interfaces,omitempty"`
+	TocFiles   []string          `json:"toc_files"`
+	Hints      map[string]string `json:"hints,omitempty"`
 }
 
 type Addon struct {

@@ -15,6 +15,7 @@ type Reference struct {
 
 var ownerRepoPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$`)
 var gitLabProjectPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+$`)
+var numericIDPattern = regexp.MustCompile(`^[1-9][0-9]*$`)
 
 func ParseReference(s string) (Reference, error) {
 	s = strings.TrimSpace(s)
@@ -34,6 +35,13 @@ func ParseReference(s string) (Reference, error) {
 			return Reference{}, fmt.Errorf("invalid gitlab reference %q", s)
 		}
 		return Reference{Provider: "gitlab", ID: rest}, nil
+	}
+
+	if rest, ok := strings.CutPrefix(s, "wowup:"); ok {
+		if !numericIDPattern.MatchString(rest) {
+			return Reference{}, fmt.Errorf("invalid wowup reference %q", s)
+		}
+		return Reference{Provider: "wowuphub", ID: rest}, nil
 	}
 
 	if rest, ok := strings.CutPrefix(s, "direct:"); ok {
@@ -66,6 +74,13 @@ func ParseReference(s string) (Reference, error) {
 				return Reference{}, fmt.Errorf("invalid gitlab reference in %q", s)
 			}
 			return Reference{Provider: "gitlab", ID: id}, nil
+		}
+		if u.Host == "wowup.io" || u.Host == "www.wowup.io" {
+			parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+			if len(parts) == 2 && parts[0] == "addons" && numericIDPattern.MatchString(parts[1]) {
+				return Reference{Provider: "wowuphub", ID: parts[1]}, nil
+			}
+			return Reference{}, fmt.Errorf("invalid WowUp addon URL %q", s)
 		}
 		if err := validateDirectURL(s); err != nil {
 			return Reference{}, err

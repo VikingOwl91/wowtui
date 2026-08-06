@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -60,10 +61,15 @@ func buildProviders(cfg *config.Config) map[string]provider.Provider {
 
 func newService(cmd *cobra.Command, cfg *config.Config) *service.Service {
 	regPath := registryPath(cmd)
+	out := cmd.OutOrStdout()
 	return &service.Service{
 		Providers:    buildProviders(cfg),
 		RegistryPath: regPath,
 		BackupRoot:   filepath.Join(filepath.Dir(regPath), "backups"),
-		Out:          cmd.OutOrStdout(),
+		OnEvent: func(e service.Event) {
+			if e.Message != "" {
+				fmt.Fprintln(out, e.Message)
+			}
+		},
 	}
 }

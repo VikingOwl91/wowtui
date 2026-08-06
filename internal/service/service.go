@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,7 +19,7 @@ type Service struct {
 	RegistryPath string
 	BackupRoot   string
 	MaxDownload  int64
-	Out          io.Writer
+	OnEvent      EmitFunc
 }
 
 type UpdateStatus struct {
@@ -52,20 +51,20 @@ func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.Ga
 		return fmt.Errorf("%s is already installed in %s", ref.ID, install.Path)
 	}
 
-	s.printf("resolving %s", ref.ID)
+	s.emit(Event{Ref: ref.ID, Stage: StageResolve, Message: "resolving " + ref.ID})
 	remote, err := p.Resolve(ctx, ref)
 	if err != nil {
 		return err
 	}
 
-	s.printf("fetching latest version for flavor %s", flavor)
+	s.emit(Event{Ref: ref.ID, Stage: StageResolve, Message: fmt.Sprintf("fetching latest version for flavor %s", flavor)})
 	release, err := p.Latest(ctx, remote, flavor, source)
 	if err != nil {
 		return err
 	}
-	s.printf("release %s (%s, %s)", versionLabel(release), release.AssetName, humanSize(release.Size))
+	s.emit(Event{Ref: ref.ID, Stage: StageInfo, Message: fmt.Sprintf("release %s (%s, %s)", versionLabel(release), release.AssetName, humanSize(release.Size))})
 
-	folders, sha, err := s.downloadAndInstall(ctx, p, release, install.Path, ref.Provider+"-"+ref.ID)
+	folders, sha, err := s.downloadAndInstall(ctx, p, release, install.Path, ref.Provider+"-"+ref.ID, ref.ID, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -91,7 +90,7 @@ func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.Ga
 	if err := reg.Save(s.RegistryPath); err != nil {
 		return err
 	}
-	s.printf("installed %s (%s)", ref.ID, strings.Join(folders, ", "))
+	s.emit(Event{Ref: ref.ID, Stage: StageDone, Message: fmt.Sprintf("installed %s (%s)", ref.ID, strings.Join(folders, ", "))})
 	return nil
 }
 
@@ -102,8 +101,10 @@ func (s *Service) Check(ctx context.Context) ([]UpdateStatus, error) {
 	}
 
 	statuses := make([]UpdateStatus, 0, len(reg.Addons))
-	for _, addon := range reg.Addons {
+	total := len(reg.Addons)
+	for i, addon := range reg.Addons {
 		status := UpdateStatus{Addon: addon}
+		s.emit(Event{Ref: addon.Ref, Stage: StageResolve, Message: "checking " + addon.Ref, Index: i + 1, Total: total})
 
 		p, ok := s.Providers[addon.Provider]
 		if !ok {
@@ -136,7 +137,7 @@ func (s *Service) Update(ctx context.Context, refOrName string, dryRun bool) err
 	if err != nil {
 		return err
 	}
-	return s.updateAddon(ctx, reg, addon, dryRun)
+	return s.updateAddon(ctx, reg, addon, dryRun, 0, 0)
 }
 
 func (s *Service) UpdateAll(ctx context.Context, dryRun bool) error {
@@ -144,37 +145,43 @@ func (s *Service) UpdateAll(ctx context.Context, dryRun bool) error {
 	if err != nil {
 		return err
 	}
+	total := len(reg.Addons)
 	for i := range reg.Addons {
-		if err := s.updateAddon(ctx, reg, &reg.Addons[i], dryRun); err != nil {
+		if err := s.updateAddon(ctx, reg, &reg.Addons[i], dryRun, i+1, total); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon *registry.Addon, dryRun bool) error {
+func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon *registry.Addon, dryRun bool, index, total int) error {
+	ev := func(stage Stage, msg string) {
+		s.emit(Event{Ref: addon.Ref, Stage: stage, Message: msg, Index: index, Total: total})
+	}
+
 	p, ok := s.Providers[addon.Provider]
 	if !ok {
 		return fmt.Errorf("provider %q is not configured", addon.Provider)
 	}
 
 	remote := provider.RemoteAddon{Provider: addon.Provider, ID: addon.Ref, Name: addon.Name}
+	ev(StageResolve, "resolving "+addon.Ref)
 	release, err := p.Latest(ctx, remote, wow.GameFlavor(addon.Flavor), addon.Source)
 	if err != nil {
 		return err
 	}
 
 	if sameVersion(*addon, release) {
-		s.printf("%s is up to date (%s)", addon.Ref, addon.Version)
+		ev(StageCurrent, fmt.Sprintf("%s is up to date (%s)", addon.Ref, addon.Version))
 		return nil
 	}
 	if dryRun {
-		s.printf("%s: %s -> %s (dry run)", addon.Ref, addon.Version, versionLabel(release))
+		ev(StageInfo, fmt.Sprintf("%s: %s -> %s (dry run)", addon.Ref, addon.Version, versionLabel(release)))
 		return nil
 	}
 
-	s.printf("updating %s: %s -> %s", addon.Ref, addon.Version, versionLabel(release))
-	folders, sha, err := s.downloadAndInstall(ctx, p, release, addon.InstallPath, addon.Provider+"-"+addon.Ref)
+	ev(StageInstall, fmt.Sprintf("updating %s: %s -> %s", addon.Ref, addon.Version, versionLabel(release)))
+	folders, sha, err := s.downloadAndInstall(ctx, p, release, addon.InstallPath, addon.Provider+"-"+addon.Ref, addon.Ref, index, total)
 	if err != nil {
 		return err
 	}
@@ -230,7 +237,12 @@ func shortHash(s string) string {
 	return s
 }
 
-func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, release provider.Release, installPath, label string) ([]string, string, error) {
+func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, release provider.Release, installPath, label, ref string, index, total int) ([]string, string, error) {
+	ev := func(stage Stage, msg string) {
+		s.emit(Event{Ref: ref, Stage: stage, Message: msg, Index: index, Total: total})
+	}
+
+	ev(StageDownload, "downloading "+release.AssetName)
 	body, err := p.Download(ctx, release)
 	if err != nil {
 		return nil, "", err
@@ -253,8 +265,9 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 	if err != nil {
 		return nil, "", err
 	}
-	s.printf("downloaded %s (sha256 %s)", humanSize(size), sha[:12])
+	ev(StageDownload, fmt.Sprintf("downloaded %s (sha256 %s)", humanSize(size), sha[:12]))
 
+	ev(StageExtract, "extracting")
 	staging := filepath.Join(workDir, "staging")
 	if err := os.MkdirAll(staging, 0o755); err != nil {
 		return nil, "", err
@@ -263,6 +276,7 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		return nil, "", err
 	}
 
+	ev(StageInstall, "installing")
 	addonsDir := filepath.Join(installPath, "Interface", "AddOns")
 	if err := os.MkdirAll(addonsDir, 0o755); err != nil {
 		return nil, "", err
@@ -277,7 +291,7 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		return nil, "", err
 	}
 	if result.BackupPath != "" {
-		s.printf("backup: %s", result.BackupPath)
+		ev(StageBackup, "backup: "+result.BackupPath)
 	}
 	return result.Folders, sha, nil
 }
@@ -310,9 +324,9 @@ func findAddon(reg *registry.Registry, refOrName string) (*registry.Addon, error
 	return nil, fmt.Errorf("addon %q not found in registry", refOrName)
 }
 
-func (s *Service) printf(format string, args ...any) {
-	if s.Out != nil {
-		fmt.Fprintf(s.Out, format+"\n", args...)
+func (s *Service) emit(e Event) {
+	if s.OnEvent != nil {
+		s.OnEvent(e)
 	}
 }
 

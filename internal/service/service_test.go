@@ -65,7 +65,7 @@ func buildZip(t *testing.T, files map[string]string) []byte {
 	return buf.Bytes()
 }
 
-func newTestService(t *testing.T, fp *fakeProvider) (*Service, wow.Installation, *bytes.Buffer) {
+func newTestService(t *testing.T, fp *fakeProvider) (*Service, wow.Installation, *captured) {
 	t.Helper()
 	base := t.TempDir()
 	install := wow.Installation{
@@ -76,14 +76,37 @@ func newTestService(t *testing.T, fp *fakeProvider) (*Service, wow.Installation,
 		t.Fatal(err)
 	}
 
-	out := &bytes.Buffer{}
+	out := &captured{}
 	svc := &Service{
 		Providers:    map[string]provider.Provider{"github": fp},
 		RegistryPath: filepath.Join(base, "registry.json"),
 		BackupRoot:   filepath.Join(base, "backups"),
-		Out:          out,
+		OnEvent:      out.emit,
 	}
 	return svc, install, out
+}
+
+type captured struct {
+	events []Event
+	text   strings.Builder
+}
+
+func (c *captured) emit(e Event) {
+	c.events = append(c.events, e)
+	if e.Message != "" {
+		c.text.WriteString(e.Message + "\n")
+	}
+}
+
+func (c *captured) String() string { return c.text.String() }
+
+func (c *captured) firstIndex(stage Stage) int {
+	for i, e := range c.events {
+		if e.Stage == stage {
+			return i
+		}
+	}
+	return -1
 }
 
 func addonZip(t *testing.T, version string) []byte {
@@ -475,5 +498,60 @@ func TestUpdateAll(t *testing.T) {
 	addon := reg.FindAddon("Owner/MyAddon", install.Path)
 	if addon == nil || addon.ReleaseID != 200 {
 		t.Errorf("registry entry = %+v", addon)
+	}
+}
+
+func TestAddEmitsStageSequence(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 100, Tag: "v1.0.0", AssetName: "MyAddon-1.0.0.zip", DownloadURL: "http://fake/zip", Size: 10},
+		zipContent: addonZip(t, "1.0.0"),
+	}
+	svc, install, out := newTestService(t, fp)
+	ref := provider.Reference{Provider: "github", ID: "Owner/MyAddon"}
+	if err := svc.Add(context.Background(), ref, wow.Retail, install, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	download := out.firstIndex(StageDownload)
+	extract := out.firstIndex(StageExtract)
+	install_ := out.firstIndex(StageInstall)
+	done := out.firstIndex(StageDone)
+	if download < 0 || extract < 0 || install_ < 0 || done < 0 {
+		t.Fatalf("missing stages, events = %+v", out.events)
+	}
+	if !(download < extract && extract < install_ && install_ < done) {
+		t.Errorf("stage order wrong: download=%d extract=%d install=%d done=%d", download, extract, install_, done)
+	}
+	if out.events[done].Ref != "Owner/MyAddon" {
+		t.Errorf("done event ref = %q", out.events[done].Ref)
+	}
+}
+
+func TestUpdateAllEmitsBatchProgress(t *testing.T) {
+	fp := &fakeProvider{release: provider.Release{Kind: provider.KindRelease, ID: 100, Tag: "v1.0.0", AssetName: "a.zip"}}
+	svc, install, out := newTestService(t, fp)
+
+	reg := &registry.Registry{Version: 1}
+	reg.UpsertAddon(registry.Addon{Provider: "github", Ref: "Owner/One", Flavor: "retail", InstallPath: install.Path, Version: "v1.0.0", Source: "auto", ReleaseID: 100})
+	reg.UpsertAddon(registry.Addon{Provider: "github", Ref: "Owner/Two", Flavor: "retail", InstallPath: install.Path, Version: "v1.0.0", Source: "auto", ReleaseID: 100})
+	if err := reg.Save(svc.RegistryPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := svc.UpdateAll(context.Background(), false); err != nil {
+		t.Fatal(err)
+	}
+
+	var currents []Event
+	for _, e := range out.events {
+		if e.Stage == StageCurrent {
+			currents = append(currents, e)
+		}
+	}
+	if len(currents) != 2 {
+		t.Fatalf("got %d up-to-date events, want 2: %+v", len(currents), out.events)
+	}
+	if currents[0].Index != 1 || currents[0].Total != 2 || currents[1].Index != 2 || currents[1].Total != 2 {
+		t.Errorf("batch indices wrong: %+v", currents)
 	}
 }

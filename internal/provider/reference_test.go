@@ -64,6 +64,23 @@ func TestParseReferenceForeignURLIsDirect(t *testing.T) {
 	}
 }
 
+func TestParseReferenceDirectLoopbackAllowed(t *testing.T) {
+	tests := []string{
+		"direct:http://127.0.0.1/addon.zip",
+		"direct:http://localhost/addon.zip",
+		"http://127.0.0.1:8080/addon.zip",
+	}
+	for _, tt := range tests {
+		ref, err := ParseReference(tt)
+		if err != nil {
+			t.Fatalf("%s: %v", tt, err)
+		}
+		if ref.Provider != "direct" {
+			t.Errorf("%s: got %+v, want direct", tt, ref)
+		}
+	}
+}
+
 func TestParseReferenceInvalid(t *testing.T) {
 	tests := []string{
 		"",
@@ -74,6 +91,8 @@ func TestParseReferenceInvalid(t *testing.T) {
 		"github:owner/repo/extra",
 		"https://github.com/onlyowner",
 		"ftp://example.com/x.zip",
+		"direct:http://example.com/x.zip",
+		"http://example.com/x.zip",
 	}
 	for _, tt := range tests {
 		if _, err := ParseReference(tt); err == nil {

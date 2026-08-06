@@ -215,13 +215,19 @@ func releaseIDFor(release provider.Release) int64 {
 
 func versionLabel(release provider.Release) string {
 	if release.Kind == provider.KindBranch && release.Commit != "" {
-		short := release.Commit
-		if len(short) > 12 {
-			short = short[:12]
-		}
-		return release.Tag + "@" + short
+		return release.Tag + "@" + shortHash(release.Commit)
+	}
+	if release.Kind == provider.KindDirect && len(release.Tag) == 64 {
+		return shortHash(release.Tag)
 	}
 	return release.Tag
+}
+
+func shortHash(s string) string {
+	if len(s) > 12 {
+		return s[:12]
+	}
+	return s
 }
 
 func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, release provider.Release, installPath, label string) ([]string, string, error) {

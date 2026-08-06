@@ -20,6 +20,7 @@ const (
 	KindRelease ReleaseKind = "release"
 	KindTag     ReleaseKind = "tag"
 	KindBranch  ReleaseKind = "branch"
+	KindDirect  ReleaseKind = "direct"
 )
 
 type Release struct {

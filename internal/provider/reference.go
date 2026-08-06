@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"regexp"
 	"strings"
@@ -65,8 +66,22 @@ func ParseReference(s string) (Reference, error) {
 
 func validateDirectURL(s string) error {
 	u, err := url.Parse(s)
-	if err != nil || u.Scheme != "https" || u.Host == "" {
-		return fmt.Errorf("direct reference must be an https URL, got %q", s)
+	if err != nil || u.Host == "" {
+		return fmt.Errorf("direct reference must be a valid URL, got %q", s)
 	}
-	return nil
+	if u.Scheme == "https" {
+		return nil
+	}
+	if u.Scheme == "http" && isLoopbackHost(u.Hostname()) {
+		return nil
+	}
+	return fmt.Errorf("direct reference must be an https URL (http only allowed for localhost), got %q", s)
+}
+
+func isLoopbackHost(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

@@ -309,3 +309,45 @@ func TestAddRejectsUnknownSource(t *testing.T) {
 		t.Fatal("expected error for unknown source")
 	}
 }
+
+func TestAddDirectURL(t *testing.T) {
+	content := buildCmdZip(t, "1.0.0")
+	directSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.Write(content)
+	}))
+	t.Cleanup(directSrv.Close)
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	installPath := filepath.Join(home, "wow", "_retail_")
+	if err := os.MkdirAll(filepath.Join(installPath, "Interface", "AddOns"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfgPath := filepath.Join(home, "config.toml")
+	if err := os.WriteFile(cfgPath, []byte(fmt.Sprintf("[wow]\npaths = [%q]\n", filepath.Join(home, "wow"))), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out := runCmd(t, "add", "direct:"+directSrv.URL+"/addon.zip", "--config", cfgPath)
+	if !strings.Contains(out, "installed") {
+		t.Fatalf("add output: %s", out)
+	}
+
+	toc, err := os.ReadFile(filepath.Join(installPath, "Interface", "AddOns", "TestAddon", "TestAddon.toc"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(toc) != "## Version: 1.0.0" {
+		t.Errorf("installed toc = %q", toc)
+	}
+
+	out = runCmd(t, "check", "--config", cfgPath)
+	if !strings.Contains(out, "current") {
+		t.Errorf("check output: %s", out)
+	}
+}

@@ -51,7 +51,7 @@ func runCheck(cmd *cobra.Command, _ []string) error {
 }
 
 func shortVersion(v string) string {
-	if len(v) == 40 && isHex(v) {
+	if len(v) > 12 && isHex(v) {
 		return v[:12]
 	}
 	return v

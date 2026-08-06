@@ -52,7 +52,10 @@ func buildProviders(cfg *config.Config) map[string]provider.Provider {
 	if base := os.Getenv("WOWTUI_GITHUB_API"); base != "" {
 		gh.SetAPIBase(base)
 	}
-	return map[string]provider.Provider{"github": gh}
+	return map[string]provider.Provider{
+		"github": gh,
+		"direct": provider.NewDirect(),
+	}
 }
 
 func newService(cmd *cobra.Command, cfg *config.Config) *service.Service {

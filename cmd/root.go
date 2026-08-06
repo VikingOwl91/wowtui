@@ -58,11 +58,13 @@ func buildProviders(cfg *config.Config) map[string]provider.Provider {
 	if base := os.Getenv("WOWTUI_WOWUPHUB_API"); base != "" {
 		hub.SetBaseURL(base)
 	}
+	curseForge := provider.NewCurseForge(cfg.Providers.CurseForge.APIKey)
 	all := map[string]provider.Provider{
-		"github":   gh,
-		"direct":   provider.NewDirect(),
-		"gitlab":   provider.NewGitLab(cfg.Providers.GitLab.APIKey),
-		"wowuphub": hub,
+		"github":     gh,
+		"direct":     provider.NewDirect(),
+		"gitlab":     provider.NewGitLab(cfg.Providers.GitLab.APIKey),
+		"wowuphub":   hub,
+		"curseforge": curseForge,
 	}
 	active := make(map[string]provider.Provider)
 	for name, p := range all {

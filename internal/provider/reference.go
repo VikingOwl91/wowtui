@@ -44,6 +44,13 @@ func ParseReference(s string) (Reference, error) {
 		return Reference{Provider: "wowuphub", ID: rest}, nil
 	}
 
+	if rest, ok := strings.CutPrefix(s, "curseforge:"); ok {
+		if !numericIDPattern.MatchString(rest) {
+			return Reference{}, fmt.Errorf("invalid CurseForge reference %q", s)
+		}
+		return Reference{Provider: "curseforge", ID: rest}, nil
+	}
+
 	if rest, ok := strings.CutPrefix(s, "direct:"); ok {
 		if err := validateDirectURL(rest); err != nil {
 			return Reference{}, err
@@ -81,6 +88,13 @@ func ParseReference(s string) (Reference, error) {
 				return Reference{Provider: "wowuphub", ID: parts[1]}, nil
 			}
 			return Reference{}, fmt.Errorf("invalid WowUp addon URL %q", s)
+		}
+		if u.Host == "curseforge.com" || u.Host == "www.curseforge.com" {
+			parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+			if len(parts) >= 3 && parts[0] == "wow" && parts[1] == "addons" {
+				return Reference{Provider: "curseforge", ID: parts[2]}, nil
+			}
+			return Reference{}, fmt.Errorf("invalid CurseForge addon URL %q", s)
 		}
 		if err := validateDirectURL(s); err != nil {
 			return Reference{}, err

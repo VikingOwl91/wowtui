@@ -24,7 +24,7 @@ provider catalog are still evolving.
 | GitLab | Available | Releases, tags, and branch archives |
 | Direct URL | Available | ZIP URLs with ETag, Last-Modified, or SHA-256 identity |
 | Wago | Retired | Kept as a planned integration; no stable public read/download API was verified |
-| CurseForge | Planned | Requires an approved API integration and API key |
+| CurseForge | Available | Official API integration; requires an approved API key |
 | WowUpHub | Pending upstream approval | Adapter implemented, activation paused until WowUp confirms third-party use |
 
 ## Features

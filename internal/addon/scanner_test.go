@@ -101,14 +101,14 @@ func TestScanCaseInsensitiveExtension(t *testing.T) {
 func TestFolderHints(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, "Interface", "AddOns", "Hinted")
-	writeToc(t, dir, "Hinted.toc", "## X-SourceRepo: https://github.com/Owner/Repo\n## X-Wago: ABC123\n## Author: ignored\n")
+	writeToc(t, dir, "Hinted.toc", "## X-SourceRepo: https://github.com/Owner/Repo\n## X-Wago-ID: ABC123\n## Author: ignored\n")
 
 	folders, err := Scan(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	hints := folders[0].Hints()
-	if hints["x-source-repo"] != "https://github.com/Owner/Repo" || hints["x-wago"] != "ABC123" {
+	if hints["x-source-repo"] != "https://github.com/Owner/Repo" || hints["x-wago-id"] != "ABC123" {
 		t.Errorf("hints = %v", hints)
 	}
 	if _, ok := hints["author"]; ok {

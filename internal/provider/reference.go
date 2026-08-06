@@ -14,6 +14,7 @@ type Reference struct {
 }
 
 var ownerRepoPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$`)
+var gitLabProjectPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+$`)
 
 func ParseReference(s string) (Reference, error) {
 	s = strings.TrimSpace(s)
@@ -26,6 +27,13 @@ func ParseReference(s string) (Reference, error) {
 			return Reference{}, fmt.Errorf("invalid github reference %q, want Owner/Repo", s)
 		}
 		return Reference{Provider: "github", ID: rest}, nil
+	}
+
+	if rest, ok := strings.CutPrefix(s, "gitlab:"); ok {
+		if !gitLabProjectPattern.MatchString(rest) {
+			return Reference{}, fmt.Errorf("invalid gitlab reference %q", s)
+		}
+		return Reference{Provider: "gitlab", ID: rest}, nil
 	}
 
 	if rest, ok := strings.CutPrefix(s, "direct:"); ok {
@@ -50,6 +58,14 @@ func ParseReference(s string) (Reference, error) {
 				return Reference{}, fmt.Errorf("invalid github reference in %q", s)
 			}
 			return Reference{Provider: "github", ID: id}, nil
+		}
+		if u.Host == "gitlab.com" || u.Host == "www.gitlab.com" {
+			id := strings.TrimSuffix(strings.Trim(u.Path, "/"), ".git")
+			id = strings.TrimPrefix(id, "/")
+			if !gitLabProjectPattern.MatchString(id) {
+				return Reference{}, fmt.Errorf("invalid gitlab reference in %q", s)
+			}
+			return Reference{Provider: "gitlab", ID: id}, nil
 		}
 		if err := validateDirectURL(s); err != nil {
 			return Reference{}, err

@@ -57,6 +57,7 @@ func buildProviders(cfg *config.Config) map[string]provider.Provider {
 	all := map[string]provider.Provider{
 		"github": gh,
 		"direct": provider.NewDirect(),
+		"gitlab": provider.NewGitLab(cfg.Providers.GitLab.APIKey),
 	}
 	active := make(map[string]provider.Provider)
 	for name, p := range all {

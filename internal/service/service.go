@@ -287,7 +287,13 @@ func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon
 func sameVersion(addon registry.Addon, release provider.Release) bool {
 	switch release.Kind {
 	case provider.KindRelease:
-		return addon.ReleaseID != 0 && addon.ReleaseID == release.ID
+		if addon.Source == "tag" || addon.Source == "branch" {
+			return false
+		}
+		if addon.ReleaseID != 0 && release.ID != 0 {
+			return addon.ReleaseID == release.ID
+		}
+		return addon.Version != "" && strings.EqualFold(addon.Version, release.Tag)
 	case provider.KindBranch:
 		return addon.Version != "" && addon.Version == release.Commit
 	default:

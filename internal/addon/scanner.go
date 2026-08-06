@@ -21,7 +21,7 @@ func (f *Folder) Hints() map[string]string {
 			if value == "" {
 				continue
 			}
-			if key == "x-website" || key == "x-source-repo" || key == "x-sourcerepo" || key == "x-wago" || key == "x-curse" || key == "x-curseforge" {
+			if key == "x-website" || key == "x-source-repo" || key == "x-sourcerepo" || key == "x-wago" || key == "x-wago-id" || key == "x-curse" || key == "x-curseforge" || key == "x-curse-project-id" {
 				if key == "x-sourcerepo" {
 					key = "x-source-repo"
 				}

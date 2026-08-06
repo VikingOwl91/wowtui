@@ -6,11 +6,13 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type Registry struct {
 	Version       int            `json:"version"`
 	Installations []Installation `json:"installations"`
+	Addons        []Addon        `json:"addons,omitempty"`
 }
 
 type Installation struct {
@@ -24,6 +26,39 @@ type Folder struct {
 	Version    string   `json:"version"`
 	Interfaces []int    `json:"interfaces,omitempty"`
 	TocFiles   []string `json:"toc_files"`
+}
+
+type Addon struct {
+	Provider    string    `json:"provider"`
+	Ref         string    `json:"ref"`
+	Name        string    `json:"name"`
+	Flavor      string    `json:"flavor"`
+	InstallPath string    `json:"install_path"`
+	Folders     []string  `json:"folders"`
+	Version     string    `json:"version"`
+	ReleaseID   int64     `json:"release_id"`
+	AssetName   string    `json:"asset_name"`
+	SHA256      string    `json:"sha256"`
+	InstalledAt time.Time `json:"installed_at"`
+}
+
+func (r *Registry) FindAddon(ref, installPath string) *Addon {
+	for i := range r.Addons {
+		if r.Addons[i].Ref == ref && r.Addons[i].InstallPath == installPath {
+			return &r.Addons[i]
+		}
+	}
+	return nil
+}
+
+func (r *Registry) UpsertAddon(addon Addon) {
+	for i := range r.Addons {
+		if r.Addons[i].Ref == addon.Ref && r.Addons[i].InstallPath == addon.InstallPath {
+			r.Addons[i] = addon
+			return
+		}
+	}
+	r.Addons = append(r.Addons, addon)
 }
 
 func Load(path string) (*Registry, error) {

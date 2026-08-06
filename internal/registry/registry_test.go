@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func sampleRegistry() *Registry {
@@ -111,5 +112,78 @@ func TestDefaultPathFallsBackToHome(t *testing.T) {
 	t.Setenv("HOME", "/tmp/fakehome")
 	if got := DefaultPath(); got != "/tmp/fakehome/.local/share/wowtui/registry.json" {
 		t.Errorf("DefaultPath = %q", got)
+	}
+}
+
+func sampleAddon() Addon {
+	return Addon{
+		Provider:    "github",
+		Ref:         "Owner/Repo",
+		Name:        "Owner/Repo",
+		Flavor:      "retail",
+		InstallPath: "/games/wow/_retail_",
+		Folders:     []string{"Repo"},
+		Version:     "v1.2.3",
+		ReleaseID:   4242,
+		AssetName:   "Repo-1.2.3.zip",
+		SHA256:      "abc123",
+		InstalledAt: time.Date(2026, 8, 6, 12, 0, 0, 0, time.UTC),
+	}
+}
+
+func TestAddonRoundtrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "registry.json")
+	reg := &Registry{Version: 1, Addons: []Addon{sampleAddon()}}
+	if err := reg.Save(path); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Addons) != 1 {
+		t.Fatalf("got %d addons, want 1", len(got.Addons))
+	}
+	addon := got.Addons[0]
+	if addon.Ref != "Owner/Repo" || addon.ReleaseID != 4242 || addon.Version != "v1.2.3" {
+		t.Errorf("addon roundtrip mismatch: %+v", addon)
+	}
+	if !addon.InstalledAt.Equal(time.Date(2026, 8, 6, 12, 0, 0, 0, time.UTC)) {
+		t.Errorf("installed_at = %v", addon.InstalledAt)
+	}
+}
+
+func TestFindAddon(t *testing.T) {
+	reg := &Registry{Version: 1, Addons: []Addon{sampleAddon()}}
+
+	if got := reg.FindAddon("Owner/Repo", "/games/wow/_retail_"); got == nil || got.Ref != "Owner/Repo" {
+		t.Errorf("FindAddon = %+v", got)
+	}
+	if got := reg.FindAddon("Owner/Repo", "/other/path"); got != nil {
+		t.Errorf("FindAddon should miss on different install path, got %+v", got)
+	}
+	if got := reg.FindAddon("Other/Repo", "/games/wow/_retail_"); got != nil {
+		t.Errorf("FindAddon should miss on different ref, got %+v", got)
+	}
+}
+
+func TestUpsertAddon(t *testing.T) {
+	reg := &Registry{Version: 1}
+
+	reg.UpsertAddon(sampleAddon())
+	if len(reg.Addons) != 1 {
+		t.Fatalf("got %d addons after insert, want 1", len(reg.Addons))
+	}
+
+	updated := sampleAddon()
+	updated.Version = "v2.0.0"
+	updated.ReleaseID = 9999
+	reg.UpsertAddon(updated)
+	if len(reg.Addons) != 1 {
+		t.Fatalf("got %d addons after update, want 1", len(reg.Addons))
+	}
+	if reg.Addons[0].Version != "v2.0.0" || reg.Addons[0].ReleaseID != 9999 {
+		t.Errorf("upsert did not update: %+v", reg.Addons[0])
 	}
 }

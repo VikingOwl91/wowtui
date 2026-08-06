@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"somegit.dev/vikingowl/wowtui/internal/addon"
-	"somegit.dev/vikingowl/wowtui/internal/config"
 	"somegit.dev/vikingowl/wowtui/internal/registry"
 	"somegit.dev/vikingowl/wowtui/internal/wow"
 )
@@ -22,11 +21,7 @@ func newScanCmd() *cobra.Command {
 }
 
 func runScan(cmd *cobra.Command, _ []string) error {
-	cfgPath, _ := cmd.Flags().GetString("config")
-	if cfgPath == "" {
-		cfgPath = config.DefaultPath()
-	}
-	cfg, err := config.Load(cfgPath)
+	cfg, err := loadConfig(cmd)
 	if err != nil {
 		return err
 	}
@@ -69,10 +64,7 @@ func runScan(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	regPath, _ := cmd.Flags().GetString("registry")
-	if regPath == "" {
-		regPath = registry.DefaultPath()
-	}
+	regPath := registryPath(cmd)
 	if err := reg.Save(regPath); err != nil {
 		return err
 	}

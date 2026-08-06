@@ -555,3 +555,43 @@ func TestUpdateAllEmitsBatchProgress(t *testing.T) {
 		t.Errorf("batch indices wrong: %+v", currents)
 	}
 }
+
+func TestScanPreservesManagedAddons(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	svc, install, _ := newTestService(t, &fakeProvider{})
+
+	addonDir := filepath.Join(install.Path, "Interface", "AddOns", "MyAddon")
+	if err := os.MkdirAll(addonDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(addonDir, "MyAddon.toc"), []byte("## Version: 1.0\n## Interface: 120007"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	reg := &registry.Registry{Version: 1}
+	reg.UpsertAddon(registry.Addon{Provider: "github", Ref: "Owner/MyAddon", Flavor: "retail", InstallPath: install.Path, Folders: []string{"MyAddon"}, Version: "v1.0.0", Source: "auto", ReleaseID: 100})
+	if err := reg.Save(svc.RegistryPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := svc.Scan(context.Background(), []string{install.Path}); err != nil {
+		t.Fatal(err)
+	}
+
+	reg2, err := registry.Load(svc.RegistryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reg2.Addons) != 1 || reg2.Addons[0].Ref != "Owner/MyAddon" {
+		t.Fatalf("managed addons lost by scan: %+v", reg2.Addons)
+	}
+	if len(reg2.Installations) != 1 {
+		t.Fatalf("got %d installations, want 1", len(reg2.Installations))
+	}
+	if reg2.Installations[0].Flavor != "retail" {
+		t.Errorf("flavor = %q", reg2.Installations[0].Flavor)
+	}
+	if len(reg2.Installations[0].Folders) != 1 || reg2.Installations[0].Folders[0].Name != "MyAddon" {
+		t.Errorf("folders = %+v", reg2.Installations[0].Folders)
+	}
+}

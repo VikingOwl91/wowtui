@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"somegit.dev/vikingowl/wowtui/internal/addon"
 	"somegit.dev/vikingowl/wowtui/internal/installer"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
 	"somegit.dev/vikingowl/wowtui/internal/registry"
@@ -36,6 +37,72 @@ var extractLimits = installer.Limits{
 }
 
 const defaultMaxDownload int64 = 512 << 20
+
+func (s *Service) Scan(ctx context.Context, configPaths []string) ([]registry.Installation, error) {
+	installs, err := wow.Discover(configPaths)
+	if err != nil {
+		return nil, err
+	}
+
+	reg, err := registry.Load(s.RegistryPath)
+	if err != nil {
+		return nil, err
+	}
+	reg.Version = 1
+	reg.Installations = nil
+
+	for _, inst := range installs {
+		folders, err := addon.Scan(inst.Path)
+		if err != nil {
+			return nil, err
+		}
+		flavor := inst.Flavor
+		if flavor == "" {
+			flavor = inferFlavor(folders)
+		}
+
+		rec := registry.Installation{Path: inst.Path, Flavor: string(flavor)}
+		for _, f := range folders {
+			rec.Folders = append(rec.Folders, registry.Folder{
+				Name:       f.Name,
+				Version:    f.Version(),
+				Interfaces: f.Interfaces(),
+				TocFiles:   tocNames(f.Tocs),
+			})
+		}
+		reg.Installations = append(reg.Installations, rec)
+
+		label := string(flavor)
+		if label == "" {
+			label = "unknown"
+		}
+		s.emit(Event{Stage: StageInfo, Message: fmt.Sprintf("%s  %s  %d addons", label, inst.Path, len(folders))})
+	}
+
+	if err := reg.Save(s.RegistryPath); err != nil {
+		return nil, err
+	}
+	return reg.Installations, nil
+}
+
+func inferFlavor(folders []*addon.Folder) wow.GameFlavor {
+	for _, f := range folders {
+		for _, num := range f.Interfaces() {
+			if flavor := wow.FlavorFromInterface(num); flavor != "" {
+				return flavor
+			}
+		}
+	}
+	return ""
+}
+
+func tocNames(tocs []*addon.Toc) []string {
+	names := make([]string, 0, len(tocs))
+	for _, toc := range tocs {
+		names = append(names, filepath.Base(toc.Path))
+	}
+	return names
+}
 
 func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.GameFlavor, install wow.Installation, source string) error {
 	p, ok := s.Providers[ref.Provider]

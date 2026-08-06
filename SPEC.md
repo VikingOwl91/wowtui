@@ -188,10 +188,10 @@ Die CLI stellt dafür `wowtui providers`,
 `wowtui providers order <name>...` bereit. Die TUI zeigt dieselbe
 Reihenfolge und den Aktivierungsstatus in den Settings.
 
-GitHub und Direct sind implementiert und standardmäßig aktiv. Wago,
-CurseForge, WowUpHub und GitLab sind als Provider-IDs und
-Konfigurationsstellen vorbereitet; ihre Adapter werden separat gegen
-ihre aktuellen APIs implementiert.
+GitHub, GitLab, Direct und WowUpHub sind implementiert. GitHub, GitLab
+und Direct sind standardmäßig aktiv; WowUpHub bleibt standardmäßig
+deaktiviert. Wago ist retired. CurseForge bleibt geplant, bis ein
+zulässiger und offizieller Client-Zugang verifiziert ist.
 
 ### GitHub ohne Releases (Fallback-Kette)
 

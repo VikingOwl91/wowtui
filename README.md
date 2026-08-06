@@ -25,7 +25,7 @@ provider catalog are still evolving.
 | Direct URL | Available | ZIP URLs with ETag, Last-Modified, or SHA-256 identity |
 | Wago | Retired | Kept as a planned integration; no stable public read/download API was verified |
 | CurseForge | Planned | Requires an approved API integration and API key |
-| WowUpHub | Planned | API contract still needs verification |
+| WowUpHub | Available | Search, metadata, flavor-aware releases, changelog, downloads |
 
 ## Features
 

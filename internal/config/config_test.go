@@ -126,8 +126,11 @@ api_key = "wago"
 	if cfg.Providers.Enabled("github") {
 		t.Error("github should be disabled explicitly")
 	}
-	if !cfg.Providers.Enabled("wago") || !cfg.Providers.Enabled("direct") {
-		t.Error("wago and direct should be enabled")
+	if cfg.Providers.Enabled("wago") || !cfg.Providers.Enabled("direct") {
+		t.Error("wago should be retired and direct should be enabled")
+	}
+	if cfg.Providers.State("wago") != "retired" {
+		t.Errorf("wago state = %q", cfg.Providers.State("wago"))
 	}
 	if cfg.Providers.Enabled("curseforge") {
 		t.Error("curseforge should be disabled by default")
@@ -141,10 +144,10 @@ api_key = "wago"
 func TestSaveProviderSettings(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "nested", "config.toml")
 	cfg := &Config{}
-	if err := cfg.Providers.SetEnabled("wago", true); err != nil {
+	if err := cfg.Providers.SetEnabled("gitlab", true); err != nil {
 		t.Fatal(err)
 	}
-	if err := cfg.Providers.SetOrder([]string{"wago", "github", "direct"}); err != nil {
+	if err := cfg.Providers.SetOrder([]string{"gitlab", "github", "direct"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := Save(path, cfg); err != nil {
@@ -154,7 +157,7 @@ func TestSaveProviderSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !loaded.Providers.Enabled("wago") || loaded.Providers.Order()[0] != "wago" {
+	if !loaded.Providers.Enabled("gitlab") || loaded.Providers.Order()[0] != "gitlab" {
 		t.Errorf("provider settings = %+v", loaded.Providers)
 	}
 }

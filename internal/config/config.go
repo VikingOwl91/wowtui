@@ -50,8 +50,12 @@ type ProviderConfig struct {
 }
 
 var defaultProviderOrder = []string{"wowuphub", "wago", "curseforge", "github", "gitlab", "direct"}
+var retiredProviders = map[string]bool{"wago": true}
 
 func (p Providers) Enabled(name string) bool {
+	if retiredProviders[name] {
+		return false
+	}
 	var configured *bool
 	switch name {
 	case "github":
@@ -92,6 +96,9 @@ func KnownProviders() []string {
 }
 
 func (p *Providers) SetEnabled(name string, enabled bool) error {
+	if retiredProviders[name] && enabled {
+		return fmt.Errorf("provider %q is retired", name)
+	}
 	value := enabled
 	switch name {
 	case "github":
@@ -110,6 +117,22 @@ func (p *Providers) SetEnabled(name string, enabled bool) error {
 		return fmt.Errorf("unknown provider %q", name)
 	}
 	return nil
+}
+
+func (p Providers) State(name string) string {
+	if retiredProviders[name] {
+		return "retired"
+	}
+	if name == "github" || name == "direct" || name == "gitlab" {
+		if p.Enabled(name) {
+			return "enabled"
+		}
+		return "disabled"
+	}
+	if p.Enabled(name) {
+		return "planned-enabled"
+	}
+	return "planned"
 }
 
 func (p *Providers) SetOrder(order []string) error {

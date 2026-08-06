@@ -28,11 +28,7 @@ func runProviders(cmd *cobra.Command, _ []string) error {
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "PROVIDER\tENABLED\tIMPLEMENTATION\tPRIORITY")
 	for i, name := range cfg.Providers.Order() {
-		implementation := "configured"
-		if name != "github" && name != "direct" {
-			implementation = "planned"
-		}
-		fmt.Fprintf(w, "%s\t%t\t%s\t%d\n", name, cfg.Providers.Enabled(name), implementation, i+1)
+		fmt.Fprintf(w, "%s\t%t\t%s\t%d\n", name, cfg.Providers.Enabled(name), cfg.Providers.State(name), i+1)
 	}
 	return w.Flush()
 }

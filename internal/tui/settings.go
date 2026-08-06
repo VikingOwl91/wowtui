@@ -87,10 +87,7 @@ func (m *Model) settingsView() string {
 
 	lines = append(lines, "", labelStyle.Render("Providers (priority order):"))
 	for i, name := range m.deps.Config.Providers.Order() {
-		state := "disabled"
-		if m.deps.Config.Providers.Enabled(name) {
-			state = "enabled"
-		}
+		state := m.deps.Config.Providers.State(name)
 		lines = append(lines, "  "+strconv.Itoa(i+1)+". "+name+"  "+state)
 	}
 

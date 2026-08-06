@@ -171,6 +171,35 @@ Regeln:
   Rate-Limits
 - Direct-URL braucht keinen Key
 
+### GitHub ohne Releases (Fallback-Kette)
+
+Viele Repos haben keine Releases oder keine ZIP-Artefakte. Der
+GitHub-Provider nutzt deshalb eine Fallback-Kette:
+
+1. Neuestes stabiles Release mit passendem ZIP-Asset für den Flavor
+2. Release vorhanden, aber ohne ZIP: Quellarchiv des Release-Tags
+3. Kein Release: Quellarchiv des neuesten Tags (semver-Sortierung,
+   bei nicht parsebaren Tags API-Reihenfolge)
+4. Auch kein Tag: Quellarchiv des Default-Branch, Version ist der
+   Commit-SHA
+
+GitHub liefert diese Archive automatisch unter
+`github.com/Owner/Repo/archive/refs/tags/<Tag>.zip` beziehungsweise
+`.../refs/heads/<Branch>.zip`. Der Installer entpackt den
+Wrapper-Ordner (`Repo-Tag/`), den diese Archive mitbringen.
+
+Versionsidentität je Quelle: Release = Release-ID, Tag = Tag-Name,
+Branch = Commit-SHA. Die Registry speichert die Quelle im
+`source`-Feld. Damit funktionieren auch Übergänge: per Tag
+installiert, das Repo bekommt später ein Release, der Check meldet
+das als Update.
+
+`add --source release|tag|branch` pinnt die Quelle. Updates folgen
+dann dem Pin statt der Kette.
+
+Einschränkung: Tag- und Branch-Archive kennen kein Flavor-Filtering
+und keine Asset-Auswahl, das gesamte Repo wird installiert.
+
 ### Datenmodell
 
 Ein Ordner ist nicht immer ein Addon. Ein Paket kann mehrere Ordner
@@ -369,6 +398,7 @@ wowtui scan          # Installationen und Addons neu einlesen
 wowtui list          # Addons mit Version und Status
 wowtui add github:WeakAuras/WeakAuras2
 wowtui add https://github.com/WeakAuras/WeakAuras2
+wowtui add github:Owner/Repo --source tag
 wowtui check         # auf Updates prüfen
 wowtui update WeakAuras
 wowtui update --all

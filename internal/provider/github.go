@@ -3,18 +3,27 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"somegit.dev/vikingowl/wowtui/internal/wow"
+)
+
+var (
+	errNoRelease = errors.New("no stable release found")
+	errNoTags    = errors.New("no tags found")
 )
 
 type GitHub struct {
 	client  *http.Client
 	token   string
 	apiBase string
+	webBase string
 }
 
 func NewGitHub(token string) *GitHub {
@@ -22,11 +31,13 @@ func NewGitHub(token string) *GitHub {
 		client:  &http.Client{Timeout: 30 * time.Second},
 		token:   token,
 		apiBase: "https://api.github.com",
+		webBase: "https://github.com",
 	}
 }
 
 func (g *GitHub) SetAPIBase(base string) {
 	g.apiBase = base
+	g.webBase = base
 }
 
 type ghAsset struct {
@@ -42,8 +53,9 @@ type ghRelease struct {
 }
 
 type ghRepo struct {
-	FullName string `json:"full_name"`
-	HTMLURL  string `json:"html_url"`
+	FullName      string `json:"full_name"`
+	HTMLURL       string `json:"html_url"`
+	DefaultBranch string `json:"default_branch"`
 }
 
 func (g *GitHub) Resolve(ctx context.Context, ref Reference) (RemoteAddon, error) {
@@ -61,14 +73,51 @@ func (g *GitHub) Resolve(ctx context.Context, ref Reference) (RemoteAddon, error
 	return RemoteAddon{Provider: "github", ID: ref.ID, Name: repo.FullName, URL: repo.HTMLURL}, nil
 }
 
-func (g *GitHub) LatestRelease(ctx context.Context, addon RemoteAddon, flavor wow.GameFlavor) (Release, error) {
+func (g *GitHub) Latest(ctx context.Context, addon RemoteAddon, flavor wow.GameFlavor, source string) (Release, error) {
+	switch source {
+	case "", "auto":
+		release, err := g.latestRelease(ctx, addon, flavor)
+		if err == nil {
+			return release, nil
+		}
+		if !errors.Is(err, errNoRelease) {
+			return Release{}, err
+		}
+		release, err = g.latestTag(ctx, addon)
+		if err == nil {
+			return release, nil
+		}
+		if !errors.Is(err, errNoTags) {
+			return Release{}, err
+		}
+		return g.latestBranch(ctx, addon)
+	case "release":
+		release, err := g.latestRelease(ctx, addon, flavor)
+		if errors.Is(err, errNoRelease) {
+			return Release{}, fmt.Errorf("no stable release found for %s (source pinned to release)", addon.ID)
+		}
+		return release, err
+	case "tag":
+		release, err := g.latestTag(ctx, addon)
+		if errors.Is(err, errNoTags) {
+			return Release{}, fmt.Errorf("no tags found for %s (source pinned to tag)", addon.ID)
+		}
+		return release, err
+	case "branch":
+		return g.latestBranch(ctx, addon)
+	default:
+		return Release{}, fmt.Errorf("unknown source %q (release, tag, branch)", source)
+	}
+}
+
+func (g *GitHub) latestRelease(ctx context.Context, addon RemoteAddon, flavor wow.GameFlavor) (Release, error) {
 	var rel ghRelease
 	status, err := g.get(ctx, g.apiBase+"/repos/"+addon.ID+"/releases/latest", &rel)
 	if err != nil {
 		return Release{}, err
 	}
 	if status == http.StatusNotFound {
-		return Release{}, fmt.Errorf("no stable release found for %s", addon.ID)
+		return Release{}, errNoRelease
 	}
 	if status != http.StatusOK {
 		return Release{}, fmt.Errorf("github api returned %s for %s", http.StatusText(status), addon.ID)
@@ -80,12 +129,16 @@ func (g *GitHub) LatestRelease(ctx context.Context, addon RemoteAddon, flavor wo
 	}
 	picked, err := PickAsset(names, flavor)
 	if err != nil {
-		return Release{}, fmt.Errorf("%s: %w", addon.ID, err)
+		if rel.TagName == "" {
+			return Release{}, fmt.Errorf("%s: %w", addon.ID, err)
+		}
+		return g.tagArchive(addon.ID, rel.TagName), nil
 	}
 
 	for _, asset := range rel.Assets {
 		if asset.Name == picked {
 			return Release{
+				Kind:        KindRelease,
 				ID:          rel.ID,
 				Tag:         rel.TagName,
 				AssetName:   asset.Name,
@@ -95,6 +148,82 @@ func (g *GitHub) LatestRelease(ctx context.Context, addon RemoteAddon, flavor wo
 		}
 	}
 	return Release{}, fmt.Errorf("asset %s disappeared from release", picked)
+}
+
+func (g *GitHub) latestTag(ctx context.Context, addon RemoteAddon) (Release, error) {
+	var tags []struct {
+		Name string `json:"name"`
+	}
+	status, err := g.get(ctx, g.apiBase+"/repos/"+addon.ID+"/tags?per_page=50", &tags)
+	if err != nil {
+		return Release{}, err
+	}
+	if status == http.StatusNotFound {
+		return Release{}, errNoTags
+	}
+	if status != http.StatusOK {
+		return Release{}, fmt.Errorf("github api returned %s for %s", http.StatusText(status), addon.ID)
+	}
+
+	names := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		names = append(names, tag.Name)
+	}
+	best := pickTag(names)
+	if best == "" {
+		return Release{}, errNoTags
+	}
+	return g.tagArchive(addon.ID, best), nil
+}
+
+func (g *GitHub) latestBranch(ctx context.Context, addon RemoteAddon) (Release, error) {
+	var repo ghRepo
+	status, err := g.get(ctx, g.apiBase+"/repos/"+addon.ID, &repo)
+	if err != nil {
+		return Release{}, err
+	}
+	if status == http.StatusNotFound {
+		return Release{}, fmt.Errorf("github repository %s not found", addon.ID)
+	}
+	branch := repo.DefaultBranch
+	if branch == "" {
+		branch = "main"
+	}
+
+	var commits []struct {
+		SHA string `json:"sha"`
+	}
+	status, err = g.get(ctx, g.apiBase+"/repos/"+addon.ID+"/commits?sha="+url.QueryEscape(branch)+"&per_page=1", &commits)
+	if err != nil {
+		return Release{}, err
+	}
+	if status != http.StatusOK || len(commits) == 0 || commits[0].SHA == "" {
+		return Release{}, fmt.Errorf("could not determine latest commit on branch %s of %s", branch, addon.ID)
+	}
+
+	return Release{
+		Kind:        KindBranch,
+		Tag:         branch,
+		Commit:      commits[0].SHA,
+		AssetName:   repoBaseName(addon.ID) + "-" + branch + ".zip",
+		DownloadURL: g.webBase + "/" + addon.ID + "/archive/refs/heads/" + url.PathEscape(branch) + ".zip",
+	}, nil
+}
+
+func (g *GitHub) tagArchive(repo, tag string) Release {
+	return Release{
+		Kind:        KindTag,
+		Tag:         tag,
+		AssetName:   repoBaseName(repo) + "-" + tag + ".zip",
+		DownloadURL: g.webBase + "/" + repo + "/archive/refs/tags/" + url.PathEscape(tag) + ".zip",
+	}
+}
+
+func repoBaseName(repo string) string {
+	if idx := strings.LastIndex(repo, "/"); idx >= 0 {
+		return repo[idx+1:]
+	}
+	return repo
 }
 
 func (g *GitHub) Download(ctx context.Context, release Release) (io.ReadCloser, error) {

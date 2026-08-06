@@ -38,7 +38,7 @@ var extractLimits = installer.Limits{
 
 const defaultMaxDownload int64 = 512 << 20
 
-func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.GameFlavor, install wow.Installation) error {
+func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.GameFlavor, install wow.Installation, source string) error {
 	p, ok := s.Providers[ref.Provider]
 	if !ok {
 		return fmt.Errorf("provider %q is not configured", ref.Provider)
@@ -58,18 +58,22 @@ func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.Ga
 		return err
 	}
 
-	s.printf("fetching latest release for flavor %s", flavor)
-	release, err := p.LatestRelease(ctx, remote, flavor)
+	s.printf("fetching latest version for flavor %s", flavor)
+	release, err := p.Latest(ctx, remote, flavor, source)
 	if err != nil {
 		return err
 	}
-	s.printf("release %s (%s, %s)", release.Tag, release.AssetName, humanSize(release.Size))
+	s.printf("release %s (%s, %s)", versionLabel(release), release.AssetName, humanSize(release.Size))
 
 	folders, sha, err := s.downloadAndInstall(ctx, p, release, install.Path, ref.Provider+"-"+ref.ID)
 	if err != nil {
 		return err
 	}
 
+	pin := source
+	if pin == "" {
+		pin = "auto"
+	}
 	reg.UpsertAddon(registry.Addon{
 		Provider:    ref.Provider,
 		Ref:         ref.ID,
@@ -77,8 +81,9 @@ func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.Ga
 		Flavor:      string(flavor),
 		InstallPath: install.Path,
 		Folders:     folders,
-		Version:     release.Tag,
-		ReleaseID:   release.ID,
+		Version:     versionFor(release),
+		Source:      pin,
+		ReleaseID:   releaseIDFor(release),
 		AssetName:   release.AssetName,
 		SHA256:      sha,
 		InstalledAt: time.Now(),
@@ -108,7 +113,7 @@ func (s *Service) Check(ctx context.Context) ([]UpdateStatus, error) {
 		}
 
 		remote := provider.RemoteAddon{Provider: addon.Provider, ID: addon.Ref, Name: addon.Name}
-		release, err := p.LatestRelease(ctx, remote, wow.GameFlavor(addon.Flavor))
+		release, err := p.Latest(ctx, remote, wow.GameFlavor(addon.Flavor), addon.Source)
 		if err != nil {
 			status.Error = err
 			statuses = append(statuses, status)
@@ -116,7 +121,7 @@ func (s *Service) Check(ctx context.Context) ([]UpdateStatus, error) {
 		}
 
 		status.Latest = release
-		status.HasUpdate = release.ID != addon.ReleaseID
+		status.HasUpdate = !sameVersion(addon, release)
 		statuses = append(statuses, status)
 	}
 	return statuses, nil
@@ -154,33 +159,69 @@ func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon
 	}
 
 	remote := provider.RemoteAddon{Provider: addon.Provider, ID: addon.Ref, Name: addon.Name}
-	release, err := p.LatestRelease(ctx, remote, wow.GameFlavor(addon.Flavor))
+	release, err := p.Latest(ctx, remote, wow.GameFlavor(addon.Flavor), addon.Source)
 	if err != nil {
 		return err
 	}
 
-	if release.ID == addon.ReleaseID {
+	if sameVersion(*addon, release) {
 		s.printf("%s is up to date (%s)", addon.Ref, addon.Version)
 		return nil
 	}
 	if dryRun {
-		s.printf("%s: %s -> %s (dry run)", addon.Ref, addon.Version, release.Tag)
+		s.printf("%s: %s -> %s (dry run)", addon.Ref, addon.Version, versionLabel(release))
 		return nil
 	}
 
-	s.printf("updating %s: %s -> %s", addon.Ref, addon.Version, release.Tag)
+	s.printf("updating %s: %s -> %s", addon.Ref, addon.Version, versionLabel(release))
 	folders, sha, err := s.downloadAndInstall(ctx, p, release, addon.InstallPath, addon.Provider+"-"+addon.Ref)
 	if err != nil {
 		return err
 	}
 
 	addon.Folders = folders
-	addon.Version = release.Tag
-	addon.ReleaseID = release.ID
+	addon.Version = versionFor(release)
+	addon.ReleaseID = releaseIDFor(release)
 	addon.AssetName = release.AssetName
 	addon.SHA256 = sha
 	addon.InstalledAt = time.Now()
 	return reg.Save(s.RegistryPath)
+}
+
+func sameVersion(addon registry.Addon, release provider.Release) bool {
+	switch release.Kind {
+	case provider.KindRelease:
+		return addon.ReleaseID != 0 && addon.ReleaseID == release.ID
+	case provider.KindBranch:
+		return addon.Version != "" && addon.Version == release.Commit
+	default:
+		return addon.Version != "" && strings.EqualFold(addon.Version, release.Tag)
+	}
+}
+
+func versionFor(release provider.Release) string {
+	if release.Kind == provider.KindBranch {
+		return release.Commit
+	}
+	return release.Tag
+}
+
+func releaseIDFor(release provider.Release) int64 {
+	if release.Kind == provider.KindRelease {
+		return release.ID
+	}
+	return 0
+}
+
+func versionLabel(release provider.Release) string {
+	if release.Kind == provider.KindBranch && release.Commit != "" {
+		short := release.Commit
+		if len(short) > 12 {
+			short = short[:12]
+		}
+		return release.Tag + "@" + short
+	}
+	return release.Tag
 }
 
 func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, release provider.Release, installPath, label string) ([]string, string, error) {

@@ -124,6 +124,7 @@ func sampleAddon() Addon {
 		InstallPath: "/games/wow/_retail_",
 		Folders:     []string{"Repo"},
 		Version:     "v1.2.3",
+		Source:      "auto",
 		ReleaseID:   4242,
 		AssetName:   "Repo-1.2.3.zip",
 		SHA256:      "abc123",
@@ -148,6 +149,9 @@ func TestAddonRoundtrip(t *testing.T) {
 	addon := got.Addons[0]
 	if addon.Ref != "Owner/Repo" || addon.ReleaseID != 4242 || addon.Version != "v1.2.3" {
 		t.Errorf("addon roundtrip mismatch: %+v", addon)
+	}
+	if addon.Source != "auto" {
+		t.Errorf("source = %q, want auto", addon.Source)
 	}
 	if !addon.InstalledAt.Equal(time.Date(2026, 8, 6, 12, 0, 0, 0, time.UTC)) {
 		t.Errorf("installed_at = %v", addon.InstalledAt)

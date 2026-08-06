@@ -36,6 +36,7 @@ type Addon struct {
 	InstallPath string    `json:"install_path"`
 	Folders     []string  `json:"folders"`
 	Version     string    `json:"version"`
+	Source      string    `json:"source,omitempty"`
 	ReleaseID   int64     `json:"release_id"`
 	AssetName   string    `json:"asset_name"`
 	SHA256      string    `json:"sha256"`

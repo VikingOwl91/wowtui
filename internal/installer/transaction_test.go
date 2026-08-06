@@ -67,6 +67,65 @@ func TestFindAddonRootsNoTocErrors(t *testing.T) {
 	}
 }
 
+func TestFindAddonRootsNormalizesVersionedWrapperToTocName(t *testing.T) {
+	staging := t.TempDir()
+	wrapper := filepath.Join(staging, "StreamerPrivacy-0.4.0")
+	if err := os.MkdirAll(wrapper, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(wrapper, "StreamerPrivacy.toc"), []byte("## Version: 0.4.0"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	roots, err := FindAddonRoots(staging)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(roots) != 1 {
+		t.Fatalf("got %d roots, want 1", len(roots))
+	}
+	if roots[0].Name != "StreamerPrivacy" {
+		t.Errorf("root name = %q, want StreamerPrivacy (toc base name)", roots[0].Name)
+	}
+	if roots[0].Src != wrapper {
+		t.Errorf("root src = %q, want wrapper path", roots[0].Src)
+	}
+}
+
+func TestFindAddonRootsKeepsNameWhenAlreadyMatching(t *testing.T) {
+	staging := t.TempDir()
+	stageAddon(t, staging, "MyAddon", "## Version: 1")
+
+	roots, err := FindAddonRoots(staging)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(roots) != 1 || roots[0].Name != "MyAddon" {
+		t.Fatalf("roots = %+v", roots)
+	}
+}
+
+func TestFindAddonRootsKeepsNameOnAmbiguousTocs(t *testing.T) {
+	staging := t.TempDir()
+	dir := filepath.Join(staging, "SomeAddon-1.0")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"Foo.toc", "Bar.toc"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("## Version: 1"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	roots, err := FindAddonRoots(staging)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(roots) != 1 || roots[0].Name != "SomeAddon-1.0" {
+		t.Fatalf("roots = %+v, want folder name kept on ambiguous tocs", roots)
+	}
+}
+
 func installPlan(t *testing.T) (InstallPlan, string) {
 	t.Helper()
 	base := t.TempDir()

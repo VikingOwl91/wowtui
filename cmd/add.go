@@ -20,6 +20,7 @@ func newAddCmd() *cobra.Command {
 	}
 	cmd.Flags().String("flavor", "retail", "target flavor (retail, classic, classic-era, beta, ptr)")
 	cmd.Flags().String("install", "", "explicit install path (overrides flavor selection)")
+	cmd.Flags().String("source", "", "pin update source: release, tag, or branch (default: auto fallback chain)")
 	return cmd
 }
 
@@ -35,6 +36,13 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unknown flavor %q (retail, classic, classic-era, beta, ptr)", flavorStr)
 	}
 
+	source, _ := cmd.Flags().GetString("source")
+	switch source {
+	case "", "release", "tag", "branch":
+	default:
+		return fmt.Errorf("unknown source %q (release, tag, branch)", source)
+	}
+
 	cfg, err := loadConfig(cmd)
 	if err != nil {
 		return err
@@ -46,7 +54,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	svc := newService(cmd, cfg)
-	return svc.Add(cmd.Context(), ref, flavor, install)
+	return svc.Add(cmd.Context(), ref, flavor, install, source)
 }
 
 func knownFlavor(flavor wow.GameFlavor) bool {

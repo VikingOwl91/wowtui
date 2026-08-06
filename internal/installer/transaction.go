@@ -44,7 +44,7 @@ func FindAddonRoots(stagingDir string) ([]StagedRoot, error) {
 		return nil, err
 	}
 	if len(roots) > 0 {
-		return roots, nil
+		return normalizeRootNames(roots), nil
 	}
 
 	if len(dirs) == 1 {
@@ -65,11 +65,40 @@ func FindAddonRoots(stagingDir string) ([]StagedRoot, error) {
 			return nil, err
 		}
 		if len(roots) > 0 {
-			return roots, nil
+			return normalizeRootNames(roots), nil
 		}
 	}
 
 	return nil, fmt.Errorf("archive contains no addon folders (no .toc files found)")
+}
+
+func normalizeRootNames(roots []StagedRoot) []StagedRoot {
+	if len(roots) != 1 {
+		return roots
+	}
+	root := roots[0]
+	entries, err := os.ReadDir(root.Src)
+	if err != nil {
+		return roots
+	}
+
+	base := ""
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.EqualFold(filepath.Ext(entry.Name()), ".toc") {
+			continue
+		}
+		name := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		if base == "" {
+			base = name
+		} else if base != name {
+			return roots
+		}
+	}
+	if base != "" && base != root.Name {
+		root.Name = base
+		roots[0] = root
+	}
+	return roots
 }
 
 func collectRoots(base string, dirNames []string) ([]StagedRoot, error) {

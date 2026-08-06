@@ -20,10 +20,17 @@ type fakeGitHub struct {
 	releaseID  int64
 	tag        string
 	zipContent []byte
+	tags       []string
+	tagZips    map[string][]byte
 }
 
 func newFakeGitHub(t *testing.T, zipContent []byte) *fakeGitHub {
-	f := &fakeGitHub{releaseID: 1, tag: "v1.0.0", zipContent: zipContent}
+	f := &fakeGitHub{
+		releaseID:  1,
+		tag:        "v1.0.0",
+		zipContent: zipContent,
+		tagZips:    map[string][]byte{},
+	}
 	f.srv = httptest.NewServer(f)
 	t.Cleanup(f.srv.Close)
 	return f
@@ -35,6 +42,20 @@ func (f *fakeGitHub) bump(tag string, zipContent []byte) {
 	f.releaseID++
 	f.tag = tag
 	f.zipContent = zipContent
+}
+
+func (f *fakeGitHub) seedTags(tag string, zipContent []byte) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.tags = []string{tag}
+	f.tagZips[tag] = zipContent
+}
+
+func (f *fakeGitHub) bumpTag(tag string, zipContent []byte) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.tags = append([]string{tag}, f.tags...)
+	f.tagZips[tag] = zipContent
 }
 
 func (f *fakeGitHub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +79,30 @@ func (f *fakeGitHub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 	case "/dl/TestAddon.zip":
 		w.Write(f.zipContent)
+
+	case "/repos/Owner/TagOnly":
+		json.NewEncoder(w).Encode(map[string]any{
+			"full_name":      "Owner/TagOnly",
+			"html_url":       "https://github.com/Owner/TagOnly",
+			"default_branch": "main",
+		})
+	case "/repos/Owner/TagOnly/releases/latest":
+		w.WriteHeader(http.StatusNotFound)
+	case "/repos/Owner/TagOnly/tags":
+		tags := make([]map[string]any, 0, len(f.tags))
+		for _, name := range f.tags {
+			tags = append(tags, map[string]any{"name": name})
+		}
+		json.NewEncoder(w).Encode(tags)
+
 	default:
+		if idx := strings.Index(r.URL.Path, "/archive/refs/tags/"); idx >= 0 {
+			tag := strings.TrimSuffix(r.URL.Path[idx+len("/archive/refs/tags/"):], ".zip")
+			if zip, found := f.tagZips[tag]; found {
+				w.Write(zip)
+				return
+			}
+		}
 		w.WriteHeader(http.StatusNotFound)
 	}
 }
@@ -184,5 +228,84 @@ func TestUpdateWithoutTargetErrors(t *testing.T) {
 	root.SetArgs([]string{"update", "--config", cfgPath})
 	if err := root.Execute(); err == nil {
 		t.Fatal("expected error when neither addon nor --all is given")
+	}
+}
+
+func buildWrappedZip(t *testing.T, wrapper, version string) []byte {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	w := zip.NewWriter(buf)
+	fw, err := w.Create(wrapper + "/TestAddon/TestAddon.toc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fw.Write([]byte("## Version: " + version)); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func TestAddWithTagFallback(t *testing.T) {
+	gh := newFakeGitHub(t, nil)
+	gh.seedTags("v1.0.0", buildWrappedZip(t, "TagOnly-1.0.0", "1.0.0"))
+	cfgPath, installPath := setupAddEnv(t, gh)
+	tocPath := filepath.Join(installPath, "Interface", "AddOns", "TestAddon", "TestAddon.toc")
+
+	out := runCmd(t, "add", "github:Owner/TagOnly", "--config", cfgPath)
+	if !strings.Contains(out, "installed") {
+		t.Fatalf("add output: %s", out)
+	}
+	content, err := os.ReadFile(tocPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "## Version: 1.0.0" {
+		t.Fatalf("installed toc = %q (wrapper folder not unwrapped?)", content)
+	}
+
+	out = runCmd(t, "check", "--config", cfgPath)
+	if !strings.Contains(out, "current") {
+		t.Errorf("check output: %s", out)
+	}
+
+	gh.bumpTag("v1.10.0", buildWrappedZip(t, "TagOnly-1.10.0", "1.10.0"))
+
+	out = runCmd(t, "check", "--config", cfgPath)
+	if !strings.Contains(out, "update") {
+		t.Errorf("check output after new tag: %s", out)
+	}
+
+	out = runCmd(t, "update", "TagOnly", "--config", cfgPath)
+	if !strings.Contains(out, "updating") {
+		t.Errorf("update output: %s", out)
+	}
+	content, err = os.ReadFile(tocPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "## Version: 1.10.0" {
+		t.Errorf("updated toc = %q", content)
+	}
+
+	out = runCmd(t, "check", "--config", cfgPath)
+	if !strings.Contains(out, "current") {
+		t.Errorf("check output after update: %s", out)
+	}
+}
+
+func TestAddRejectsUnknownSource(t *testing.T) {
+	gh := newFakeGitHub(t, buildCmdZip(t, "1.0.0"))
+	cfgPath, _ := setupAddEnv(t, gh)
+
+	root := NewRootCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"add", "github:Owner/TestAddon", "--source", "bogus", "--config", cfgPath})
+	if err := root.Execute(); err == nil {
+		t.Fatal("expected error for unknown source")
 	}
 }

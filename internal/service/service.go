@@ -48,6 +48,10 @@ func (s *Service) Scan(ctx context.Context, configPaths []string) ([]registry.In
 	if err != nil {
 		return nil, err
 	}
+	oldByPath := map[string]registry.Installation{}
+	for _, inst := range reg.Installations {
+		oldByPath[inst.Path] = inst
+	}
 	reg.Version = 1
 	reg.Installations = nil
 
@@ -62,6 +66,9 @@ func (s *Service) Scan(ctx context.Context, configPaths []string) ([]registry.In
 		}
 
 		rec := registry.Installation{Path: inst.Path, Flavor: string(flavor)}
+		if old, ok := oldByPath[inst.Path]; ok {
+			rec.Title = old.Title
+		}
 		for _, f := range folders {
 			rec.Folders = append(rec.Folders, registry.Folder{
 				Name:       f.Name,
@@ -102,6 +109,20 @@ func tocNames(tocs []*addon.Toc) []string {
 		names = append(names, filepath.Base(toc.Path))
 	}
 	return names
+}
+
+func (s *Service) SetInstallTitle(path, title string) error {
+	reg, err := registry.Load(s.RegistryPath)
+	if err != nil {
+		return err
+	}
+	for i := range reg.Installations {
+		if reg.Installations[i].Path == path {
+			reg.Installations[i].Title = title
+			return reg.Save(s.RegistryPath)
+		}
+	}
+	return fmt.Errorf("installation %s not found in registry", path)
 }
 
 func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.GameFlavor, install wow.Installation, source string) error {

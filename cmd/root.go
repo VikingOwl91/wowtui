@@ -19,10 +19,11 @@ func NewRootCmd() *cobra.Command {
 		Short:         "A slim, safe WoW addon updater",
 		SilenceUsage:  true,
 		SilenceErrors: false,
+		RunE:          runTUI,
 	}
 	root.PersistentFlags().String("config", "", "path to config file (default: XDG config path)")
 	root.PersistentFlags().String("registry", "", "path to registry file (default: XDG data path)")
-	root.AddCommand(newScanCmd(), newListCmd(), newAddCmd(), newCheckCmd(), newUpdateCmd())
+	root.AddCommand(newScanCmd(), newListCmd(), newAddCmd(), newCheckCmd(), newUpdateCmd(), newInstallsCmd(), newRenameCmd())
 	return root
 }
 

@@ -556,6 +556,59 @@ func TestUpdateAllEmitsBatchProgress(t *testing.T) {
 	}
 }
 
+func TestScanPreservesTitle(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	svc, install, _ := newTestService(t, &fakeProvider{})
+
+	addonDir := filepath.Join(install.Path, "Interface", "AddOns", "MyAddon")
+	if err := os.MkdirAll(addonDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(addonDir, "MyAddon.toc"), []byte("## Version: 1.0"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	reg := &registry.Registry{Version: 1, Installations: []registry.Installation{{Path: install.Path, Flavor: "retail", Title: "Mein Retail"}}}
+	if err := reg.Save(svc.RegistryPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := svc.Scan(context.Background(), []string{install.Path}); err != nil {
+		t.Fatal(err)
+	}
+
+	reg2, err := registry.Load(svc.RegistryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reg2.Installations) != 1 || reg2.Installations[0].Title != "Mein Retail" {
+		t.Fatalf("title lost by scan: %+v", reg2.Installations)
+	}
+}
+
+func TestSetInstallTitle(t *testing.T) {
+	svc, install, _ := newTestService(t, &fakeProvider{})
+	reg := &registry.Registry{Version: 1, Installations: []registry.Installation{{Path: install.Path, Flavor: "retail"}}}
+	if err := reg.Save(svc.RegistryPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := svc.SetInstallTitle(install.Path, "Classic Alt"); err != nil {
+		t.Fatal(err)
+	}
+	reg2, err := registry.Load(svc.RegistryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reg2.Installations[0].Title != "Classic Alt" {
+		t.Errorf("title = %q", reg2.Installations[0].Title)
+	}
+
+	if err := svc.SetInstallTitle("/does/not/exist", "x"); err == nil {
+		t.Fatal("expected error for unknown installation")
+	}
+}
+
 func TestScanPreservesManagedAddons(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	svc, install, _ := newTestService(t, &fakeProvider{})

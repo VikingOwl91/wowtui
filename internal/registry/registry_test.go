@@ -132,6 +132,21 @@ func sampleAddon() Addon {
 	}
 }
 
+func TestInstallationTitleRoundtrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "registry.json")
+	reg := &Registry{Version: 1, Installations: []Installation{{Path: "/x", Flavor: "retail", Title: "Retail Main"}}}
+	if err := reg.Save(path); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Installations) != 1 || got.Installations[0].Title != "Retail Main" {
+		t.Errorf("title roundtrip = %+v", got.Installations)
+	}
+}
+
 func TestAddonRoundtrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "registry.json")
 	reg := &Registry{Version: 1, Addons: []Addon{sampleAddon()}}

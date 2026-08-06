@@ -18,6 +18,7 @@ type Registry struct {
 type Installation struct {
 	Path    string   `json:"path"`
 	Flavor  string   `json:"flavor"`
+	Title   string   `json:"title,omitempty"`
 	Folders []Folder `json:"folders"`
 }
 

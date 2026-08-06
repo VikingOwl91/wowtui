@@ -129,7 +129,7 @@ func (s *Service) SetInstallTitle(path, title string) error {
 func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.GameFlavor, install wow.Installation, source string) error {
 	p, ok := s.Providers[ref.Provider]
 	if !ok {
-		return fmt.Errorf("provider %q is not configured", ref.Provider)
+		return providerUnavailable(ref.Provider)
 	}
 
 	reg, err := registry.Load(s.RegistryPath)
@@ -197,7 +197,7 @@ func (s *Service) Check(ctx context.Context) ([]UpdateStatus, error) {
 
 		p, ok := s.Providers[addon.Provider]
 		if !ok {
-			status.Error = fmt.Errorf("provider %q is not configured", addon.Provider)
+			status.Error = providerUnavailable(addon.Provider)
 			statuses = append(statuses, status)
 			continue
 		}
@@ -250,7 +250,7 @@ func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon
 
 	p, ok := s.Providers[addon.Provider]
 	if !ok {
-		return fmt.Errorf("provider %q is not configured", addon.Provider)
+		return providerUnavailable(addon.Provider)
 	}
 
 	remote := provider.RemoteAddon{Provider: addon.Provider, ID: addon.Ref, Name: addon.Name}
@@ -423,6 +423,10 @@ func (s *Service) emit(e Event) {
 	if s.OnEvent != nil {
 		s.OnEvent(e)
 	}
+}
+
+func providerUnavailable(name string) error {
+	return fmt.Errorf("provider %q is disabled or not configured; enable it with: wowtui providers enable %s", name, name)
 }
 
 func humanSize(n int64) string {

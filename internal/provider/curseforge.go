@@ -28,6 +28,20 @@ func NewCurseForge(apiKey string) *CurseForge {
 
 func (c *CurseForge) SetBaseURL(base string) { c.baseURL = strings.TrimRight(base, "/") }
 
+func (c *CurseForge) Authenticate(ctx context.Context) error {
+	var response struct {
+		Data []json.RawMessage `json:"data"`
+	}
+	status, err := c.get(ctx, c.baseURL+"/v1/games?pageSize=1", &response)
+	if err != nil {
+		return err
+	}
+	if status != http.StatusOK {
+		return fmt.Errorf("CurseForge authentication returned HTTP %d", status)
+	}
+	return nil
+}
+
 type curseForgeMod struct {
 	ID          int64                 `json:"id"`
 	Name        string                `json:"name"`

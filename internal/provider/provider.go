@@ -33,6 +33,10 @@ type MatchProvider interface {
 	Match(ctx context.Context, hint MatchHint, flavor wow.GameFlavor) (RemoteAddon, bool, error)
 }
 
+type Authenticator interface {
+	Authenticate(ctx context.Context) error
+}
+
 type ReleaseKind string
 
 const (

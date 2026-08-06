@@ -23,6 +23,7 @@ type Providers struct {
 	PriorityOrder []string       `toml:"order"`
 	GitHub        GitHub         `toml:"github"`
 	GitLab        ProviderConfig `toml:"gitlab"`
+	Git           ProviderConfig `toml:"git"`
 	WowUpHub      ProviderConfig `toml:"wowuphub"`
 	Wago          Wago           `toml:"wago"`
 	CurseForge    CurseForge     `toml:"curseforge"`
@@ -49,9 +50,10 @@ type ProviderConfig struct {
 	APIKey  string `toml:"api_key"`
 }
 
-var defaultProviderOrder = []string{"wowuphub", "wago", "curseforge", "github", "gitlab", "direct"}
+var defaultProviderOrder = []string{"wowuphub", "wago", "curseforge", "github", "gitlab", "git", "direct"}
 var retiredProviders = map[string]bool{"wago": true}
-var pausedProviders = map[string]bool{"wowuphub": true}
+var pausedProviders = map[string]bool{"wowuphub": true, "curseforge": true}
+var pausedProviderStates = map[string]string{"wowuphub": "pending-upstream", "curseforge": "pending-approval"}
 
 func (p Providers) Enabled(name string) bool {
 	if retiredProviders[name] || pausedProviders[name] {
@@ -67,6 +69,8 @@ func (p Providers) Enabled(name string) bool {
 		configured = p.CurseForge.Enabled
 	case "gitlab":
 		configured = p.GitLab.Enabled
+	case "git":
+		configured = p.Git.Enabled
 	case "wowuphub":
 		configured = p.WowUpHub.Enabled
 	case "direct":
@@ -77,7 +81,7 @@ func (p Providers) Enabled(name string) bool {
 	if configured != nil {
 		return *configured
 	}
-	return name == "github" || name == "direct"
+	return name == "github" || name == "gitlab" || name == "git" || name == "direct"
 }
 
 func (p Providers) Order() []string {
@@ -109,6 +113,8 @@ func (p *Providers) SetEnabled(name string, enabled bool) error {
 		p.GitHub.Enabled = &value
 	case "gitlab":
 		p.GitLab.Enabled = &value
+	case "git":
+		p.Git.Enabled = &value
 	case "wowuphub":
 		p.WowUpHub.Enabled = &value
 	case "wago":
@@ -128,9 +134,9 @@ func (p Providers) State(name string) string {
 		return "retired"
 	}
 	if pausedProviders[name] {
-		return "pending-upstream"
+		return pausedProviderStates[name]
 	}
-	if name == "github" || name == "direct" || name == "gitlab" {
+	if name == "github" || name == "direct" || name == "gitlab" || name == "git" || name == "curseforge" {
 		if p.Enabled(name) {
 			return "enabled"
 		}

@@ -22,9 +22,10 @@ provider catalog are still evolving.
 | --- | --- | --- |
 | GitHub | Available | Releases, tags, and default-branch fallback |
 | GitLab | Available | Releases, tags, and branch archives |
+| Generic Git | Available | HTTPS/SSH repositories via tags or shallow branch clones |
 | Direct URL | Available | ZIP URLs with ETag, Last-Modified, or SHA-256 identity |
 | Wago | Retired | Kept as a planned integration; no stable public read/download API was verified |
-| CurseForge | Available | Official API integration; requires an approved API key |
+| CurseForge | Pending approval | Adapter ready; activation requires approved third-party API access |
 | WowUpHub | Pending upstream approval | Adapter implemented, activation paused until WowUp confirms third-party use |
 
 ## Features

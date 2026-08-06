@@ -63,6 +63,7 @@ func buildProviders(cfg *config.Config) map[string]provider.Provider {
 		"github":     gh,
 		"direct":     provider.NewDirect(),
 		"gitlab":     provider.NewGitLab(cfg.Providers.GitLab.APIKey),
+		"git":        provider.NewGit(),
 		"wowuphub":   hub,
 		"curseforge": curseForge,
 	}

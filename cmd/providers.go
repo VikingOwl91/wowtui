@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"text/tabwriter"
@@ -8,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"somegit.dev/vikingowl/wowtui/internal/config"
+	"somegit.dev/vikingowl/wowtui/internal/provider"
 )
 
 func newProvidersCmd() *cobra.Command {
@@ -17,7 +19,36 @@ func newProvidersCmd() *cobra.Command {
 		RunE:  runProviders,
 	}
 	cmd.AddCommand(newProviderToggleCmd("enable", true), newProviderToggleCmd("disable", false), newProviderOrderCmd())
+	cmd.AddCommand(newProviderTestCmd())
 	return cmd
+}
+
+func newProviderTestCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "test <provider>",
+		Args:  cobra.ExactArgs(1),
+		Short: "Test provider authentication without printing credentials",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig(cmd)
+			if err != nil {
+				return err
+			}
+			providers := buildProviders(cfg)
+			p, ok := providers[args[0]]
+			if !ok {
+				return fmt.Errorf("provider %q is %s and cannot be tested", args[0], cfg.Providers.State(args[0]))
+			}
+			auth, ok := p.(provider.Authenticator)
+			if !ok {
+				return fmt.Errorf("provider %q does not expose an authentication check", args[0])
+			}
+			if err := auth.Authenticate(context.Background()); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%s authentication succeeded\n", args[0])
+			return nil
+		},
+	}
 }
 
 func runProviders(cmd *cobra.Command, _ []string) error {

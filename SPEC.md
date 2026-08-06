@@ -188,8 +188,9 @@ Die CLI stellt dafür `wowtui providers`,
 `wowtui providers order <name>...` bereit. Die TUI zeigt dieselbe
 Reihenfolge und den Aktivierungsstatus in den Settings.
 
-GitHub, GitLab, Direct, WowUpHub und CurseForge sind implementiert.
-GitHub, GitLab, Direct und CurseForge sind standardmäßig aktiv. WowUpHub bleibt bis zur Antwort
+GitHub, GitLab, Generic Git, Direct, WowUpHub und CurseForge sind implementiert.
+GitHub, GitLab, Generic Git und Direct sind standardmäßig aktiv. CurseForge bleibt
+bis zur Genehmigung des Third-Party-Zugangs pausiert. WowUpHub bleibt bis zur Antwort
 der WowUp-Entwickler auf eine Anfrage zur Drittanbieter-Nutzung
 pausiert. Wago ist retired. CurseForge benötigt einen genehmigten
 API-Key für Drittanbieter-Clients.

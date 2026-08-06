@@ -51,6 +51,13 @@ func ParseReference(s string) (Reference, error) {
 		return Reference{Provider: "curseforge", ID: rest}, nil
 	}
 
+	if rest, ok := strings.CutPrefix(s, "git:"); ok {
+		if err := validateGitURL(rest); err != nil {
+			return Reference{}, err
+		}
+		return Reference{Provider: "git", ID: rest}, nil
+	}
+
 	if rest, ok := strings.CutPrefix(s, "direct:"); ok {
 		if err := validateDirectURL(rest); err != nil {
 			return Reference{}, err
@@ -121,6 +128,14 @@ func validateDirectURL(s string) error {
 		return nil
 	}
 	return fmt.Errorf("direct reference must be an https URL (http only allowed for localhost), got %q", s)
+}
+
+func validateGitURL(s string) error {
+	u, err := url.Parse(s)
+	if err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "ssh" && u.Scheme != "git") {
+		return fmt.Errorf("git reference must be an https, ssh, or git URL, got %q", s)
+	}
+	return nil
 }
 
 func isLoopbackHost(host string) bool {

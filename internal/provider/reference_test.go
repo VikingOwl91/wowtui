@@ -54,6 +54,16 @@ func TestParseReferenceDirectPrefix(t *testing.T) {
 	}
 }
 
+func TestParseReferenceGenericGit(t *testing.T) {
+	ref, err := ParseReference("git:https://git.example.org/team/addon.git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ref.Provider != "git" || ref.ID != "https://git.example.org/team/addon.git" {
+		t.Errorf("ref = %+v", ref)
+	}
+}
+
 func TestParseReferenceForeignURLIsDirect(t *testing.T) {
 	ref, err := ParseReference("https://example.com/addon.zip")
 	if err != nil {

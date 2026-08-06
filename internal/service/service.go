@@ -426,6 +426,15 @@ func (s *Service) emit(e Event) {
 }
 
 func providerUnavailable(name string) error {
+	if name == "wowuphub" {
+		return fmt.Errorf("provider %q is paused pending upstream approval", name)
+	}
+	if name == "curseforge" {
+		return fmt.Errorf("provider %q is paused pending approved third-party API access", name)
+	}
+	if name == "wago" {
+		return fmt.Errorf("provider %q is retired", name)
+	}
 	return fmt.Errorf("provider %q is disabled or not configured; enable it with: wowtui providers enable %s", name, name)
 }
 

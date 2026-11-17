@@ -547,6 +547,11 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 	if len(conflicts) > 0 {
 		return nil, "", fmt.Errorf("refusing to install %s in %s: %s", ref, installPath, strings.Join(conflicts, "; "))
 	}
+	if release.Kind == provider.KindTag || release.Kind == provider.KindBranch {
+		for _, msg := range packagerWarnings(staging, roots) {
+			ev(StageWarning, fmt.Sprintf("warning: %s: %s", ref, msg))
+		}
+	}
 
 	var dropped []string
 	for _, name := range previous {

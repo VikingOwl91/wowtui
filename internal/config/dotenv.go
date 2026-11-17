@@ -8,8 +8,15 @@ import (
 	"strings"
 )
 
-// LoadDotEnv loads variables from a dotenv file without replacing values that
-// are already present in the process environment.
+var dotEnvKeys = map[string]bool{
+	"WOWTUI_GITHUB_TOKEN":       true,
+	"WOWTUI_WAGO_API_KEY":       true,
+	"WOWTUI_CURSEFORGE_API_KEY": true,
+}
+
+// LoadDotEnv loads credential variables from a dotenv file without replacing
+// values that are already present in the process environment. Other keys in
+// the file are ignored.
 func LoadDotEnv(path string) error {
 	file, err := os.Open(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -29,7 +36,7 @@ func LoadDotEnv(path string) error {
 		line = strings.TrimPrefix(line, "export ")
 		key, value, ok := strings.Cut(line, "=")
 		key = strings.TrimSpace(key)
-		if !ok || key == "" {
+		if !ok || !dotEnvKeys[key] {
 			continue
 		}
 		if _, exists := os.LookupEnv(key); exists {

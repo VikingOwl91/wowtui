@@ -362,7 +362,7 @@ func TestUpdateInstallsNewVersion(t *testing.T) {
 		release:    provider.Release{Kind: provider.KindRelease, ID: 200, Tag: "v2.0.0", AssetName: "MyAddon-2.0.0.zip"},
 		zipContent: addonZip(t, "2.0.0"),
 	}
-	svc, install, _ := newTestService(t, fp)
+	svc, install, out := newTestService(t, fp)
 	seedAddon(t, svc, install, 100, "v1.0.0")
 
 	addonsDir := filepath.Join(install.Path, "Interface", "AddOns")
@@ -383,6 +383,9 @@ func TestUpdateInstallsNewVersion(t *testing.T) {
 	}
 	if string(content) != "## Version: 2.0.0" {
 		t.Errorf("updated toc = %q", content)
+	}
+	if w := eventsWithStage(out, StageWarning); len(w) != 0 {
+		t.Errorf("replacing the addon's own folder must not warn: %+v", w)
 	}
 
 	reg, err := registry.Load(svc.RegistryPath)
@@ -642,6 +645,318 @@ func TestMapAndAdoptUnmanagedAddon(t *testing.T) {
 	if addon == nil || addon.Version != "1.0" || addon.Folders[0] != "MyAddon" {
 		t.Errorf("adopted addon = %+v", addon)
 	}
+}
+
+func seedAddons(t *testing.T, svc *Service, addons ...registry.Addon) {
+	t.Helper()
+	reg := &registry.Registry{Version: 1}
+	for _, a := range addons {
+		reg.UpsertAddon(a)
+	}
+	if err := reg.Save(svc.RegistryPath); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeAddonFolder(t *testing.T, addonsDir, name, toc string) {
+	t.Helper()
+	dir := filepath.Join(addonsDir, name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, name+".toc"), []byte(toc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertToc(t *testing.T, addonsDir, name, want string) {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join(addonsDir, name, name+".toc"))
+	if err != nil {
+		t.Fatalf("reading %s: %v", name, err)
+	}
+	if string(content) != want {
+		t.Errorf("%s toc = %q, want %q", name, content, want)
+	}
+}
+
+func eventsWithStage(c *captured, stage Stage) []Event {
+	var out []Event
+	for _, e := range c.events {
+		if e.Stage == stage {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+func twoFolderZip(t *testing.T, second, version string) []byte {
+	return buildZip(t, map[string]string{
+		"MyAddon/MyAddon.toc":          "## Version: " + version,
+		second + "/" + second + ".toc": "## Version: " + version,
+	})
+}
+
+func TestAddRefusesFolderOwnedByAnotherAddon(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 100, Tag: "v1.0.0", AssetName: "a.zip"},
+		zipContent: twoFolderZip(t, "SharedLib", "1.0.0"),
+	}
+	svc, install, _ := newTestService(t, fp)
+	seedAddons(t, svc, registry.Addon{Provider: "github", Ref: "Other/Lib", Flavor: "retail", InstallPath: install.Path, Folders: []string{"SharedLib"}, Version: "v1", Source: "auto"})
+	addonsDir := filepath.Join(install.Path, "Interface", "AddOns")
+	writeAddonFolder(t, addonsDir, "SharedLib", "## Version: lib")
+
+	ref := provider.Reference{Provider: "github", ID: "Owner/MyAddon"}
+	err := svc.Add(context.Background(), ref, wow.Retail, install, "")
+	if err == nil {
+		t.Fatal("expected refusal for a folder owned by another managed addon")
+	}
+	if !strings.Contains(err.Error(), "SharedLib") || !strings.Contains(err.Error(), "Other/Lib") {
+		t.Errorf("error = %v, want folder name and owning addon ref", err)
+	}
+	assertToc(t, addonsDir, "SharedLib", "## Version: lib")
+	if _, err := os.Stat(filepath.Join(addonsDir, "MyAddon")); !os.IsNotExist(err) {
+		t.Error("refused install must not write any folder")
+	}
+	if _, err := os.Stat(svc.BackupRoot); !os.IsNotExist(err) {
+		t.Error("refused install must not create a backup")
+	}
+	reg, err := registry.Load(svc.RegistryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reg.FindAddon("Owner/MyAddon", install.Path) != nil {
+		t.Error("refused install must not register the addon")
+	}
+}
+
+func TestUpdateRefusesFolderOwnedByAnotherAddon(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 200, Tag: "v2.0.0", AssetName: "a.zip"},
+		zipContent: twoFolderZip(t, "SharedLib", "2.0.0"),
+	}
+	svc, install, _ := newTestService(t, fp)
+	seedAddons(t, svc,
+		registry.Addon{Provider: "github", Ref: "Owner/MyAddon", Flavor: "retail", InstallPath: install.Path, Folders: []string{"MyAddon"}, Version: "v1.0.0", Source: "auto", ReleaseID: 100},
+		registry.Addon{Provider: "github", Ref: "Other/Lib", Flavor: "retail", InstallPath: install.Path, Folders: []string{"SharedLib"}, Version: "v1", Source: "auto"},
+	)
+	addonsDir := filepath.Join(install.Path, "Interface", "AddOns")
+	writeAddonFolder(t, addonsDir, "MyAddon", "## Version: 1.0.0")
+	writeAddonFolder(t, addonsDir, "SharedLib", "## Version: lib")
+
+	err := svc.Update(context.Background(), "Owner/MyAddon", false)
+	if err == nil {
+		t.Fatal("expected refusal for a folder owned by another managed addon")
+	}
+	if !strings.Contains(err.Error(), "SharedLib") || !strings.Contains(err.Error(), "Other/Lib") {
+		t.Errorf("error = %v, want folder name and owning addon ref", err)
+	}
+	assertToc(t, addonsDir, "MyAddon", "## Version: 1.0.0")
+	assertToc(t, addonsDir, "SharedLib", "## Version: lib")
+	reg, err := registry.Load(svc.RegistryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a := reg.FindAddon("Owner/MyAddon", install.Path); a == nil || a.ReleaseID != 100 {
+		t.Errorf("registry entry changed by refused update: %+v", a)
+	}
+}
+
+func TestUpdateAllowsOwnFolderAlsoClaimedByAnotherAddon(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 200, Tag: "v2.0.0", AssetName: "a.zip"},
+		zipContent: addonZip(t, "2.0.0"),
+	}
+	svc, install, _ := newTestService(t, fp)
+	seedAddons(t, svc,
+		registry.Addon{Provider: "github", Ref: "Owner/MyAddon", Flavor: "retail", InstallPath: install.Path, Folders: []string{"MyAddon"}, Version: "v1.0.0", Source: "auto", ReleaseID: 100},
+		registry.Addon{Provider: "github", Ref: "Other/Stale", Flavor: "retail", InstallPath: install.Path, Folders: []string{"MyAddon"}, Version: "v1", Source: "auto"},
+	)
+	addonsDir := filepath.Join(install.Path, "Interface", "AddOns")
+	writeAddonFolder(t, addonsDir, "MyAddon", "## Version: 1.0.0")
+
+	if err := svc.Update(context.Background(), "Owner/MyAddon", false); err != nil {
+		t.Fatalf("update of a folder the addon already owns must not be refused: %v", err)
+	}
+	assertToc(t, addonsDir, "MyAddon", "## Version: 2.0.0")
+}
+
+func TestAddWarnsWhenReplacingUnmanagedFolder(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 100, Tag: "v1.0.0", AssetName: "a.zip"},
+		zipContent: twoFolderZip(t, "WeakAuras", "1.0.0"),
+	}
+	svc, install, out := newTestService(t, fp)
+	addonsDir := filepath.Join(install.Path, "Interface", "AddOns")
+	writeAddonFolder(t, addonsDir, "WeakAuras", "## Version: manual")
+
+	ref := provider.Reference{Provider: "github", ID: "Owner/MyAddon"}
+	if err := svc.Add(context.Background(), ref, wow.Retail, install, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	backups, err := os.ReadDir(svc.BackupRoot)
+	if err != nil || len(backups) != 1 {
+		t.Fatalf("expected one backup, got %v (%v)", backups, err)
+	}
+	backupPath := filepath.Join(svc.BackupRoot, backups[0].Name())
+	assertToc(t, backupPath, "WeakAuras", "## Version: manual")
+
+	warnings := eventsWithStage(out, StageWarning)
+	if len(warnings) != 1 {
+		t.Fatalf("got %d warnings, want 1: %+v", len(warnings), out.events)
+	}
+	msg := warnings[0].Message
+	if !strings.Contains(msg, "WeakAuras") || !strings.Contains(msg, backupPath) {
+		t.Errorf("warning = %q, want replaced folder and backup path %s", msg, backupPath)
+	}
+	if warnings[0].Ref != "Owner/MyAddon" {
+		t.Errorf("warning ref = %q", warnings[0].Ref)
+	}
+}
+
+func hiddenTempDirs(t *testing.T, dir string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, entry := range entries {
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), ".wowtui-") {
+			names = append(names, entry.Name())
+		}
+	}
+	return names
+}
+
+func recordWorkDirs(t *testing.T, svc *Service, out *captured, interfaceDir string) *[]string {
+	t.Helper()
+	var seen []string
+	svc.OnEvent = func(e Event) {
+		out.emit(e)
+		if e.Stage == StageExtract {
+			for _, name := range hiddenTempDirs(t, interfaceDir) {
+				if _, err := os.Stat(filepath.Join(interfaceDir, name, "archive.zip")); err == nil {
+					seen = append(seen, name)
+				}
+			}
+		}
+	}
+	return &seen
+}
+
+func TestAddKeepsWorkDirInsideInterface(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 100, Tag: "v1.0.0", AssetName: "a.zip"},
+		zipContent: addonZip(t, "1.0.0"),
+	}
+	svc, install, out := newTestService(t, fp)
+	interfaceDir := filepath.Join(install.Path, "Interface")
+	seen := recordWorkDirs(t, svc, out, interfaceDir)
+
+	ref := provider.Reference{Provider: "github", ID: "Owner/MyAddon"}
+	if err := svc.Add(context.Background(), ref, wow.Retail, install, ""); err != nil {
+		t.Fatal(err)
+	}
+	if len(*seen) != 1 {
+		t.Fatalf("work dir with archive not found inside %s during install, got %v", interfaceDir, *seen)
+	}
+	if left := hiddenTempDirs(t, interfaceDir); len(left) != 0 {
+		t.Errorf("temp dirs left behind after success: %v", left)
+	}
+}
+
+func TestAddRemovesWorkDirOnFailure(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 100, Tag: "v1.0.0", AssetName: "a.zip"},
+		zipContent: buildZip(t, map[string]string{"README.md": "no toc here"}),
+	}
+	svc, install, out := newTestService(t, fp)
+	interfaceDir := filepath.Join(install.Path, "Interface")
+	seen := recordWorkDirs(t, svc, out, interfaceDir)
+
+	ref := provider.Reference{Provider: "github", ID: "Owner/MyAddon"}
+	if err := svc.Add(context.Background(), ref, wow.Retail, install, ""); err == nil {
+		t.Fatal("expected install of an archive without toc to fail")
+	}
+	if len(*seen) != 1 {
+		t.Fatalf("work dir with archive not found inside %s during install, got %v", interfaceDir, *seen)
+	}
+	if left := hiddenTempDirs(t, interfaceDir); len(left) != 0 {
+		t.Errorf("temp dirs left behind after failure: %v", left)
+	}
+}
+
+func TestUpdateRemovesDroppedFolder(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 200, Tag: "v2.0.0", AssetName: "a.zip"},
+		zipContent: addonZip(t, "2.0.0"),
+	}
+	svc, install, out := newTestService(t, fp)
+	seedAddons(t, svc, registry.Addon{Provider: "github", Ref: "Owner/MyAddon", Flavor: "retail", InstallPath: install.Path, Folders: []string{"MyAddon", "MyAddon_Legacy"}, Version: "v1.0.0", Source: "auto", ReleaseID: 100})
+	addonsDir := filepath.Join(install.Path, "Interface", "AddOns")
+	writeAddonFolder(t, addonsDir, "MyAddon", "## Version: 1.0.0")
+	writeAddonFolder(t, addonsDir, "MyAddon_Legacy", "## Version: 1.0.0")
+
+	if err := svc.Update(context.Background(), "Owner/MyAddon", false); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(addonsDir, "MyAddon_Legacy")); !os.IsNotExist(err) {
+		t.Error("folder dropped by the new version must be removed")
+	}
+	assertToc(t, addonsDir, "MyAddon", "## Version: 2.0.0")
+
+	backups, err := os.ReadDir(svc.BackupRoot)
+	if err != nil || len(backups) != 1 {
+		t.Fatalf("expected one backup, got %v (%v)", backups, err)
+	}
+	assertToc(t, filepath.Join(svc.BackupRoot, backups[0].Name()), "MyAddon_Legacy", "## Version: 1.0.0")
+
+	reg, err := registry.Load(svc.RegistryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := reg.FindAddon("Owner/MyAddon", install.Path)
+	if a == nil || len(a.Folders) != 1 || a.Folders[0] != "MyAddon" {
+		t.Errorf("registry entry = %+v, want folders [MyAddon]", a)
+	}
+
+	named := false
+	for _, e := range out.events {
+		if strings.Contains(e.Message, "MyAddon_Legacy") && strings.Contains(e.Message, "removed") {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("no event names the removed folder: %s", out.String())
+	}
+	if left := hiddenTempDirs(t, filepath.Join(install.Path, "Interface")); len(left) != 0 {
+		t.Errorf("temp dirs left behind: %v", left)
+	}
+}
+
+func TestUpdateKeepsDroppedFolderClaimedByAnotherAddon(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 200, Tag: "v2.0.0", AssetName: "a.zip"},
+		zipContent: addonZip(t, "2.0.0"),
+	}
+	svc, install, _ := newTestService(t, fp)
+	seedAddons(t, svc,
+		registry.Addon{Provider: "github", Ref: "Owner/MyAddon", Flavor: "retail", InstallPath: install.Path, Folders: []string{"MyAddon", "SharedLib"}, Version: "v1.0.0", Source: "auto", ReleaseID: 100},
+		registry.Addon{Provider: "github", Ref: "Other/Lib", Flavor: "retail", InstallPath: install.Path, Folders: []string{"SharedLib"}, Version: "v1", Source: "auto"},
+	)
+	addonsDir := filepath.Join(install.Path, "Interface", "AddOns")
+	writeAddonFolder(t, addonsDir, "MyAddon", "## Version: 1.0.0")
+	writeAddonFolder(t, addonsDir, "SharedLib", "## Version: lib")
+
+	if err := svc.Update(context.Background(), "Owner/MyAddon", false); err != nil {
+		t.Fatal(err)
+	}
+	assertToc(t, addonsDir, "SharedLib", "## Version: lib")
+	assertToc(t, addonsDir, "MyAddon", "## Version: 2.0.0")
 }
 
 func TestScanPreservesManagedAddons(t *testing.T) {

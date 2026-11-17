@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,11 +19,15 @@ type InstallPlan struct {
 	StagingDir string
 	BackupRoot string
 	Label      string
+	Roots      []StagedRoot
+	Remove     []string
 }
 
 type InstallResult struct {
 	Folders    []string
 	BackupPath string
+	Replaced   []string
+	Removed    []string
 }
 
 func FindAddonRoots(stagingDir string) ([]StagedRoot, error) {
@@ -129,9 +134,13 @@ func Install(plan InstallPlan) (*InstallResult, error) {
 }
 
 func installWithMover(plan InstallPlan, move func(src, dst string) error) (*InstallResult, error) {
-	roots, err := FindAddonRoots(plan.StagingDir)
-	if err != nil {
-		return nil, err
+	roots := plan.Roots
+	var err error
+	if len(roots) == 0 {
+		roots, err = FindAddonRoots(plan.StagingDir)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for _, root := range roots {
@@ -149,22 +158,44 @@ func installWithMover(plan InstallPlan, move func(src, dst string) error) (*Inst
 		}
 	}
 
+	var remove []string
+	for _, name := range plan.Remove {
+		if name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\`) {
+			return nil, fmt.Errorf("refusing to remove %q: not a plain folder name", name)
+		}
+		if hasRoot(roots, name) || containsFold(remove, name) {
+			continue
+		}
+		info, err := os.Lstat(filepath.Join(plan.AddonsDir, name))
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		if info.IsDir() {
+			remove = append(remove, name)
+		}
+	}
+
+	aside := append(append([]string(nil), existing...), remove...)
+
 	var backupPath string
-	if len(existing) > 0 {
-		backupPath, err = Backup(plan.AddonsDir, existing, plan.BackupRoot, plan.Label)
+	if len(aside) > 0 {
+		backupPath, err = Backup(plan.AddonsDir, aside, plan.BackupRoot, plan.Label)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	rollbackDir, err := os.MkdirTemp("", "wowtui-rollback-")
+	rollbackDir, err := os.MkdirTemp(filepath.Dir(plan.AddonsDir), ".wowtui-rollback-")
 	if err != nil {
 		return nil, err
 	}
 	defer os.RemoveAll(rollbackDir)
 
 	var movedAside []string
-	for _, name := range existing {
+	for _, name := range aside {
 		if err := move(filepath.Join(plan.AddonsDir, name), filepath.Join(rollbackDir, name)); err != nil {
 			rollback(plan.AddonsDir, rollbackDir, nil, movedAside, move)
 			return nil, fmt.Errorf("moving old folder %s aside: %w", name, err)
@@ -176,7 +207,7 @@ func installWithMover(plan InstallPlan, move func(src, dst string) error) (*Inst
 	for _, root := range roots {
 		target := filepath.Join(plan.AddonsDir, root.Name)
 		if err := move(root.Src, target); err != nil {
-			rollback(plan.AddonsDir, rollbackDir, installed, existing, move)
+			rollback(plan.AddonsDir, rollbackDir, installed, aside, move)
 			return nil, fmt.Errorf("installing folder %s: %w", root.Name, err)
 		}
 		installed = append(installed, root.Name)
@@ -186,7 +217,25 @@ func installWithMover(plan InstallPlan, move func(src, dst string) error) (*Inst
 	for _, root := range roots {
 		folders = append(folders, root.Name)
 	}
-	return &InstallResult{Folders: folders, BackupPath: backupPath}, nil
+	return &InstallResult{Folders: folders, BackupPath: backupPath, Replaced: existing, Removed: remove}, nil
+}
+
+func hasRoot(roots []StagedRoot, name string) bool {
+	for _, root := range roots {
+		if strings.EqualFold(root.Name, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsFold(names []string, name string) bool {
+	for _, n := range names {
+		if strings.EqualFold(n, name) {
+			return true
+		}
+	}
+	return false
 }
 
 func rollback(addonsDir, rollbackDir string, installed, existing []string, move func(src, dst string) error) {

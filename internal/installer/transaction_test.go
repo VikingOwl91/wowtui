@@ -271,3 +271,230 @@ func TestInstallRollsBackOnFailure(t *testing.T) {
 		t.Errorf("Beta not rolled back, content = %q", contentB)
 	}
 }
+
+func assertNoTempDirs(t *testing.T, dir string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), ".wowtui-") {
+			t.Errorf("temp dir %s left behind in %s", entry.Name(), dir)
+		}
+	}
+}
+
+func assertRollbackDirBesideAddons(t *testing.T, addonsDir, asideDst string) {
+	t.Helper()
+	if asideDst == "" {
+		t.Fatal("old folder was never moved aside")
+	}
+	rollbackDir := filepath.Dir(asideDst)
+	if filepath.Dir(rollbackDir) != filepath.Dir(addonsDir) {
+		t.Errorf("rollback dir %s is not directly inside %s", rollbackDir, filepath.Dir(addonsDir))
+	}
+	if !strings.HasPrefix(filepath.Base(rollbackDir), ".") {
+		t.Errorf("rollback dir %s is not hidden", rollbackDir)
+	}
+}
+
+func TestInstallKeepsRollbackDirBesideAddonsDir(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+
+	var asideDst string
+	mover := func(src, dst string) error {
+		if src == filepath.Join(addonsDir, "Alpha") {
+			asideDst = dst
+		}
+		return MoveDir(src, dst)
+	}
+	if _, err := installWithMover(plan, mover); err != nil {
+		t.Fatal(err)
+	}
+	assertRollbackDirBesideAddons(t, addonsDir, asideDst)
+	assertNoTempDirs(t, filepath.Dir(addonsDir))
+}
+
+func TestInstallRemovesRollbackDirOnFailure(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+	stageAddon(t, plan.StagingDir, "Beta", "## Version: new-b")
+
+	var asideDst string
+	mover := func(src, dst string) error {
+		if src == filepath.Join(addonsDir, "Alpha") {
+			asideDst = dst
+		}
+		if src == filepath.Join(plan.StagingDir, "Beta") {
+			return errors.New("simulated failure")
+		}
+		return MoveDir(src, dst)
+	}
+	if _, err := installWithMover(plan, mover); err == nil {
+		t.Fatal("expected install to fail")
+	}
+	assertRollbackDirBesideAddons(t, addonsDir, asideDst)
+	assertNoTempDirs(t, filepath.Dir(addonsDir))
+}
+
+func readToc(t *testing.T, dir, name string) string {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join(dir, name, name+".toc"))
+	if err != nil {
+		t.Fatalf("reading %s: %v", name, err)
+	}
+	return string(content)
+}
+
+func TestInstallRemovesDroppedFolders(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+	stageAddon(t, addonsDir, "Legacy", "## Version: old-legacy")
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+	plan.Remove = []string{"Legacy"}
+
+	result, err := Install(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(addonsDir, "Legacy")); !os.IsNotExist(err) {
+		t.Error("dropped folder must be removed after a successful install")
+	}
+	if got := readToc(t, addonsDir, "Alpha"); got != "## Version: new-a" {
+		t.Errorf("Alpha = %q", got)
+	}
+	if got := readToc(t, result.BackupPath, "Legacy"); got != "## Version: old-legacy" {
+		t.Errorf("backup of dropped folder = %q", got)
+	}
+	if len(result.Removed) != 1 || result.Removed[0] != "Legacy" {
+		t.Errorf("removed = %v, want [Legacy]", result.Removed)
+	}
+	assertNoTempDirs(t, filepath.Dir(addonsDir))
+}
+
+func TestInstallRestoresDroppedFolderOnFailure(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+	stageAddon(t, addonsDir, "Legacy", "## Version: old-legacy")
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+	stageAddon(t, plan.StagingDir, "Beta", "## Version: new-b")
+	plan.Remove = []string{"Legacy"}
+
+	movedLegacy := false
+	mover := func(src, dst string) error {
+		if src == filepath.Join(addonsDir, "Legacy") {
+			movedLegacy = true
+		}
+		if src == filepath.Join(plan.StagingDir, "Beta") {
+			return errors.New("simulated failure")
+		}
+		return MoveDir(src, dst)
+	}
+	if _, err := installWithMover(plan, mover); err == nil {
+		t.Fatal("expected install to fail")
+	}
+	if !movedLegacy {
+		t.Fatal("dropped folder was never moved aside, rollback not exercised")
+	}
+	if got := readToc(t, addonsDir, "Legacy"); got != "## Version: old-legacy" {
+		t.Errorf("dropped folder not restored, content = %q", got)
+	}
+	if got := readToc(t, addonsDir, "Alpha"); got != "## Version: old-a" {
+		t.Errorf("Alpha not rolled back, content = %q", got)
+	}
+	if _, err := os.Stat(filepath.Join(addonsDir, "Beta")); !os.IsNotExist(err) {
+		t.Error("partially installed folder must be removed on rollback")
+	}
+	assertNoTempDirs(t, filepath.Dir(addonsDir))
+}
+
+func TestInstallSkipsRemoveEntriesThatAreNotDroppedFolders(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+	linkTarget := filepath.Join(filepath.Dir(addonsDir), "elsewhere")
+	stageAddon(t, linkTarget, "Linked", "## Version: dev")
+	if err := os.Symlink(filepath.Join(linkTarget, "Linked"), filepath.Join(addonsDir, "Linked")); err != nil {
+		t.Fatal(err)
+	}
+	plan.Remove = []string{"Alpha", "Missing", "Linked"}
+
+	result, err := Install(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Removed) != 0 {
+		t.Errorf("removed = %v, want none", result.Removed)
+	}
+	if got := readToc(t, addonsDir, "Alpha"); got != "## Version: new-a" {
+		t.Errorf("Alpha = %q, a staged root must win over a remove entry", got)
+	}
+	if info, err := os.Lstat(filepath.Join(addonsDir, "Linked")); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("symlinked folder must stay untouched: %v", err)
+	}
+	if got := readToc(t, linkTarget, "Linked"); got != "## Version: dev" {
+		t.Errorf("symlink target = %q", got)
+	}
+}
+
+func TestInstallRejectsUnsafeRemoveNames(t *testing.T) {
+	for _, name := range []string{"", ".", "..", "../outside", "a/b", `a\b`} {
+		t.Run(name, func(t *testing.T) {
+			plan, addonsDir := installPlan(t)
+			stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+			stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+			stageAddon(t, filepath.Dir(addonsDir), "outside", "## Version: outside")
+			plan.Remove = []string{name}
+
+			if _, err := Install(plan); err == nil {
+				t.Fatalf("expected refusal for remove entry %q", name)
+			}
+			if got := readToc(t, addonsDir, "Alpha"); got != "## Version: old-a" {
+				t.Errorf("Alpha touched by refused install: %q", got)
+			}
+			if got := readToc(t, filepath.Dir(addonsDir), "outside"); got != "## Version: outside" {
+				t.Errorf("folder outside AddOns touched: %q", got)
+			}
+			if _, err := os.Stat(plan.BackupRoot); !os.IsNotExist(err) {
+				t.Error("refused install must not create a backup")
+			}
+		})
+	}
+}
+
+func TestInstallReportsReplacedFolders(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+	stageAddon(t, plan.StagingDir, "Beta", "## Version: new-b")
+
+	result, err := Install(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Replaced) != 1 || result.Replaced[0] != "Alpha" {
+		t.Errorf("replaced = %v, want [Alpha]", result.Replaced)
+	}
+}
+
+func TestInstallUsesProvidedRoots(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+	stageAddon(t, plan.StagingDir, "Beta", "## Version: new-b")
+	plan.Roots = []StagedRoot{{Src: filepath.Join(plan.StagingDir, "Alpha"), Name: "Alpha"}}
+
+	result, err := Install(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Folders) != 1 || result.Folders[0] != "Alpha" {
+		t.Errorf("folders = %v, want [Alpha]", result.Folders)
+	}
+	if _, err := os.Stat(filepath.Join(addonsDir, "Beta")); !os.IsNotExist(err) {
+		t.Error("roots outside plan.Roots must not be installed")
+	}
+}

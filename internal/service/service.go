@@ -294,7 +294,7 @@ func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.Ga
 	}
 	s.emit(Event{Ref: ref.ID, Stage: StageInfo, Message: fmt.Sprintf("release %s (%s, %s)", versionLabel(release), release.AssetName, humanSize(release.Size))})
 
-	folders, sha, err := s.downloadAndInstall(ctx, p, release, install.Path, ref.Provider+"-"+ref.ID, ref.ID, 0, 0)
+	folders, sha, err := s.downloadAndInstall(ctx, p, release, reg, install.Path, ref.Provider+"-"+ref.ID, ref.ID, nil, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -412,7 +412,7 @@ func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon
 	}
 
 	ev(StageInstall, fmt.Sprintf("updating %s: %s -> %s", addon.Ref, addon.Version, versionLabel(release)))
-	folders, sha, err := s.downloadAndInstall(ctx, p, release, addon.InstallPath, addon.Provider+"-"+addon.Ref, addon.Ref, index, total)
+	folders, sha, err := s.downloadAndInstall(ctx, p, release, reg, addon.InstallPath, addon.Provider+"-"+addon.Ref, addon.Ref, addon.Folders, index, total)
 	if err != nil {
 		return err
 	}
@@ -474,7 +474,7 @@ func shortHash(s string) string {
 	return s
 }
 
-func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, release provider.Release, installPath, label, ref string, index, total int) ([]string, string, error) {
+func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, release provider.Release, reg *registry.Registry, installPath, label, ref string, previous []string, index, total int) ([]string, string, error) {
 	ev := func(stage Stage, msg string) {
 		s.emit(Event{Ref: ref, Stage: stage, Message: msg, Index: index, Total: total})
 	}
@@ -491,7 +491,11 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		maxDownload = defaultMaxDownload
 	}
 
-	workDir, err := os.MkdirTemp("", "wowtui-")
+	addonsDir := filepath.Join(installPath, "Interface", "AddOns")
+	if err := os.MkdirAll(addonsDir, 0o755); err != nil {
+		return nil, "", err
+	}
+	workDir, err := os.MkdirTemp(filepath.Dir(addonsDir), ".wowtui-work-")
 	if err != nil {
 		return nil, "", err
 	}
@@ -513,16 +517,45 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		return nil, "", err
 	}
 
-	ev(StageInstall, "installing")
-	addonsDir := filepath.Join(installPath, "Interface", "AddOns")
-	if err := os.MkdirAll(addonsDir, 0o755); err != nil {
+	roots, err := installer.FindAddonRoots(staging)
+	if err != nil {
 		return nil, "", err
 	}
+	var conflicts []string
+	for _, root := range roots {
+		if containsFold(previous, root.Name) {
+			continue
+		}
+		if owner := folderOwner(reg, installPath, ref, root.Name); owner != nil {
+			conflicts = append(conflicts, fmt.Sprintf("folder %s is managed by %s", root.Name, owner.Ref))
+		}
+	}
+	if len(conflicts) > 0 {
+		return nil, "", fmt.Errorf("refusing to install %s in %s: %s", ref, installPath, strings.Join(conflicts, "; "))
+	}
+
+	var dropped []string
+	for _, name := range previous {
+		shipped := false
+		for _, root := range roots {
+			if strings.EqualFold(root.Name, name) {
+				shipped = true
+				break
+			}
+		}
+		if !shipped && folderOwner(reg, installPath, ref, name) == nil {
+			dropped = append(dropped, name)
+		}
+	}
+
+	ev(StageInstall, "installing")
 	result, err := installer.Install(installer.InstallPlan{
 		AddonsDir:  addonsDir,
 		StagingDir: staging,
 		BackupRoot: s.BackupRoot,
 		Label:      label,
+		Roots:      roots,
+		Remove:     dropped,
 	})
 	if err != nil {
 		return nil, "", err
@@ -530,7 +563,41 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 	if result.BackupPath != "" {
 		ev(StageBackup, "backup: "+result.BackupPath)
 	}
+	var unmanaged []string
+	for _, name := range result.Replaced {
+		if !containsFold(previous, name) {
+			unmanaged = append(unmanaged, name)
+		}
+	}
+	if len(unmanaged) > 0 {
+		ev(StageWarning, fmt.Sprintf("warning: %s replaced unmanaged folders %s (backup: %s)", ref, strings.Join(unmanaged, ", "), result.BackupPath))
+	}
+	if len(result.Removed) > 0 {
+		ev(StageInfo, fmt.Sprintf("%s removed folders no longer shipped: %s (backup: %s)", ref, strings.Join(result.Removed, ", "), result.BackupPath))
+	}
 	return result.Folders, sha, nil
+}
+
+func folderOwner(reg *registry.Registry, installPath, ref, folder string) *registry.Addon {
+	for i := range reg.Addons {
+		a := &reg.Addons[i]
+		if a.InstallPath != installPath || a.Ref == ref {
+			continue
+		}
+		if containsFold(a.Folders, folder) {
+			return a
+		}
+	}
+	return nil
+}
+
+func containsFold(names []string, name string) bool {
+	for _, n := range names {
+		if strings.EqualFold(n, name) {
+			return true
+		}
+	}
+	return false
 }
 
 func findAddon(reg *registry.Registry, refOrName string) (*registry.Addon, error) {

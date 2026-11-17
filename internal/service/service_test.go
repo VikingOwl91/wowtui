@@ -647,6 +647,76 @@ func TestMapAndAdoptUnmanagedAddon(t *testing.T) {
 	}
 }
 
+func seedUnmanagedFolder(t *testing.T, svc *Service, installPath, folder string, owners ...registry.Addon) {
+	t.Helper()
+	reg := &registry.Registry{Version: 1, Installations: []registry.Installation{{
+		Path:   installPath,
+		Flavor: "retail",
+		Folders: []registry.Folder{{Name: folder, Version: "1.0", Hints: map[string]string{
+			"x-source-repo": "https://github.com/Owner/MyAddon",
+		}}},
+	}}}
+	for _, owner := range owners {
+		reg.UpsertAddon(owner)
+	}
+	if err := reg.Save(svc.RegistryPath); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAdoptRefusesFolderOwnedByAnotherAddon(t *testing.T) {
+	for _, owned := range []string{"MyAddon", "myaddon"} {
+		t.Run(owned, func(t *testing.T) {
+			svc, install, _ := newTestService(t, &fakeProvider{})
+			seedUnmanagedFolder(t, svc, install.Path, "MyAddon",
+				registry.Addon{Provider: "github", Ref: "Other/Suite", Flavor: "retail", InstallPath: install.Path, Folders: []string{"Other", owned}, Version: "v1", Source: "auto"})
+			before, err := os.ReadFile(svc.RegistryPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = svc.Adopt(context.Background(), install.Path, "MyAddon", provider.Reference{Provider: "github", ID: "Owner/MyAddon"})
+			if err == nil {
+				t.Fatal("expected adopt to refuse a folder owned by another managed addon")
+			}
+			if !strings.Contains(err.Error(), "MyAddon") || !strings.Contains(err.Error(), "Other/Suite") {
+				t.Errorf("error = %v, want folder name and owning addon ref", err)
+			}
+			after, err := os.ReadFile(svc.RegistryPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(before, after) {
+				t.Errorf("refused adopt changed the registry:\n%s", after)
+			}
+		})
+	}
+}
+
+func TestAdoptAllowsFolderOwnedInAnotherInstall(t *testing.T) {
+	svc, install, _ := newTestService(t, &fakeProvider{})
+	seedUnmanagedFolder(t, svc, install.Path, "MyAddon",
+		registry.Addon{Provider: "github", Ref: "Other/Suite", Flavor: "classic", InstallPath: filepath.Join(filepath.Dir(install.Path), "_classic_"), Folders: []string{"MyAddon"}, Version: "v1", Source: "auto"})
+
+	if err := svc.Adopt(context.Background(), install.Path, "MyAddon", provider.Reference{Provider: "github", ID: "Owner/MyAddon"}); err != nil {
+		t.Fatalf("ownership in another installation must not block adopt: %v", err)
+	}
+}
+
+func TestMapUnmanagedSkipsManagedFolderCaseInsensitive(t *testing.T) {
+	svc, install, _ := newTestService(t, &fakeProvider{})
+	seedUnmanagedFolder(t, svc, install.Path, "MyAddon",
+		registry.Addon{Provider: "github", Ref: "Other/Suite", Flavor: "retail", InstallPath: install.Path, Folders: []string{"myaddon"}, Version: "v1", Source: "auto"})
+
+	candidates, err := svc.MapUnmanaged()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 0 {
+		t.Errorf("folder managed under different case must not be a candidate: %+v", candidates)
+	}
+}
+
 func seedAddons(t *testing.T, svc *Service, addons ...registry.Addon) {
 	t.Helper()
 	reg := &registry.Registry{Version: 1}

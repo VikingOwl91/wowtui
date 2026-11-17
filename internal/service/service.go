@@ -167,17 +167,10 @@ func (s *Service) MapUnmanaged() ([]MappingCandidate, error) {
 	if err != nil {
 		return nil, err
 	}
-	managed := make(map[string]bool)
-	for _, addon := range reg.Addons {
-		for _, folder := range addon.Folders {
-			managed[addon.InstallPath+"\x00"+folder] = true
-		}
-	}
-
 	var candidates []MappingCandidate
 	for _, installation := range reg.Installations {
 		for _, folder := range installation.Folders {
-			if managed[installation.Path+"\x00"+folder.Name] {
+			if folderOwner(reg, installation.Path, "", folder.Name) != nil {
 				continue
 			}
 			for _, candidate := range mapFolderHints(installation, folder) {
@@ -211,6 +204,9 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 	}
 	if !found {
 		return fmt.Errorf("unmanaged folder %q not found in %s", folderName, installPath)
+	}
+	if owner := folderOwner(reg, installPath, ref.ID, folder.Name); owner != nil {
+		return fmt.Errorf("refusing to adopt %s in %s: folder %s is managed by %s", ref.ID, installPath, folder.Name, owner.Ref)
 	}
 	p, ok := s.Providers[ref.Provider]
 	if !ok {

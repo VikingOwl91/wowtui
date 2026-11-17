@@ -167,17 +167,10 @@ func (s *Service) MapUnmanaged() ([]MappingCandidate, error) {
 	if err != nil {
 		return nil, err
 	}
-	managed := make(map[string]bool)
-	for _, addon := range reg.Addons {
-		for _, folder := range addon.Folders {
-			managed[addon.InstallPath+"\x00"+folder] = true
-		}
-	}
-
 	var candidates []MappingCandidate
 	for _, installation := range reg.Installations {
 		for _, folder := range installation.Folders {
-			if managed[installation.Path+"\x00"+folder.Name] {
+			if folderOwner(reg, installation.Path, "", folder.Name) != nil {
 				continue
 			}
 			for _, candidate := range mapFolderHints(installation, folder) {
@@ -211,6 +204,9 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 	}
 	if !found {
 		return fmt.Errorf("unmanaged folder %q not found in %s", folderName, installPath)
+	}
+	if owner := folderOwner(reg, installPath, ref.ID, folder.Name); owner != nil {
+		return fmt.Errorf("refusing to adopt %s in %s: folder %s is managed by %s", ref.ID, installPath, folder.Name, owner.Ref)
 	}
 	p, ok := s.Providers[ref.Provider]
 	if !ok {
@@ -377,13 +373,31 @@ func (s *Service) UpdateAll(ctx context.Context, dryRun bool) error {
 		return err
 	}
 	total := len(reg.Addons)
+	var failures updateFailures
 	for i := range reg.Addons {
-		if err := s.updateAddon(ctx, reg, &reg.Addons[i], dryRun, i+1, total); err != nil {
-			return err
+		addon := &reg.Addons[i]
+		if err := s.updateAddon(ctx, reg, addon, dryRun, i+1, total); err != nil {
+			s.emit(Event{Ref: addon.Ref, Stage: StageError, Message: fmt.Sprintf("failed to update %s: %v", addon.Ref, err), Index: i + 1, Total: total, Err: err})
+			failures = append(failures, fmt.Errorf("%s: %w", addon.Ref, err))
 		}
+	}
+	if len(failures) > 0 {
+		return failures
 	}
 	return nil
 }
+
+type updateFailures []error
+
+func (f updateFailures) Error() string {
+	msgs := make([]string, 0, len(f))
+	for _, err := range f {
+		msgs = append(msgs, err.Error())
+	}
+	return "update failed: " + strings.Join(msgs, "; ")
+}
+
+func (f updateFailures) Unwrap() []error { return f }
 
 func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon *registry.Addon, dryRun bool, index, total int) error {
 	ev := func(stage Stage, msg string) {
@@ -532,6 +546,11 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 	}
 	if len(conflicts) > 0 {
 		return nil, "", fmt.Errorf("refusing to install %s in %s: %s", ref, installPath, strings.Join(conflicts, "; "))
+	}
+	if release.Kind == provider.KindTag || release.Kind == provider.KindBranch {
+		for _, msg := range packagerWarnings(staging, roots) {
+			ev(StageWarning, fmt.Sprintf("warning: %s: %s", ref, msg))
+		}
 	}
 
 	var dropped []string

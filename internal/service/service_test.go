@@ -504,6 +504,80 @@ func TestUpdateAll(t *testing.T) {
 	}
 }
 
+func TestUpdateAllContinuesPastFailingAddons(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		dryRun bool
+	}{{"install", false}, {"dry-run", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			apiDown := errors.New("api down")
+			fp := &fakeProvider{
+				release:    provider.Release{Kind: provider.KindRelease, ID: 200, Tag: "v2.0.0", AssetName: "a.zip"},
+				zipContent: addonZip(t, "2.0.0"),
+			}
+			svc, install, out := newTestService(t, fp)
+			svc.Providers["broken"] = &fakeProvider{releaseErr: apiDown}
+			seedAddons(t, svc,
+				registry.Addon{Provider: "broken", Ref: "Owner/Broken", Flavor: "retail", InstallPath: install.Path, Folders: []string{"Broken"}, Version: "v1", Source: "auto"},
+				registry.Addon{Provider: "github", Ref: "Owner/MyAddon", Flavor: "retail", InstallPath: install.Path, Folders: []string{"MyAddon"}, Version: "v1.0.0", Source: "auto", ReleaseID: 100},
+				registry.Addon{Provider: "wago", Ref: "Owner/Gone", Flavor: "retail", InstallPath: install.Path, Folders: []string{"Gone"}, Version: "v1", Source: "auto"},
+			)
+			addonsDir := filepath.Join(install.Path, "Interface", "AddOns")
+			writeAddonFolder(t, addonsDir, "MyAddon", "## Version: 1.0.0")
+
+			err := svc.UpdateAll(context.Background(), tc.dryRun)
+			if err == nil {
+				t.Fatal("expected an error listing the failed addons")
+			}
+			for _, ref := range []string{"Owner/Broken", "Owner/Gone"} {
+				if !strings.Contains(err.Error(), ref) {
+					t.Errorf("error = %q, want failed ref %s", err, ref)
+				}
+			}
+			if strings.Contains(err.Error(), "Owner/MyAddon") {
+				t.Errorf("error = %q names an addon that did not fail", err)
+			}
+			if strings.Contains(err.Error(), "\n") {
+				t.Errorf("error = %q, want a single line", err)
+			}
+			if !errors.Is(err, apiDown) {
+				t.Errorf("error = %v, want it to wrap the provider error", err)
+			}
+
+			failures := eventsWithStage(out, StageError)
+			if len(failures) != 2 {
+				t.Fatalf("got %d error events, want 2: %+v", len(failures), out.events)
+			}
+			if f := failures[0]; f.Ref != "Owner/Broken" || f.Index != 1 || f.Total != 3 || !strings.Contains(f.Message, "Owner/Broken") || !strings.Contains(f.Message, "api down") {
+				t.Errorf("first error event = %+v", f)
+			}
+			if f := failures[1]; f.Ref != "Owner/Gone" || f.Index != 3 || f.Total != 3 || !strings.Contains(f.Message, "Owner/Gone") || !strings.Contains(f.Message, "wago") {
+				t.Errorf("second error event = %+v", f)
+			}
+
+			reg, err := registry.Load(svc.RegistryPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			a := reg.FindAddon("Owner/MyAddon", install.Path)
+			if tc.dryRun {
+				assertToc(t, addonsDir, "MyAddon", "## Version: 1.0.0")
+				if fp.downloads != 0 {
+					t.Error("dry run must not download")
+				}
+				if a == nil || a.ReleaseID != 100 {
+					t.Errorf("dry run changed the registry entry: %+v", a)
+				}
+				return
+			}
+			assertToc(t, addonsDir, "MyAddon", "## Version: 2.0.0")
+			if a == nil || a.ReleaseID != 200 || a.Version != "v2.0.0" {
+				t.Errorf("registry entry = %+v, want the successful update saved", a)
+			}
+		})
+	}
+}
+
 func TestAddEmitsStageSequence(t *testing.T) {
 	fp := &fakeProvider{
 		release:    provider.Release{Kind: provider.KindRelease, ID: 100, Tag: "v1.0.0", AssetName: "MyAddon-1.0.0.zip", DownloadURL: "http://fake/zip", Size: 10},
@@ -644,6 +718,76 @@ func TestMapAndAdoptUnmanagedAddon(t *testing.T) {
 	addon := reg.FindAddon("Owner/MyAddon", install.Path)
 	if addon == nil || addon.Version != "1.0" || addon.Folders[0] != "MyAddon" {
 		t.Errorf("adopted addon = %+v", addon)
+	}
+}
+
+func seedUnmanagedFolder(t *testing.T, svc *Service, installPath, folder string, owners ...registry.Addon) {
+	t.Helper()
+	reg := &registry.Registry{Version: 1, Installations: []registry.Installation{{
+		Path:   installPath,
+		Flavor: "retail",
+		Folders: []registry.Folder{{Name: folder, Version: "1.0", Hints: map[string]string{
+			"x-source-repo": "https://github.com/Owner/MyAddon",
+		}}},
+	}}}
+	for _, owner := range owners {
+		reg.UpsertAddon(owner)
+	}
+	if err := reg.Save(svc.RegistryPath); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAdoptRefusesFolderOwnedByAnotherAddon(t *testing.T) {
+	for _, owned := range []string{"MyAddon", "myaddon"} {
+		t.Run(owned, func(t *testing.T) {
+			svc, install, _ := newTestService(t, &fakeProvider{})
+			seedUnmanagedFolder(t, svc, install.Path, "MyAddon",
+				registry.Addon{Provider: "github", Ref: "Other/Suite", Flavor: "retail", InstallPath: install.Path, Folders: []string{"Other", owned}, Version: "v1", Source: "auto"})
+			before, err := os.ReadFile(svc.RegistryPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = svc.Adopt(context.Background(), install.Path, "MyAddon", provider.Reference{Provider: "github", ID: "Owner/MyAddon"})
+			if err == nil {
+				t.Fatal("expected adopt to refuse a folder owned by another managed addon")
+			}
+			if !strings.Contains(err.Error(), "MyAddon") || !strings.Contains(err.Error(), "Other/Suite") {
+				t.Errorf("error = %v, want folder name and owning addon ref", err)
+			}
+			after, err := os.ReadFile(svc.RegistryPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(before, after) {
+				t.Errorf("refused adopt changed the registry:\n%s", after)
+			}
+		})
+	}
+}
+
+func TestAdoptAllowsFolderOwnedInAnotherInstall(t *testing.T) {
+	svc, install, _ := newTestService(t, &fakeProvider{})
+	seedUnmanagedFolder(t, svc, install.Path, "MyAddon",
+		registry.Addon{Provider: "github", Ref: "Other/Suite", Flavor: "classic", InstallPath: filepath.Join(filepath.Dir(install.Path), "_classic_"), Folders: []string{"MyAddon"}, Version: "v1", Source: "auto"})
+
+	if err := svc.Adopt(context.Background(), install.Path, "MyAddon", provider.Reference{Provider: "github", ID: "Owner/MyAddon"}); err != nil {
+		t.Fatalf("ownership in another installation must not block adopt: %v", err)
+	}
+}
+
+func TestMapUnmanagedSkipsManagedFolderCaseInsensitive(t *testing.T) {
+	svc, install, _ := newTestService(t, &fakeProvider{})
+	seedUnmanagedFolder(t, svc, install.Path, "MyAddon",
+		registry.Addon{Provider: "github", Ref: "Other/Suite", Flavor: "retail", InstallPath: install.Path, Folders: []string{"myaddon"}, Version: "v1", Source: "auto"})
+
+	candidates, err := svc.MapUnmanaged()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(candidates) != 0 {
+		t.Errorf("folder managed under different case must not be a candidate: %+v", candidates)
 	}
 }
 

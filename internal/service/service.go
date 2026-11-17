@@ -508,6 +508,20 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		return nil, "", fmt.Errorf("refusing to install %s in %s: %s", ref, installPath, strings.Join(conflicts, "; "))
 	}
 
+	var dropped []string
+	for _, name := range previous {
+		shipped := false
+		for _, root := range roots {
+			if strings.EqualFold(root.Name, name) {
+				shipped = true
+				break
+			}
+		}
+		if !shipped && folderOwner(reg, installPath, ref, name) == nil {
+			dropped = append(dropped, name)
+		}
+	}
+
 	ev(StageInstall, "installing")
 	result, err := installer.Install(installer.InstallPlan{
 		AddonsDir:  addonsDir,
@@ -515,6 +529,7 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		BackupRoot: s.BackupRoot,
 		Label:      label,
 		Roots:      roots,
+		Remove:     dropped,
 	})
 	if err != nil {
 		return nil, "", err
@@ -530,6 +545,9 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 	}
 	if len(unmanaged) > 0 {
 		ev(StageWarning, fmt.Sprintf("warning: %s replaced unmanaged folders %s (backup: %s)", ref, strings.Join(unmanaged, ", "), result.BackupPath))
+	}
+	if len(result.Removed) > 0 {
+		ev(StageInfo, fmt.Sprintf("%s removed folders no longer shipped: %s (backup: %s)", ref, strings.Join(result.Removed, ", "), result.BackupPath))
 	}
 	return result.Folders, sha, nil
 }

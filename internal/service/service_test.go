@@ -889,6 +889,76 @@ func TestAddRemovesWorkDirOnFailure(t *testing.T) {
 	}
 }
 
+func TestUpdateRemovesDroppedFolder(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 200, Tag: "v2.0.0", AssetName: "a.zip"},
+		zipContent: addonZip(t, "2.0.0"),
+	}
+	svc, install, out := newTestService(t, fp)
+	seedAddons(t, svc, registry.Addon{Provider: "github", Ref: "Owner/MyAddon", Flavor: "retail", InstallPath: install.Path, Folders: []string{"MyAddon", "MyAddon_Legacy"}, Version: "v1.0.0", Source: "auto", ReleaseID: 100})
+	addonsDir := filepath.Join(install.Path, "Interface", "AddOns")
+	writeAddonFolder(t, addonsDir, "MyAddon", "## Version: 1.0.0")
+	writeAddonFolder(t, addonsDir, "MyAddon_Legacy", "## Version: 1.0.0")
+
+	if err := svc.Update(context.Background(), "Owner/MyAddon", false); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(addonsDir, "MyAddon_Legacy")); !os.IsNotExist(err) {
+		t.Error("folder dropped by the new version must be removed")
+	}
+	assertToc(t, addonsDir, "MyAddon", "## Version: 2.0.0")
+
+	backups, err := os.ReadDir(svc.BackupRoot)
+	if err != nil || len(backups) != 1 {
+		t.Fatalf("expected one backup, got %v (%v)", backups, err)
+	}
+	assertToc(t, filepath.Join(svc.BackupRoot, backups[0].Name()), "MyAddon_Legacy", "## Version: 1.0.0")
+
+	reg, err := registry.Load(svc.RegistryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := reg.FindAddon("Owner/MyAddon", install.Path)
+	if a == nil || len(a.Folders) != 1 || a.Folders[0] != "MyAddon" {
+		t.Errorf("registry entry = %+v, want folders [MyAddon]", a)
+	}
+
+	named := false
+	for _, e := range out.events {
+		if strings.Contains(e.Message, "MyAddon_Legacy") && strings.Contains(e.Message, "removed") {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("no event names the removed folder: %s", out.String())
+	}
+	if left := hiddenTempDirs(t, filepath.Join(install.Path, "Interface")); len(left) != 0 {
+		t.Errorf("temp dirs left behind: %v", left)
+	}
+}
+
+func TestUpdateKeepsDroppedFolderClaimedByAnotherAddon(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 200, Tag: "v2.0.0", AssetName: "a.zip"},
+		zipContent: addonZip(t, "2.0.0"),
+	}
+	svc, install, _ := newTestService(t, fp)
+	seedAddons(t, svc,
+		registry.Addon{Provider: "github", Ref: "Owner/MyAddon", Flavor: "retail", InstallPath: install.Path, Folders: []string{"MyAddon", "SharedLib"}, Version: "v1.0.0", Source: "auto", ReleaseID: 100},
+		registry.Addon{Provider: "github", Ref: "Other/Lib", Flavor: "retail", InstallPath: install.Path, Folders: []string{"SharedLib"}, Version: "v1", Source: "auto"},
+	)
+	addonsDir := filepath.Join(install.Path, "Interface", "AddOns")
+	writeAddonFolder(t, addonsDir, "MyAddon", "## Version: 1.0.0")
+	writeAddonFolder(t, addonsDir, "SharedLib", "## Version: lib")
+
+	if err := svc.Update(context.Background(), "Owner/MyAddon", false); err != nil {
+		t.Fatal(err)
+	}
+	assertToc(t, addonsDir, "SharedLib", "## Version: lib")
+	assertToc(t, addonsDir, "MyAddon", "## Version: 2.0.0")
+}
+
 func TestScanPreservesManagedAddons(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	svc, install, _ := newTestService(t, &fakeProvider{})

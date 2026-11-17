@@ -27,7 +27,7 @@ func FlavorFromInterface(num int) GameFlavor {
 	switch {
 	case num >= 80000:
 		return Retail
-	case num >= 30000 && num < 50000:
+	case num >= 30000 && num < 60000:
 		return Classic
 	case num >= 10000 && num < 30000:
 		return ClassicEra

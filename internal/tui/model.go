@@ -80,6 +80,20 @@ type opResult struct {
 	err      error
 }
 
+const dismissKey = "ctrl+x"
+
+type noticeKind int
+
+const (
+	noticeError noticeKind = iota
+	noticeWarning
+)
+
+type notice struct {
+	kind noticeKind
+	text string
+}
+
 type Model struct {
 	deps Deps
 
@@ -113,6 +127,7 @@ type Model struct {
 	busy           bool
 	busyMsg        string
 	errMsg         string
+	notices        []notice
 	filter         int
 	searching      bool
 	filterQuery    string
@@ -219,6 +234,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if e.Message != "" {
 			m.busyMsg = e.Message
 		}
+		m.collectNotice(e)
 		m.applyEvent(e)
 		return m, waitForEvent(m.eventChan)
 
@@ -238,6 +254,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == dismissKey && m.noticeVisible() {
+		m.notices = nil
+		m.errMsg = ""
+		return m, nil
+	}
 	switch m.screen {
 	case screenAddons:
 		return m.handleAddonsKey(msg)
@@ -272,7 +293,11 @@ func (m *Model) View() string {
 		body = m.settingsView()
 	}
 
-	return m.headerView() + "\n" + contentPanel.Render(body) + "\n" + footerBar.Render(m.footerView())
+	notices := ""
+	if lines := m.noticeLines(); len(lines) > 0 {
+		notices = noticeBar.Render(strings.Join(lines, "\n")) + "\n"
+	}
+	return m.headerView() + "\n" + contentPanel.Render(body) + "\n" + notices + footerBar.Render(m.footerView())
 }
 
 func (m *Model) headerView() string {
@@ -303,10 +328,58 @@ func (m *Model) footerView() string {
 	if m.busy {
 		return statusBusy.Render(m.spinner.View() + " " + m.busyMsg)
 	}
-	if m.errMsg != "" {
-		return errStyle.Render(m.errMsg)
+	help := m.helpText()
+	if m.noticeVisible() {
+		help = dismissKey + " dismiss · " + help
 	}
-	return helpStyle.Render(m.helpText())
+	return helpStyle.Render(help)
+}
+
+func (m *Model) collectNotice(e service.Event) {
+	var kind noticeKind
+	switch e.Stage {
+	case service.StageWarning:
+		kind = noticeWarning
+	case service.StageError:
+		kind = noticeError
+	default:
+		return
+	}
+	text := e.Message
+	if text == "" && e.Err != nil {
+		text = e.Err.Error()
+	}
+	if text != "" {
+		m.notices = append(m.notices, notice{kind: kind, text: text})
+	}
+}
+
+func (m *Model) noticeEntries() []notice {
+	var entries []notice
+	if m.errMsg != "" {
+		entries = append(entries, notice{kind: noticeError, text: m.errMsg})
+	}
+	return append(entries, m.notices...)
+}
+
+func (m *Model) noticeVisible() bool {
+	return !m.busy && len(m.noticeEntries()) > 0
+}
+
+func (m *Model) noticeLines() []string {
+	if !m.noticeVisible() {
+		return nil
+	}
+	entries := m.noticeEntries()
+	lines := make([]string, 0, len(entries))
+	for _, n := range entries {
+		if n.kind == noticeWarning {
+			lines = append(lines, warnStyle.Render("! "+n.text))
+		} else {
+			lines = append(lines, errStyle.Render("✗ "+n.text))
+		}
+	}
+	return lines
 }
 
 func (m *Model) helpText() string {
@@ -341,6 +414,7 @@ func waitForEvent(ch chan service.Event) tea.Cmd {
 func (m *Model) startOp(kind opKind, run func(svc *service.Service) opResult) tea.Cmd {
 	m.busy = true
 	m.errMsg = ""
+	m.notices = nil
 	m.opKind = kind
 	m.eventChan = make(chan service.Event, 64)
 	m.resultChan = make(chan opResult, 1)
@@ -368,7 +442,7 @@ func (m *Model) finishOp() (tea.Model, tea.Cmd) {
 	}
 
 	if result.err != nil {
-		m.errMsg = result.err.Error()
+		m.notices = append([]notice{{kind: noticeError, text: result.err.Error()}}, m.notices...)
 	}
 
 	switch kind {

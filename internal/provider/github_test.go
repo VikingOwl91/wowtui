@@ -6,9 +6,11 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"somegit.dev/vikingowl/wowtui/internal/wow"
 )
@@ -459,6 +461,81 @@ func TestGitHubReleaseJSONNeverSendsTokenToDownloadHosts(t *testing.T) {
 	for i, value := range auth {
 		if value != "" {
 			t.Errorf("request %s carried Authorization %q", paths[i], value)
+		}
+	}
+}
+
+func rateLimitedGitHub(t *testing.T, status int, remaining, reset, token string) *GitHub {
+	t.Helper()
+	gh, _ := newTestGitHub(t, func(w http.ResponseWriter, r *http.Request) {
+		if remaining != "" {
+			w.Header().Set("X-RateLimit-Remaining", remaining)
+		}
+		if reset != "" {
+			w.Header().Set("X-RateLimit-Reset", reset)
+		}
+		w.WriteHeader(status)
+	}, token)
+	return gh
+}
+
+func TestGitHubRateLimitExhaustedWithoutToken(t *testing.T) {
+	reset := time.Date(2026, 11, 18, 14, 32, 10, 0, time.UTC).Unix()
+	resetAt := time.Unix(reset, 0).Format("15:04:05 MST")
+	for _, status := range []int{http.StatusForbidden, http.StatusTooManyRequests} {
+		t.Run(strconv.Itoa(status), func(t *testing.T) {
+			gh := rateLimitedGitHub(t, status, "0", strconv.FormatInt(reset, 10), "")
+			_, resolveErr := gh.Resolve(context.Background(), Reference{Provider: "github", ID: "Owner/Repo"})
+			_, latestErr := gh.Latest(context.Background(), RemoteAddon{Provider: "github", ID: "Owner/Repo"}, wow.Retail, "")
+			for _, err := range []error{resolveErr, latestErr} {
+				if err == nil {
+					t.Fatal("expected a rate limit error")
+				}
+				for _, want := range []string{"rate limit exhausted", "resets at " + resetAt, "WOWTUI_GITHUB_TOKEN", "providers.github.token"} {
+					if !strings.Contains(err.Error(), want) {
+						t.Errorf("error %q does not mention %q", err, want)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestGitHubRateLimitExhaustedWithToken(t *testing.T) {
+	reset := time.Date(2026, 11, 18, 14, 32, 10, 0, time.UTC).Unix()
+	gh := rateLimitedGitHub(t, http.StatusForbidden, "0", strconv.FormatInt(reset, 10), "dummy-token")
+	_, err := gh.Resolve(context.Background(), Reference{Provider: "github", ID: "Owner/Repo"})
+	if err == nil {
+		t.Fatal("expected a rate limit error")
+	}
+	if !strings.Contains(err.Error(), "rate limit exhausted") || !strings.Contains(err.Error(), "resets at "+time.Unix(reset, 0).Format("15:04:05 MST")) {
+		t.Errorf("error = %q", err)
+	}
+	if strings.Contains(err.Error(), "WOWTUI_GITHUB_TOKEN") || strings.Contains(err.Error(), "dummy-token") {
+		t.Errorf("error %q suggests a token although one is configured, or leaks it", err)
+	}
+}
+
+func TestGitHubRateLimitExhaustedWithoutReset(t *testing.T) {
+	gh := rateLimitedGitHub(t, http.StatusForbidden, "0", "soon", "")
+	_, err := gh.Resolve(context.Background(), Reference{Provider: "github", ID: "Owner/Repo"})
+	if err == nil {
+		t.Fatal("expected a rate limit error")
+	}
+	if !strings.Contains(err.Error(), "rate limit exhausted") || strings.Contains(err.Error(), "resets at") {
+		t.Errorf("error = %q, want no reset time without a valid X-RateLimit-Reset", err)
+	}
+}
+
+func TestGitHubForbiddenWithRemainingQuotaIsNoRateLimit(t *testing.T) {
+	for _, remaining := range []string{"", "12"} {
+		gh := rateLimitedGitHub(t, http.StatusForbidden, remaining, "1795000000", "")
+		_, err := gh.Resolve(context.Background(), Reference{Provider: "github", ID: "Owner/Repo"})
+		if err == nil {
+			t.Fatal("expected an error for 403")
+		}
+		if strings.Contains(err.Error(), "rate limit") {
+			t.Errorf("remaining %q: error %q claims a rate limit", remaining, err)
 		}
 	}
 }

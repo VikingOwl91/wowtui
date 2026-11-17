@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -306,6 +307,9 @@ func (g *GitHub) get(ctx context.Context, url string, out any) (int, error) {
 	}
 	defer resp.Body.Close()
 
+	if (resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests) && resp.Header.Get("X-RateLimit-Remaining") == "0" {
+		return resp.StatusCode, g.rateLimitError(resp.Header.Get("X-RateLimit-Reset"))
+	}
 	if resp.StatusCode == http.StatusNotModified && haveCached {
 		if out != nil {
 			if err := json.Unmarshal(cached.Body, out); err != nil {
@@ -325,4 +329,18 @@ func (g *GitHub) get(ctx context.Context, url string, out any) (int, error) {
 		g.cache.store(cachedResponse{URL: url, ETag: resp.Header.Get("ETag"), LastModified: resp.Header.Get("Last-Modified"), Body: head})
 	}
 	return resp.StatusCode, nil
+}
+
+func (g *GitHub) rateLimitError(reset string) error {
+	msg := "github api rate limit exhausted"
+	if g.token != "" {
+		msg += " for the configured token"
+	}
+	if seconds, err := strconv.ParseInt(reset, 10, 64); err == nil {
+		msg += ", resets at " + time.Unix(seconds, 0).Format("15:04:05 MST")
+	}
+	if g.token == "" {
+		msg += "; a token via WOWTUI_GITHUB_TOKEN or providers.github.token raises the limit"
+	}
+	return errors.New(msg)
 }

@@ -66,10 +66,17 @@ type curseForgeFile struct {
 	ReleaseType int    `json:"releaseType"`
 }
 
-type curseForgeVersionType struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
-	Slug string `json:"slug"`
+// IDs of GET /v1/games/1/version-types. Names and slugs differ between
+// API snapshots, the IDs do not.
+var curseForgeVersionTypes = map[wow.GameType]int64{
+	wow.GameMainline: 517,
+	wow.GameVanilla:  67408,
+	wow.GameTBC:      73246,
+	wow.GameWrath:    73713,
+	wow.GameTitan:    81212,
+	wow.GameCata:     77522,
+	wow.GameMists:    79434,
+	wow.GameForever:  88568,
 }
 
 func (c *CurseForge) Resolve(ctx context.Context, ref Reference) (RemoteAddon, error) {
@@ -85,14 +92,14 @@ func (c *CurseForge) Latest(ctx context.Context, addon RemoteAddon, flavor wow.G
 	if err != nil {
 		return Release{}, err
 	}
-	versionType, err := c.versionType(ctx, flavor)
-	if err != nil {
-		return Release{}, err
+	versionType, ok := curseForgeVersionTypes[flavor.GameType()]
+	if !ok {
+		return Release{}, fmt.Errorf("no CurseForge version type matches flavor %s", flavor)
 	}
 
 	var fileID int64
 	for _, index := range mod.LatestFiles {
-		if index.GameVersionType == versionType.ID {
+		if index.GameVersionType == versionType {
 			fileID = index.FileID
 			break
 		}
@@ -190,32 +197,6 @@ func (c *CurseForge) getDownloadURL(ctx context.Context, modID, fileID int64) (s
 		return "", fmt.Errorf("CurseForge returned no download URL")
 	}
 	return response.Data, nil
-}
-
-func (c *CurseForge) versionType(ctx context.Context, flavor wow.GameFlavor) (curseForgeVersionType, error) {
-	var response struct {
-		Data []curseForgeVersionType `json:"data"`
-	}
-	status, err := c.get(ctx, c.baseURL+"/v1/games/"+strconv.Itoa(curseForgeWoWGameID)+"/version-types", &response)
-	if err != nil {
-		return curseForgeVersionType{}, err
-	}
-	if status != http.StatusOK {
-		return curseForgeVersionType{}, fmt.Errorf("CurseForge version types returned %s", http.StatusText(status))
-	}
-	for _, item := range response.Data {
-		name := strings.ToLower(item.Name + " " + item.Slug)
-		if flavor == wow.Retail && strings.Contains(name, "retail") {
-			return item, nil
-		}
-		if flavor == wow.ClassicEra && strings.Contains(name, "classic") {
-			return item, nil
-		}
-		if flavor == wow.Classic && (strings.Contains(name, "cata") || strings.Contains(name, "mists") || strings.Contains(name, "wrath")) {
-			return item, nil
-		}
-	}
-	return curseForgeVersionType{}, fmt.Errorf("no CurseForge version type matches flavor %s", flavor)
 }
 
 func (c *CurseForge) get(ctx context.Context, endpoint string, out any) (int, error) {

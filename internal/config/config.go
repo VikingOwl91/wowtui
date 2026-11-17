@@ -13,6 +13,15 @@ import (
 type Config struct {
 	WoW       WoW       `toml:"wow"`
 	Providers Providers `toml:"providers"`
+
+	fileCredentials credentials
+	envCredentials  credentials
+}
+
+type credentials struct {
+	githubToken      string
+	wagoAPIKey       string
+	curseForgeAPIKey string
 }
 
 type WoW struct {
@@ -192,7 +201,11 @@ func Load(path string) (*Config, error) {
 }
 
 func Save(path string, cfg *Config) error {
-	data, err := toml.Marshal(cfg)
+	out := *cfg
+	out.Providers.GitHub.Token = persistedCredential(cfg.Providers.GitHub.Token, cfg.envCredentials.githubToken, cfg.fileCredentials.githubToken)
+	out.Providers.Wago.APIKey = persistedCredential(cfg.Providers.Wago.APIKey, cfg.envCredentials.wagoAPIKey, cfg.fileCredentials.wagoAPIKey)
+	out.Providers.CurseForge.APIKey = persistedCredential(cfg.Providers.CurseForge.APIKey, cfg.envCredentials.curseForgeAPIKey, cfg.fileCredentials.curseForgeAPIKey)
+	data, err := toml.Marshal(&out)
 	if err != nil {
 		return err
 	}
@@ -206,15 +219,33 @@ func Save(path string, cfg *Config) error {
 	return os.Rename(tmp, path)
 }
 
+// persistedCredential returns the value Save writes for a credential. A value
+// that still equals the one applied from the environment is replaced by the
+// value read from the config file.
+func persistedCredential(current, fromEnv, fromFile string) string {
+	if fromEnv != "" && current == fromEnv {
+		return fromFile
+	}
+	return current
+}
+
 func applyEnv(cfg *Config) {
+	cfg.fileCredentials = credentials{
+		githubToken:      cfg.Providers.GitHub.Token,
+		wagoAPIKey:       cfg.Providers.Wago.APIKey,
+		curseForgeAPIKey: cfg.Providers.CurseForge.APIKey,
+	}
 	if v := os.Getenv("WOWTUI_GITHUB_TOKEN"); v != "" {
 		cfg.Providers.GitHub.Token = v
+		cfg.envCredentials.githubToken = v
 	}
 	if v := os.Getenv("WOWTUI_WAGO_API_KEY"); v != "" {
 		cfg.Providers.Wago.APIKey = v
+		cfg.envCredentials.wagoAPIKey = v
 	}
 	if v := os.Getenv("WOWTUI_CURSEFORGE_API_KEY"); v != "" {
 		cfg.Providers.CurseForge.APIKey = v
+		cfg.envCredentials.curseForgeAPIKey = v
 	}
 }
 

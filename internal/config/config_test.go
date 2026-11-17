@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -183,5 +184,126 @@ func TestSaveProviderSettings(t *testing.T) {
 	}
 	if !loaded.Providers.Enabled("gitlab") || loaded.Providers.Order()[0] != "gitlab" {
 		t.Errorf("provider settings = %+v", loaded.Providers)
+	}
+}
+
+func clearCredentialEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("WOWTUI_GITHUB_TOKEN", "")
+	t.Setenv("WOWTUI_WAGO_API_KEY", "")
+	t.Setenv("WOWTUI_CURSEFORGE_API_KEY", "")
+}
+
+func readConfigFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+func TestSaveDoesNotPersistEnvCredentials(t *testing.T) {
+	path := writeConfig(t, "[providers.gitlab]\nenabled = false\n")
+	t.Setenv("WOWTUI_GITHUB_TOKEN", "dummy-env-token")
+	t.Setenv("WOWTUI_WAGO_API_KEY", "dummy-env-wago")
+	t.Setenv("WOWTUI_CURSEFORGE_API_KEY", "dummy-env-cf")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cfg.Providers.SetEnabled("gitlab", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	raw := readConfigFile(t, path)
+	for _, secret := range []string{"dummy-env-token", "dummy-env-wago", "dummy-env-cf"} {
+		if strings.Contains(raw, secret) {
+			t.Errorf("config file contains env credential %q", secret)
+		}
+	}
+	if cfg.Providers.GitHub.Token != "dummy-env-token" {
+		t.Errorf("in-memory github token = %q, want env value kept", cfg.Providers.GitHub.Token)
+	}
+
+	clearCredentialEnv(t)
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !loaded.Providers.Enabled("gitlab") {
+		t.Error("gitlab should stay enabled after save")
+	}
+	if loaded.Providers.GitHub.Token != "" || loaded.Providers.Wago.APIKey != "" || loaded.Providers.CurseForge.APIKey != "" {
+		t.Errorf("saved credentials = %q, %q, %q, want none", loaded.Providers.GitHub.Token, loaded.Providers.Wago.APIKey, loaded.Providers.CurseForge.APIKey)
+	}
+}
+
+func TestSaveKeepsFileCredentials(t *testing.T) {
+	path := writeConfig(t, `
+[providers.github]
+token = "dummy-file-token"
+
+[providers.curseforge]
+api_key = "dummy-file-cf"
+`)
+	clearCredentialEnv(t)
+	t.Setenv("WOWTUI_GITHUB_TOKEN", "dummy-env-token")
+	t.Setenv("WOWTUI_CURSEFORGE_API_KEY", "dummy-env-cf")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cfg.Providers.SetOrder([]string{"gitlab"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	raw := readConfigFile(t, path)
+	for _, secret := range []string{"dummy-env-token", "dummy-env-cf"} {
+		if strings.Contains(raw, secret) {
+			t.Errorf("config file contains env credential %q", secret)
+		}
+	}
+
+	clearCredentialEnv(t)
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Providers.GitHub.Token != "dummy-file-token" {
+		t.Errorf("github token = %q, want file value", loaded.Providers.GitHub.Token)
+	}
+	if loaded.Providers.CurseForge.APIKey != "dummy-file-cf" {
+		t.Errorf("curseforge key = %q, want file value", loaded.Providers.CurseForge.APIKey)
+	}
+	if loaded.Providers.Order()[0] != "gitlab" {
+		t.Errorf("order = %v", loaded.Providers.Order())
+	}
+}
+
+func TestSavePersistsCredentialSetByCaller(t *testing.T) {
+	path := writeConfig(t, "")
+	clearCredentialEnv(t)
+	t.Setenv("WOWTUI_GITHUB_TOKEN", "dummy-env-token")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Providers.GitHub.Token = "dummy-new-token"
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	clearCredentialEnv(t)
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Providers.GitHub.Token != "dummy-new-token" {
+		t.Errorf("github token = %q, want caller value", loaded.Providers.GitHub.Token)
 	}
 }

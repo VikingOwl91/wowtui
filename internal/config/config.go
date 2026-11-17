@@ -189,6 +189,7 @@ func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
+			applyEnv(cfg)
 			return cfg, nil
 		}
 		return nil, err

@@ -17,6 +17,7 @@ func writeConfig(t *testing.T, content string) string {
 }
 
 func TestLoadMissingFileReturnsEmptyConfig(t *testing.T) {
+	clearCredentialEnv(t)
 	cfg, err := Load(filepath.Join(t.TempDir(), "nope.toml"))
 	if err != nil {
 		t.Fatal(err)
@@ -26,6 +27,44 @@ func TestLoadMissingFileReturnsEmptyConfig(t *testing.T) {
 	}
 	if len(cfg.WoW.Paths) != 0 || cfg.Providers.GitHub.Token != "" {
 		t.Errorf("expected zero config, got %+v", cfg)
+	}
+}
+
+func TestEnvCredentialsApplyWithoutConfigFile(t *testing.T) {
+	clearCredentialEnv(t)
+	t.Setenv("WOWTUI_GITHUB_TOKEN", "dummy-token")
+	t.Setenv("WOWTUI_CURSEFORGE_API_KEY", "dummy-key")
+	cfg, err := Load(filepath.Join(t.TempDir(), "nope.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Providers.GitHub.Token != "dummy-token" {
+		t.Errorf("github token = %q, want env value", cfg.Providers.GitHub.Token)
+	}
+	if cfg.Providers.CurseForge.APIKey != "dummy-key" {
+		t.Errorf("curseforge key = %q, want env value", cfg.Providers.CurseForge.APIKey)
+	}
+	if got := cfg.Providers.State("curseforge"); got != "enabled" {
+		t.Errorf("curseforge state = %q, want enabled", got)
+	}
+}
+
+func TestSaveWithoutConfigFileDoesNotPersistEnvCredentials(t *testing.T) {
+	clearCredentialEnv(t)
+	t.Setenv("WOWTUI_GITHUB_TOKEN", "dummy-token")
+	path := filepath.Join(t.TempDir(), "config.toml")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cfg.Providers.SetEnabled("gitlab", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	if raw := readConfigFile(t, path); strings.Contains(raw, "dummy-token") {
+		t.Error("config file contains env credential")
 	}
 }
 

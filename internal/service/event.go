@@ -11,6 +11,7 @@ const (
 	StageDone     Stage = "done"
 	StageCurrent  Stage = "up-to-date"
 	StageInfo     Stage = "info"
+	StageWarning  Stage = "warning"
 	StageError    Stage = "error"
 )
 

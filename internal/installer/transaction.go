@@ -18,11 +18,13 @@ type InstallPlan struct {
 	StagingDir string
 	BackupRoot string
 	Label      string
+	Roots      []StagedRoot
 }
 
 type InstallResult struct {
 	Folders    []string
 	BackupPath string
+	Replaced   []string
 }
 
 func FindAddonRoots(stagingDir string) ([]StagedRoot, error) {
@@ -134,9 +136,13 @@ func Install(plan InstallPlan) (*InstallResult, error) {
 }
 
 func installWithMover(plan InstallPlan, move func(src, dst string) error) (*InstallResult, error) {
-	roots, err := FindAddonRoots(plan.StagingDir)
-	if err != nil {
-		return nil, err
+	roots := plan.Roots
+	var err error
+	if len(roots) == 0 {
+		roots, err = FindAddonRoots(plan.StagingDir)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for _, root := range roots {
@@ -191,7 +197,7 @@ func installWithMover(plan InstallPlan, move func(src, dst string) error) (*Inst
 	for _, root := range roots {
 		folders = append(folders, root.Name)
 	}
-	return &InstallResult{Folders: folders, BackupPath: backupPath}, nil
+	return &InstallResult{Folders: folders, BackupPath: backupPath, Replaced: existing}, nil
 }
 
 func rollback(addonsDir, rollbackDir string, installed, existing []string, move func(src, dst string) error) {

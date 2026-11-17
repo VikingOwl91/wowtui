@@ -271,3 +271,36 @@ func TestInstallRollsBackOnFailure(t *testing.T) {
 		t.Errorf("Beta not rolled back, content = %q", contentB)
 	}
 }
+
+func TestInstallReportsReplacedFolders(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+	stageAddon(t, plan.StagingDir, "Beta", "## Version: new-b")
+
+	result, err := Install(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Replaced) != 1 || result.Replaced[0] != "Alpha" {
+		t.Errorf("replaced = %v, want [Alpha]", result.Replaced)
+	}
+}
+
+func TestInstallUsesProvidedRoots(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+	stageAddon(t, plan.StagingDir, "Beta", "## Version: new-b")
+	plan.Roots = []StagedRoot{{Src: filepath.Join(plan.StagingDir, "Alpha"), Name: "Alpha"}}
+
+	result, err := Install(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Folders) != 1 || result.Folders[0] != "Alpha" {
+		t.Errorf("folders = %v, want [Alpha]", result.Folders)
+	}
+	if _, err := os.Stat(filepath.Join(addonsDir, "Beta")); !os.IsNotExist(err) {
+		t.Error("roots outside plan.Roots must not be installed")
+	}
+}

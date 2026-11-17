@@ -106,21 +106,24 @@ func (s *Service) Scan(ctx context.Context, configPaths []string) ([]registry.In
 func inferFlavor(folders []*addon.Folder) wow.GameFlavor {
 	votes := map[wow.GameFlavor]int{}
 	for _, f := range folders {
-		var folderFlavor wow.GameFlavor
+		var folderType wow.GameType
 		ambiguous := false
 		for _, num := range f.Interfaces() {
-			flavor := wow.FlavorFromInterface(num)
-			if flavor == "" {
+			gameType := wow.GameTypeFromInterface(num)
+			if gameType == "" {
 				continue
 			}
-			if folderFlavor != "" && folderFlavor != flavor {
+			if folderType != "" && folderType != gameType {
 				ambiguous = true
 				break
 			}
-			folderFlavor = flavor
+			folderType = gameType
 		}
-		if folderFlavor != "" && !ambiguous {
-			votes[folderFlavor]++
+		if ambiguous {
+			continue
+		}
+		if flavor := wow.FlavorForGameType(folderType); flavor != "" {
+			votes[flavor]++
 		}
 	}
 

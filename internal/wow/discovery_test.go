@@ -151,3 +151,64 @@ func TestDiscoverDedupesConfiguredAndDefault(t *testing.T) {
 		t.Fatalf("got %d installations, want dedup to 1", len(got))
 	}
 }
+
+func assertEveryClientDir(t *testing.T, got []Installation, root string) {
+	t.Helper()
+	if len(got) != len(clientDirTests) {
+		t.Fatalf("got %d installations, want %d: %+v", len(got), len(clientDirTests), got)
+	}
+	byFlavor := map[GameFlavor]string{}
+	for _, inst := range got {
+		byFlavor[inst.Flavor] = inst.Path
+	}
+	for _, tt := range clientDirTests {
+		want := filepath.Join(root, tt.dir)
+		if byFlavor[tt.flavor] != want {
+			t.Errorf("flavor %q path = %q, want %q", tt.flavor, byFlavor[tt.flavor], want)
+		}
+	}
+}
+
+func TestDiscoverConfiguredParentFindsEveryClientDir(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	root := t.TempDir()
+	for _, tt := range clientDirTests {
+		makeFlavorDir(t, root, tt.dir, true)
+	}
+	makeFlavorDir(t, root, "_cn_beta_", true)
+
+	got, err := Discover([]string{root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEveryClientDir(t, got, root)
+}
+
+func TestDiscoverDefaultFindsEveryClientDir(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	wowDir := filepath.Join(home, "Games", "battlenet", "drive_c", "Program Files (x86)", "World of Warcraft")
+	for _, tt := range clientDirTests {
+		makeFlavorDir(t, wowDir, tt.dir, true)
+	}
+
+	got, err := Discover(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEveryClientDir(t, got, wowDir)
+}
+
+func TestDiscoverConfiguredNewFlavorDir(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	root := t.TempDir()
+	eraPTR := makeFlavorDir(t, root, "_classic_era_ptr_", true)
+
+	got, err := Discover([]string{eraPTR})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Path != eraPTR || got[0].Flavor != ClassicEraPTR {
+		t.Fatalf("got %+v, want one classic-era-ptr installation at %q", got, eraPTR)
+	}
+}

@@ -98,7 +98,10 @@ func (h *WowUpHub) Latest(ctx context.Context, addon RemoteAddon, flavor wow.Gam
 }
 
 func (h *WowUpHub) Search(ctx context.Context, query string, flavor wow.GameFlavor) ([]RemoteAddon, error) {
-	gameType := wowUpGameType(flavor)
+	gameType, ok := wowUpGameType(flavor)
+	if !ok {
+		return nil, nil
+	}
 	endpoint := h.baseURL + "/addons/search/" + url.PathEscape(gameType) + "?query=" + url.QueryEscape(query) + "&limit=50"
 	var response wowUpSearchResponse
 	status, err := h.get(ctx, endpoint, &response)
@@ -153,25 +156,32 @@ func (h *WowUpHub) get(ctx context.Context, endpoint string, out any) (int, erro
 }
 
 func wowUpReleaseMatches(release wowUpRelease, flavor wow.GameFlavor) bool {
-	want := wowUpGameType(flavor)
+	want, ok := wowUpGameType(flavor)
+	if !ok {
+		return false
+	}
 	for _, version := range release.GameVersions {
 		if version.GameType == want {
-			return true
-		}
-		if flavor == wow.Classic && (version.GameType == "cata" || version.GameType == "mop" || version.GameType == "wotlk" || version.GameType == "bc") {
 			return true
 		}
 	}
 	return false
 }
 
-func wowUpGameType(flavor wow.GameFlavor) string {
-	switch flavor {
-	case wow.ClassicEra:
-		return "classic"
-	case wow.Classic:
-		return "mists"
-	default:
-		return "retail"
-	}
+// Values of WowUp's WowGameType, which the hub uses for game_type and the
+// search path. The hub has no Titan Reforged game type.
+var wowUpGameTypes = map[wow.GameType]string{
+	"":               "retail",
+	wow.GameMainline: "retail",
+	wow.GameVanilla:  "classic",
+	wow.GameTBC:      "burningCrusade",
+	wow.GameWrath:    "wotlk",
+	wow.GameCata:     "cata",
+	wow.GameMists:    "mists",
+	wow.GameForever:  "forever",
+}
+
+func wowUpGameType(flavor wow.GameFlavor) (string, bool) {
+	gameType, ok := wowUpGameTypes[flavor.GameType()]
+	return gameType, ok
 }

@@ -76,6 +76,54 @@ func TestInferFlavor(t *testing.T) {
 			name: "no folders",
 			want: "",
 		},
+		{
+			name: "tbc interfaces infer anniversary",
+			folders: []*addon.Folder{
+				inferFolder("A", "20506"),
+				inferFolder("B", "20505, 20506"),
+			},
+			want: wow.Anniversary,
+		},
+		{
+			name: "forever interfaces infer forever",
+			folders: []*addon.Folder{
+				inferFolder("A", "16001"),
+				inferFolder("B", "110200, 11509"),
+			},
+			want: wow.Forever,
+		},
+		{
+			name: "titan interfaces infer classic-titan",
+			folders: []*addon.Folder{
+				inferFolder("A", "38002"),
+			},
+			want: wow.ClassicTitan,
+		},
+		{
+			name: "game types without a live client are not evidence",
+			folders: []*addon.Folder{
+				inferFolder("A", "30405"),
+				inferFolder("B", "40402"),
+			},
+			want: "",
+		},
+		{
+			name: "folder spanning game types is ambiguous even without a live client",
+			folders: []*addon.Folder{
+				inferFolder("A", "110200, 30405"),
+				inferFolder("B", "110200", "40402"),
+				inferFolder("C", "11509"),
+			},
+			want: wow.ClassicEra,
+		},
+		{
+			name: "vanilla and tbc are different game types",
+			folders: []*addon.Folder{
+				inferFolder("A", "11509, 20506"),
+				inferFolder("B", "20506"),
+			},
+			want: wow.Anniversary,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

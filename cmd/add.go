@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -18,7 +19,7 @@ func newAddCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  runAdd,
 	}
-	cmd.Flags().String("flavor", "retail", "target flavor (retail, classic, classic-era, beta, ptr)")
+	cmd.Flags().String("flavor", "retail", "target flavor ("+flavorList()+")")
 	cmd.Flags().String("install", "", "explicit install path (overrides flavor selection)")
 	cmd.Flags().String("source", "", "pin update source: release, tag, or branch (default: auto fallback chain)")
 	return cmd
@@ -33,7 +34,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	flavorStr, _ := cmd.Flags().GetString("flavor")
 	flavor := wow.GameFlavor(flavorStr)
 	if !knownFlavor(flavor) {
-		return fmt.Errorf("unknown flavor %q (retail, classic, classic-era, beta, ptr)", flavorStr)
+		return fmt.Errorf("unknown flavor %q (%s)", flavorStr, flavorList())
 	}
 
 	source, _ := cmd.Flags().GetString("source")
@@ -58,11 +59,16 @@ func runAdd(cmd *cobra.Command, args []string) error {
 }
 
 func knownFlavor(flavor wow.GameFlavor) bool {
-	switch flavor {
-	case wow.Retail, wow.Classic, wow.ClassicEra, wow.Beta, wow.PTR:
-		return true
+	return slices.Contains(wow.Flavors(), flavor)
+}
+
+func flavorList() string {
+	flavors := wow.Flavors()
+	names := make([]string, 0, len(flavors))
+	for _, flavor := range flavors {
+		names = append(names, string(flavor))
 	}
-	return false
+	return strings.Join(names, ", ")
 }
 
 func pickInstall(cmd *cobra.Command, cfg *config.Config, flavor wow.GameFlavor) (wow.Installation, error) {

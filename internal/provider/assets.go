@@ -8,13 +8,25 @@ import (
 	"somegit.dev/vikingowl/wowtui/internal/wow"
 )
 
-var flavorTokens = map[wow.GameFlavor][]string{
-	wow.ClassicEra: {"vanilla", "era", "classicera"},
-	wow.Classic:    {"classic", "cata", "cataclysm"},
-	wow.Retail:     {"retail", "mainline"},
+var gameTypeTokens = []struct {
+	gameType wow.GameType
+	tokens   []string
+}{
+	{wow.GameVanilla, []string{"vanilla", "era", "classicera"}},
+	{wow.GameTBC, []string{"bcc", "tbc"}},
+	{wow.GameTitan, []string{"titan"}},
+	{wow.GameWrath, []string{"wrath", "wotlkc"}},
+	{wow.GameCata, []string{"cata", "cataclysm"}},
+	{wow.GameMists, []string{"mists"}},
+	{wow.GameForever, []string{"forever", "camelot"}},
+	{wow.GameMainline, []string{"retail", "mainline"}},
 }
 
-func classifyAsset(name string) wow.GameFlavor {
+// BigWigs packager names vanilla builds "-classic", so the bare token only
+// counts when no more specific token is present.
+const genericClassicToken = "classic"
+
+func classifyAsset(name string) (gameType wow.GameType, generic bool) {
 	tokens := map[string]bool{}
 	for _, part := range strings.FieldsFunc(strings.ToLower(name), func(r rune) bool {
 		return (r < 'a' || r > 'z') && (r < '0' || r > '9')
@@ -22,14 +34,17 @@ func classifyAsset(name string) wow.GameFlavor {
 		tokens[part] = true
 	}
 
-	for _, flavor := range []wow.GameFlavor{wow.ClassicEra, wow.Classic, wow.Retail} {
-		for _, token := range flavorTokens[flavor] {
+	for _, entry := range gameTypeTokens {
+		for _, token := range entry.tokens {
 			if tokens[token] {
-				return flavor
+				return entry.gameType, false
 			}
 		}
 	}
-	return ""
+	if tokens[genericClassicToken] {
+		return wow.GameVanilla, true
+	}
+	return "", false
 }
 
 func PickAsset(names []string, flavor wow.GameFlavor) (string, error) {
@@ -46,13 +61,25 @@ func PickAsset(names []string, flavor wow.GameFlavor) (string, error) {
 		return zips[0], nil
 	}
 
+	gameType := flavor.GameType()
+	var generic string
 	for _, name := range zips {
-		if classifyAsset(name) == flavor {
+		assetType, isGeneric := classifyAsset(name)
+		if assetType != gameType {
+			continue
+		}
+		if !isGeneric {
 			return name, nil
 		}
+		if generic == "" {
+			generic = name
+		}
+	}
+	if generic != "" {
+		return generic, nil
 	}
 	for _, name := range zips {
-		if classifyAsset(name) == "" {
+		if assetType, _ := classifyAsset(name); assetType == "" {
 			return name, nil
 		}
 	}

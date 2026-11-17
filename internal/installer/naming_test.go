@@ -137,3 +137,34 @@ func TestNamingKeepsNames(t *testing.T) {
 		})
 	}
 }
+
+func TestNamingKeepsWrapperForUnsafeTocNames(t *testing.T) {
+	tests := []struct {
+		name string
+		toc  string
+	}{
+		{"dot toc", "..toc"},
+		{"dot dot toc", "...toc"},
+		{"empty base", ".toc"},
+		{"hidden base", ".hidden.toc"},
+		{"hidden base with client suffix", ".hidden_Vanilla.toc"},
+		{"backslash in base", `My\Addon.toc`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			zipPath := filepath.Join(t.TempDir(), "addon.zip")
+			writeZip(t, zipPath, []zipEntry{
+				{name: "Wrapper/"},
+				{name: "Wrapper/" + tt.toc, content: "## Interface: 110200"},
+			})
+			staging := filepath.Join(t.TempDir(), "staging")
+			if err := ExtractZip(zipPath, staging, defaultLimits()); err != nil {
+				t.Fatal(err)
+			}
+
+			if got := singleRootName(t, staging); got != "Wrapper" {
+				t.Errorf("root name = %q, want Wrapper", got)
+			}
+		})
+	}
+}

@@ -466,6 +466,110 @@ func TestInstallRejectsUnsafeRemoveNames(t *testing.T) {
 	}
 }
 
+func assertAddonsOnly(t *testing.T, addonsDir string, want ...string) {
+	t.Helper()
+	entries, err := os.ReadDir(addonsDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, entry := range entries {
+		got = append(got, entry.Name())
+	}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("AddOns entries = %q, want %q", got, want)
+	}
+}
+
+func TestInstallRejectsUnsafeRootNames(t *testing.T) {
+	for _, name := range []string{"", ".", "..", ".hidden", ".wowtui-rollback-x", "../outside", "a/b", `a\b`, "a\x00b"} {
+		t.Run(name, func(t *testing.T) {
+			plan, addonsDir := installPlan(t)
+			stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+			stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+			stageAddon(t, filepath.Dir(addonsDir), "outside", "## Version: outside")
+			plan.Roots = []StagedRoot{{Src: filepath.Join(plan.StagingDir, "Alpha"), Name: name}}
+
+			_, err := Install(plan)
+			if err == nil || !strings.Contains(err.Error(), "not a plain folder name") {
+				t.Fatalf("err = %v, want refusal for root name %q", err, name)
+			}
+			if _, err := os.Stat(plan.BackupRoot); !os.IsNotExist(err) {
+				t.Error("refused install must not create a backup")
+			}
+			assertAddonsOnly(t, addonsDir, "Alpha")
+			if got := readToc(t, addonsDir, "Alpha"); got != "## Version: old-a" {
+				t.Errorf("Alpha touched by refused install: %q", got)
+			}
+			if got := readToc(t, plan.StagingDir, "Alpha"); got != "## Version: new-a" {
+				t.Errorf("staged root moved by refused install: %q", got)
+			}
+			if got := readToc(t, filepath.Dir(addonsDir), "outside"); got != "## Version: outside" {
+				t.Errorf("folder outside AddOns touched: %q", got)
+			}
+			assertNoTempDirs(t, filepath.Dir(addonsDir))
+		})
+	}
+}
+
+func TestInstallRejectsUnsafeFoundRootNames(t *testing.T) {
+	for _, name := range []string{".hidden", `My\Addon`} {
+		t.Run(name, func(t *testing.T) {
+			plan, addonsDir := installPlan(t)
+			stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+			stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+			stageAddon(t, plan.StagingDir, name, "## Version: new")
+
+			_, err := Install(plan)
+			if err == nil || !strings.Contains(err.Error(), "not a plain folder name") {
+				t.Fatalf("err = %v, want refusal for found root %q", err, name)
+			}
+			if _, err := os.Stat(plan.BackupRoot); !os.IsNotExist(err) {
+				t.Error("refused install must not create a backup")
+			}
+			assertAddonsOnly(t, addonsDir, "Alpha")
+			if got := readToc(t, addonsDir, "Alpha"); got != "## Version: old-a" {
+				t.Errorf("Alpha touched by refused install: %q", got)
+			}
+		})
+	}
+}
+
+func TestInstallArchiveWithDotTocUsesWrapperName(t *testing.T) {
+	for _, toc := range []string{"..toc", "...toc"} {
+		t.Run(toc, func(t *testing.T) {
+			plan, addonsDir := installPlan(t)
+			stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+			zipPath := filepath.Join(t.TempDir(), "addon.zip")
+			writeZip(t, zipPath, []zipEntry{
+				{name: "Wrapper/"},
+				{name: "Wrapper/" + toc, content: "## Interface: 110200"},
+			})
+			if err := ExtractZip(zipPath, plan.StagingDir, defaultLimits()); err != nil {
+				t.Fatal(err)
+			}
+
+			result, err := Install(plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(result.Folders) != 1 || result.Folders[0] != "Wrapper" {
+				t.Errorf("folders = %v, want [Wrapper]", result.Folders)
+			}
+			if result.BackupPath != "" {
+				t.Errorf("fresh install created backup %s", result.BackupPath)
+			}
+			assertAddonsOnly(t, addonsDir, "Alpha", "Wrapper")
+			if got := readToc(t, addonsDir, "Alpha"); got != "## Version: old-a" {
+				t.Errorf("Alpha touched: %q", got)
+			}
+			if _, err := os.Stat(filepath.Join(addonsDir, "Wrapper", toc)); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
 func TestInstallReportsReplacedFolders(t *testing.T) {
 	plan, addonsDir := installPlan(t)
 	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")

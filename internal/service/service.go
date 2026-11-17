@@ -104,14 +104,40 @@ func (s *Service) Scan(ctx context.Context, configPaths []string) ([]registry.In
 }
 
 func inferFlavor(folders []*addon.Folder) wow.GameFlavor {
+	votes := map[wow.GameFlavor]int{}
 	for _, f := range folders {
+		var folderFlavor wow.GameFlavor
+		ambiguous := false
 		for _, num := range f.Interfaces() {
-			if flavor := wow.FlavorFromInterface(num); flavor != "" {
-				return flavor
+			flavor := wow.FlavorFromInterface(num)
+			if flavor == "" {
+				continue
 			}
+			if folderFlavor != "" && folderFlavor != flavor {
+				ambiguous = true
+				break
+			}
+			folderFlavor = flavor
+		}
+		if folderFlavor != "" && !ambiguous {
+			votes[folderFlavor]++
 		}
 	}
-	return ""
+
+	var best wow.GameFlavor
+	bestVotes, tied := 0, false
+	for flavor, n := range votes {
+		switch {
+		case n > bestVotes:
+			best, bestVotes, tied = flavor, n, false
+		case n == bestVotes:
+			tied = true
+		}
+	}
+	if tied {
+		return ""
+	}
+	return best
 }
 
 func tocNames(tocs []*addon.Toc) []string {

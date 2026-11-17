@@ -1,6 +1,6 @@
 # wowtui Spec Sheet
 
-Stand: 2026-08-06
+Stand: 2026-11-18
 
 ## 1. Ziel
 
@@ -54,7 +54,7 @@ Nicht in 0.1:
 |---|---|---|
 | Sprache | Go | |
 | TUI | Bubble Tea | Model-Update-View |
-| TUI-Komponenten | Bubbles | Listen, Spinner, Progress |
+| TUI-Komponenten | Bubbles | Tabellen, Spinner, Texteingaben |
 | Styling | Lip Gloss | Rahmen, Layout |
 | CLI | Cobra | Subbefehle neben der TUI |
 | Konfiguration | TOML, XDG-Pfade | kein Viper, eigener Loader reicht |
@@ -72,11 +72,15 @@ Application Service
  │
 ├── Installation Scanner   (WoW-Installationen finden)
 ├── Addon Registry         (Zustand, registry.json)
-├── Update Planner         (Versionsabgleich, Flavor-Matching)
+├── Update Planner         (Versionsabgleich, Auswahl nach Spieltyp)
 └── Package Installer      (transaktionale Installation)
      │
      ├── GitHub Provider
+     ├── GitLab Provider
+     ├── Generic-Git Provider
      ├── Direct-URL Provider
+     ├── CurseForge Provider   (nur mit eigenem API-Key)
+     ├── WowUpHub Provider     (pausiert)
      └── (später) Wago Provider
 ```
 
@@ -86,61 +90,101 @@ verwenden.
 
 ### Repository-Layout
 
+Ohne Testdateien:
+
 ```
+main.go                 (.env laden, cmd.Execute)
+
 cmd/
-├── root.go
+├── root.go             (Flags, Provider-Aufbau, Service)
+├── add.go
+├── check.go
+├── installs.go
+├── list.go
+├── map.go              (map und adopt)
+├── providers.go
+├── rename.go
 ├── scan.go
-├── update.go
-└── tui.go
+├── tui.go
+└── update.go
 
 internal/
 ├── addon/
 │   ├── addon.go
 │   ├── scanner.go
-│   └── matcher.go
-├── provider/
-│   ├── provider.go
-│   ├── github.go
-│   └── direct.go
+│   └── toc.go
+├── config/
+│   ├── config.go
+│   └── dotenv.go
 ├── installer/
-│   ├── download.go
 │   ├── archive.go
 │   ├── backup.go
+│   ├── download.go
+│   ├── fs.go
+│   ├── installer.go
+│   ├── naming.go
 │   └── transaction.go
-├── wow/
-│   ├── installation.go
-│   ├── flavor.go
-│   └── discovery.go
+├── provider/
+│   ├── provider.go
+│   ├── reference.go
+│   ├── manager.go
+│   ├── assets.go
+│   ├── tags.go
+│   ├── github.go
+│   ├── gitlab.go
+│   ├── git.go
+│   ├── direct.go
+│   ├── curseforge.go
+│   └── wowuphub.go
 ├── registry/
 │   └── registry.go
 ├── sandbox/
-│   ├── sandbox.go
-│   ├── bubblewrap.go
-│   └── worker.go
-└── tui/
-    ├── app.go
-    ├── screen_addons.go
-    ├── screen_details.go
-    └── screen_settings.go
+│   └── sandbox.go      (noch leer, siehe M3)
+├── service/
+│   ├── service.go
+│   ├── event.go
+│   └── packager.go
+├── tui/
+│   ├── tui.go
+│   ├── model.go
+│   ├── addons.go
+│   ├── explore.go
+│   ├── details.go
+│   ├── add.go
+│   ├── settings.go
+│   ├── fuzzy.go
+│   └── styles.go
+└── wow/
+    ├── wow.go
+    ├── flavor.go
+    └── discovery.go
 ```
 
 ### Kern-Interfaces
 
 ```go
+// internal/provider
 type Provider interface {
-    Search(ctx context.Context, query string) ([]RemoteAddon, error)
-    Resolve(ctx context.Context, ref AddonReference) (RemoteAddon, error)
-    LatestRelease(ctx context.Context, addon RemoteAddon, flavor GameFlavor) (Release, error)
+    Resolve(ctx context.Context, ref Reference) (RemoteAddon, error)
+    Latest(ctx context.Context, addon RemoteAddon, flavor wow.GameFlavor, source string) (Release, error)
     Download(ctx context.Context, release Release) (io.ReadCloser, error)
 }
 
-type AddonService interface {
-    Scan(ctx context.Context) ([]Addon, error)
-    CheckUpdates(ctx context.Context) ([]Update, error)
-    Update(ctx context.Context, addonID string) error
-    UpdateAll(ctx context.Context) error
+type SearchProvider interface {
+    Provider
+    Search(ctx context.Context, query string, flavor wow.GameFlavor) ([]RemoteAddon, error)
 }
 
+// internal/service: Struct ohne Interface, CLI und TUI nutzen dieselben Methoden
+func (s *Service) Scan(ctx context.Context, configPaths []string) ([]registry.Installation, error)
+func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.GameFlavor, install wow.Installation, source string) error
+func (s *Service) Check(ctx context.Context) ([]UpdateStatus, error)
+func (s *Service) Update(ctx context.Context, refOrName string, dryRun bool) error
+func (s *Service) UpdateAll(ctx context.Context, dryRun bool) error
+func (s *Service) MapUnmanaged() ([]MappingCandidate, error)
+func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref provider.Reference) error
+
+// geplant (M3), internal/sandbox ist noch leer
 type Sandbox interface {
     Run(ctx context.Context, operation Operation) (Result, error)
 }
@@ -166,6 +210,15 @@ Regeln:
 
 - Keys liegen nur in der Konfigurationsdatei (XDG-Pfad, Dateirechte
   0600) oder in Umgebungsvariablen, nie in der Registry oder im Repo
+- Umgebungsvariablen: `WOWTUI_GITHUB_TOKEN`, `WOWTUI_WAGO_API_KEY`,
+  `WOWTUI_CURSEFORGE_API_KEY`. Sie überschreiben die Werte aus
+  `config.toml` nur im laufenden Prozess. Schreibt `wowtui providers`
+  die Konfiguration neu, bleibt der Wert aus der Datei stehen; ein Key
+  aus der Umgebung landet nie in `config.toml`
+- Eine `.env` im Arbeitsverzeichnis wird gelesen, aber nur für diese
+  drei Variablen. Andere Einträge werden ignoriert, schon gesetzte
+  Umgebungsvariablen gewinnen. Werte werden wörtlich übernommen, ein
+  Paar passender äußerer Anführungszeichen wird entfernt
 - Ein Provider ohne gültigen Key wird übersprungen und meldet einen
   klaren Fehler, statt still zu scheitern
 - GitHub funktioniert ohne Token, mit Token nur für höhere
@@ -176,17 +229,23 @@ Provider können zusätzlich aktiviert/deaktiviert und priorisiert werden:
 
 ```toml
 [providers]
-order = ["wowuphub", "wago", "curseforge", "github", "gitlab", "direct"]
+order = ["wowuphub", "wago", "curseforge", "github", "gitlab", "git", "direct"]
 
-[providers.wago]
-enabled = true
-api_key = "..."
+[providers.git]
+enabled = false
 ```
+
+Die Reihenfolge oben ist der Default; nicht genannte Provider hängt
+wowtui in dieser Reihenfolge an. `enabled` gilt für GitHub, GitLab,
+Generic Git und Direct. CurseForge hängt nur am API-Key, WowUpHub und
+Wago bleiben unabhängig von `enabled` pausiert.
 
 Die CLI stellt dafür `wowtui providers`,
 `wowtui providers enable <name>`,
-`wowtui providers disable <name>` und
-`wowtui providers order <name>...` bereit. Die TUI zeigt dieselbe
+`wowtui providers disable <name>`,
+`wowtui providers order <name>...` und
+`wowtui providers test <name>` (Authentifizierung prüfen, ohne
+Credentials auszugeben; derzeit nur CurseForge) bereit. Die TUI zeigt dieselbe
 Reihenfolge und den Aktivierungsstatus in den Settings.
 
 GitHub, GitLab, Generic Git, Direct, WowUpHub und CurseForge sind implementiert.
@@ -201,8 +260,10 @@ pending-approval. CurseForge benötigt einen API-Key für Drittanbieter-Clients.
 Viele Repos haben keine Releases oder keine ZIP-Artefakte. Der
 GitHub-Provider nutzt deshalb eine Fallback-Kette:
 
-1. Neuestes stabiles Release mit passendem ZIP-Asset für den Flavor
-2. Release vorhanden, aber ohne ZIP: Quellarchiv des Release-Tags
+1. Neuestes stabiles Release mit passendem ZIP-Asset für den Spieltyp
+   des Flavors (Auswahl siehe Abschnitt 5)
+2. Release vorhanden, aber ohne passendes ZIP-Asset: Quellarchiv des
+   Release-Tags
 3. Kein Release: Quellarchiv des neuesten Tags (semver-Sortierung,
    bei nicht parsebaren Tags API-Reihenfolge)
 4. Auch kein Tag: Quellarchiv des Default-Branch, Version ist der
@@ -211,7 +272,12 @@ GitHub-Provider nutzt deshalb eine Fallback-Kette:
 GitHub liefert diese Archive automatisch unter
 `github.com/Owner/Repo/archive/refs/tags/<Tag>.zip` beziehungsweise
 `.../refs/heads/<Branch>.zip`. Der Installer entpackt den
-Wrapper-Ordner (`Repo-Tag/`), den diese Archive mitbringen.
+Wrapper-Ordner (`Repo-Tag/`), den diese Archive mitbringen. Bleibt
+genau ein Addon-Ordner übrig, bekommt er den Namen, den seine
+`.toc`-Dateien gemeinsam ergeben; Client-Suffixe wie `_Mainline` oder
+`-Vanilla` fallen dabei weg. Ergibt das keinen sicheren Ordnernamen
+(leer, mit Punkt am Anfang, mit `/`, `\` oder NUL), bleibt der
+bisherige Name.
 
 Versionsidentität je Quelle: Release = Release-ID, Tag = Tag-Name,
 Branch = Commit-SHA. Die Registry speichert die Quelle im
@@ -223,13 +289,21 @@ Unmanaged installierte Addons können über einen Mapping-Workflow einem
 Provider zugeordnet werden. Der Workflow nutzt TOC-Hints zuerst und
 verlangt eine explizite Bestätigung über `adopt`, bevor ein Addon als
 verwaltet gespeichert wird. Die vorhandenen Dateien werden dabei nicht
-ersetzt; das passiert erst beim folgenden Update.
+ersetzt; das passiert erst beim folgenden Update. `adopt` verweigert
+einen Ordner, den in derselben Installation schon ein anderes
+verwaltetes Addon besitzt.
 
 `add --source release|tag|branch` pinnt die Quelle. Updates folgen
 dann dem Pin statt der Kette.
 
 Einschränkung: Tag- und Branch-Archive kennen kein Flavor-Filtering
-und keine Asset-Auswahl, das gesamte Repo wird installiert.
+und keine Asset-Auswahl. Installiert werden die Ordner mit
+`.toc`-Dateien auf oberster Ebene des Repos, bei einem flachen Repo
+das Repo selbst. Weil solche Archive nicht vom BigWigs-Packager gebaut
+sind, warnt wowtui bei Tag- und Branch-Archiven, wenn `.pkgmeta` oder
+`pkgmeta.yaml` `externals` listet (diese Bibliotheken können dann
+fehlen) oder eine `.toc` noch `@project-version@` enthält. Die Warnung
+empfiehlt `--source release`.
 
 ### Datenmodell
 
@@ -238,31 +312,65 @@ enthalten (Details/, Details_Streamer/, Details_TinyThreat/). Deshalb
 zwei Ebenen:
 
 ```go
-type InstalledFolder struct {
-    Name      string
-    TocFiles  []string
-    Version   string
-    Interface []int
-}
-
-type AddonPackage struct {
-    ProviderID string
-    Folders    []InstalledFolder
+// internal/registry, gekürzt
+type Folder struct {           // gescannter Ordner einer Installation
+    Name       string
     Version    string
+    Interfaces []int
+    TocFiles   []string
+    Hints      map[string]string
 }
 
-type GameFlavor string
+type Addon struct {            // verwaltetes Paket
+    Provider    string
+    Ref         string
+    Flavor      string
+    InstallPath string
+    Folders     []string       // Ordnernamen in AddOns
+    Version     string
+    Source      string         // auto, release, tag, branch
+    ReleaseID   int64
+    AssetName   string
+    SHA256      string
+}
+
+// internal/wow
+type GameFlavor string         // ein Flavor je Client-Verzeichnis
 
 const (
-    Retail     GameFlavor = "retail"
-    Classic    GameFlavor = "classic"
-    ClassicEra GameFlavor = "classic-era"
-    PTR        GameFlavor = "ptr"
+    Retail        GameFlavor = "retail"
+    PTR           GameFlavor = "ptr"
+    XPTR          GameFlavor = "xptr"
+    Beta          GameFlavor = "beta"
+    Classic       GameFlavor = "classic"
+    ClassicPTR    GameFlavor = "classic-ptr"
+    ClassicBeta   GameFlavor = "classic-beta"
+    ClassicEra    GameFlavor = "classic-era"
+    ClassicEraPTR GameFlavor = "classic-era-ptr"
+    Anniversary   GameFlavor = "anniversary"
+    ClassicTitan  GameFlavor = "classic-titan"
+    Forever       GameFlavor = "forever"
+)
+
+type GameType string           // Spielinhalt, nach dem Provider auswählen
+
+const (
+    GameMainline GameType = "mainline"
+    GameVanilla  GameType = "vanilla"
+    GameTBC      GameType = "tbc"
+    GameWrath    GameType = "wrath"
+    GameTitan    GameType = "titan"
+    GameCata     GameType = "cata"
+    GameMists    GameType = "mists"
+    GameForever  GameType = "forever"
 )
 ```
 
 Zuordnung Ordner → Paket geht nicht zuverlässig über den Ordnernamen.
 Die Zuordnung läuft über die Registry-Metadaten aus der Installation.
+`add`, `update` und `adopt` verweigern Ordner, die in derselben
+Installation schon ein anderes verwaltetes Addon besitzt. Bei `update`
+sind die Ordner ausgenommen, die das Addon selbst schon hatte.
 
 ### Versionsvergleich
 
@@ -279,30 +387,109 @@ Reiner Semver-Vergleich reicht nicht. Versionen kommen vor als
 ## 5. WoW-Erkennung
 
 - Automatische Suche nach Installationen plus manuelle Pfade in der
-  Konfiguration
-- Flavorkennung über die Verzeichnisnamen: `_retail_`, `_classic_`,
-  `_classic_era_`, `_beta_`, `_ptr_`
+  Konfiguration (`[wow] paths`). Automatisch durchsucht werden
+  `~/.wine/drive_c/Program Files/World of Warcraft`,
+  `~/Games/*/drive_c/Program Files/World of Warcraft` und jeweils die
+  Variante mit `Program Files (x86)`. Dort zählt ein Client-Verzeichnis
+  nur, wenn es `Interface/` enthält. Ein konfigurierter Pfad, der fehlt
+  oder keine Installation enthält, ist ein Fehler
+- Flavorkennung über die Verzeichnisnamen, ein Flavor je
+  Client-Verzeichnis (`internal/wow/flavor.go`):
+
+  | Verzeichnis | Flavor | Spieltyp |
+  |---|---|---|
+  | `_retail_` | `retail` | mainline |
+  | `_ptr_` | `ptr` | mainline |
+  | `_xptr_` | `xptr` | mainline |
+  | `_beta_` | `beta` | mainline |
+  | `_classic_` | `classic` | mists |
+  | `_classic_ptr_` | `classic-ptr` | mists |
+  | `_classic_beta_` | `classic-beta` | forever |
+  | `_classic_era_` | `classic-era` | vanilla |
+  | `_classic_era_ptr_` | `classic-era-ptr` | tbc |
+  | `_anniversary_` | `anniversary` | tbc |
+  | `_classic_titan_` | `classic-titan` | titan |
+  | `_forever_` | `forever` | forever |
+
+  PTR- und Beta-Clients teilen den Spieltyp des Clients, dessen Inhalt
+  sie testen. Die Spieltypen von `_classic_`, `_classic_ptr_`,
+  `_classic_beta_`, `_classic_era_ptr_` und `_anniversary_` folgen dem,
+  was Blizzard dort aktuell ausliefert, und müssen nachgezogen werden,
+  sobald diese Clients die Erweiterung wechseln
+- Hat eine Installation keinen bekannten Verzeichnisnamen, leitet
+  `scan` den Flavor aus den Interface-Nummern ab. Jeder Addon-Ordner,
+  dessen Nummern alle auf denselben Spieltyp zeigen, stimmt für diesen
+  Spieltyp. Die Stimme zählt nur, wenn genau ein Client ohne Test-Status
+  diesen Spieltyp hat (Wrath und Cata haben derzeit keinen). Bei
+  Gleichstand bleibt der Flavor leer
 - Addons liegen in `<install>/Interface/AddOns/<Name>/`
-- `.toc`-Dateien werden geparst: Version, Interface-Nummer, Titel
+- `.toc`-Dateien werden geparst: Version, Interface-Nummern (auch
+  kommagetrennt), Titel und `X-`-Felder mit Quellhinweisen für das
+  Mapping
 - Dieselbe Addon-Quelle kann pro Flavor ein anderes Release brauchen.
-  Der Update Planner filtert Releases nach Flavor, nicht nach
-  "neueste ZIP".
+  Ausgewählt wird nach dem Spieltyp des Flavors, nicht nach
+  "neueste ZIP":
+  - GitHub: Ein einzelnes ZIP-Asset wird immer genommen. Bei mehreren
+    gewinnt das Asset, dessen Name den Spieltyp trägt (Tokens nach den
+    Dateinamen des BigWigs-Packagers: `vanilla`/`era`/`classicera`,
+    `bcc`/`tbc`, `wrath`/`wotlkc`, `titan`, `cata`/`cataclysm`,
+    `mists`, `forever`/`camelot`, `retail`/`mainline`). Ein nacktes
+    `-classic` gilt wie beim Packager als Vanilla und steht hinter
+    expliziten Vanilla-Tokens. Danach kommt ein Asset ohne
+    Spieltyp-Token, sonst das Quellarchiv des Release-Tags
+  - CurseForge: feste Version-Type-ID je Spieltyp
+  - WowUpHub: Spieltyp des Hubs (`retail`, `classic`, `burningCrusade`,
+    `wotlk`, `cata`, `mists`, `forever`); für Titan gibt es keinen, dort
+    findet `classic-titan` nichts
+  - Tag- und Branch-Archive, GitLab-Releases, Generic Git und
+    Direct-URL: keine Auswahl nach Flavor
 
 ## 6. Installations-Pipeline
 
 Transaktional, in dieser Reihenfolge:
 
 ```
-ZIP herunterladen
-→ ZIP validieren (SHA-256, Größenlimits)
-→ in temporären Ordner entpacken (nie direkt in den WoW-Ordner)
-→ Pfade auf Zip-Slip prüfen
-→ Inhalt kontrollieren (Struktur, Dateitypen, Limits)
-→ alte Ordner sichern (Backup)
-→ neue Ordner verschieben (atomar)
+ZIP nach <install>/Interface/.wowtui-work-*/ herunterladen
+→ dabei SHA-256 berechnen, Download auf 512 MiB begrenzt
+→ im selben Arbeitsordner nach staging/ entpacken (nie direkt in AddOns)
+→ Pfade auf Zip-Slip und absolute Pfade prüfen
+→ Inhalt kontrollieren (nur Dateien und Verzeichnisse, höchstens
+  20000 Dateien, 512 MiB gesamt, 256 MiB je Datei)
+→ Addon-Ordner über .toc-Dateien finden, Wrapper-Ordner auflösen
+→ Besitz prüfen: Ordner eines anderen verwalteten Addons → Abbruch
+→ bei Tag- und Branch-Archiven: Packager-Warnungen
+→ Ordnernamen prüfen: unsichere Namen oder Datei am Ziel → Abbruch
+→ zu ersetzende und weggefallene Ordner ins Backup kopieren
+→ diese Ordner nach <install>/Interface/.wowtui-rollback-*/ verschieben
+→ neue Ordner nach AddOns verschieben
 → Registry aktualisieren
-→ bei Fehler: Rollback aus dem Backup
+→ bei Fehler: beiseitegelegte Ordner aus dem Rollback-Ordner zurück
 ```
+
+Arbeits- und Rollback-Ordner sind versteckte Temp-Ordner in
+`<install>/Interface/`, direkt neben `AddOns`. Damit liegen sie im
+selben Dateisystem und das Verschieben ist ein einfaches `rename`; nur
+über eine Dateisystemgrenze hinweg fällt `MoveDir` auf Kopieren und
+Löschen zurück. Beide Ordner werden nach Erfolg und nach Fehlern
+entfernt. Das Backup ist eine Kopie unter
+`<Registry-Verzeichnis>/backups/`, per Default
+`~/.local/share/wowtui/backups/<provider>-<ref>-<Zeitstempel>/`
+(Sonderzeichen im Namen werden zu `-`).
+
+Regeln beim Ersetzen:
+
+- Enthält das Archiv einen Ordner, den in derselben Installation ein
+  anderes verwaltetes Addon besitzt, bricht die Installation ab, bevor
+  `AddOns` angefasst wird. Die Meldung nennt Ordner und Besitzer
+- Ein Ordner, den kein Addon verwaltet, darf ersetzt werden; wowtui
+  meldet das als Warnung mit dem Backup-Pfad
+- Ordner, die die alte Version hatte und die neue nicht mehr
+  mitbringt, werden entfernt. Sie landen vorher im Backup und kommen
+  beim Rollback zurück. Beansprucht ein anderes verwaltetes Addon den
+  Ordner noch, bleibt er stehen
+- Ein Addon-Ordnername muss ein einfacher Name sein: nicht leer, kein
+  Punkt am Anfang, kein `/`, `\` oder NUL. Sonst bricht die Installation
+  vor Backup und Verschieben ab
 
 ## 7. Sicherheitsmodell
 
@@ -311,12 +498,19 @@ und plattformunabhängig, der Rest ist Verteidigung in der Tiefe.
 
 1. **Sicherer Go-ZIP-Extractor.** Zip-Slip verhindern, Symlinks und
    Hardlinks ablehnen, maximale Dateianzahl und entpackte Gesamtgröße
-   begrenzen, nur reguläre Dateien und Verzeichnisse erlauben.
+   begrenzen, nur reguläre Dateien und Verzeichnisse erlauben. Für
+   Generic Git klont wowtui flach in ein Temp-Verzeichnis und zippt den
+   Checkout ohne `.git`-Einträge; enthält er einen Symlink oder eine
+   andere Nicht-Datei, wird er abgelehnt.
 2. **Staging, atomare Installation, Rollback.** Erst validieren, dann
-   installieren. Backups ermöglichen das Rückgängigmachen.
+   installieren. Staging und Rollback liegen in `<install>/Interface/`
+   (Abschnitt 6). Backups ermöglichen das Rückgängigmachen.
 3. **Separater Worker-Prozess** für das Entpacken und Prüfen.
 4. **Bubblewrap um den Worker**, nur Linux, optional.
 5. **Optional Seccomp-Policy** für den Worker.
+
+Umgesetzt sind Stufe 1 und 2. Stufe 3 bis 5 sind geplant (M3),
+`internal/sandbox` ist noch leer.
 
 ### Worker und Bubblewrap
 
@@ -382,61 +576,112 @@ Deshalb bleibt die Sandbox ein optionales Backend hinter dem
 ## 8. TUI
 
 Bubble Tea nur als Präsentation. Downloads und Dateisystemoperationen
-laufen als Commands, ohne die Oberfläche zu blockieren. Der Installer
-meldet Fortschritt als Messages:
+laufen in einer Goroutine, ohne die Oberfläche zu blockieren. Der
+Service meldet Fortschritt als Events über einen Channel
+(`internal/service/event.go`):
 
 ```go
-type UpdateProgressMsg struct {
-    AddonID    string
-    Stage      UpdateStage
-    Percentage float64
+type Event struct {
+    Ref     string
+    Stage   Stage
+    Message string
+    Index   int    // Position bei update --all
+    Total   int
+    Err     error
 }
 
-type UpdateStage string
+type Stage string
 
 const (
-    StageDownloading UpdateStage = "downloading"
-    StageValidating  UpdateStage = "validating"
-    StageBackingUp   UpdateStage = "backing-up"
-    StageInstalling  UpdateStage = "installing"
-    StageCompleted   UpdateStage = "completed"
+    StageResolve  Stage = "resolve"
+    StageDownload Stage = "download"
+    StageExtract  Stage = "extract"
+    StageBackup   Stage = "backup"
+    StageInstall  Stage = "install"
+    StageDone     Stage = "done"
+    StageCurrent  Stage = "up-to-date"
+    StageInfo     Stage = "info"
+    StageWarning  Stage = "warning"
+    StageError    Stage = "error"
 )
 ```
 
-Grober Aufbau:
+Die CLI gibt jede Event-Message als Zeile aus. Die TUI zeigt die
+laufende Message neben dem Spinner. Warnungen und Fehler einer
+Operation sammelt sie in einer Hinweisleiste über der Tastenhilfe,
+Fehler zuerst und ohne Duplikate. Die Leiste bleibt stehen, bis
+`ctrl+x` sie schließt oder die nächste Operation startet. Sie zeigt
+höchstens fünf Zeilen, auf niedrigen Terminals weniger, den Rest als
+`+N more`.
+
+Grober Aufbau (Addons-Tab mit offener Hinweisleiste):
 
 ```
-┌ WoW Addon Manager ──────────────────────────────────────────┐
-│ Installation: Retail                     Updates available: 3│
-├──────────────────────────────────────────────────────────────┤
-│   Addon                 Installed      Available      Status │
-│ > WeakAuras             5.18.1         5.19.0         Update │
-│   Details               11.0.8.13000   11.0.8.13120   Update │
-│   DBM                   11.2.4         11.2.4         Current│
-│   Plater                602.1          603.0          Update │
-├──────────────────────────────────────────────────────────────┤
-│ [u] Update  [a] Update all  [r] Rescan  [d] Details  [q] Quit│
-└──────────────────────────────────────────────────────────────┘
+ wowtui    Addons  Explore  Settings
+╭──────────────────────────────────────────────────────────────────────────────────────────╮
+│ game: all game versions · install: all installations · status: all · 3 addons ·          │
+│ 2 managed · 1 updates                                                                    │
+│  Addon       Status       Installed  Latest   Provider  Author     Game                  │
+│  Details     not managed  11.0.8                                   retail                │
+│  Plater      current      603.0      603.0    github    Tercioo    retail                │
+│  WeakAuras   update       5.18.1     5.19.0   github    WeakAuras  retail                │
+╰──────────────────────────────────────────────────────────────────────────────────────────╯
+ ✗ update failed: Owner/Missing: no stable release found
+ ! warning: Owner/Repo replaced unmanaged folders Foo (backup: ...)
+ ctrl+x dismiss · ↑/↓ navigate · f search · i game version · I installation · d details ·
+ a add · r check · u update · tab explore · q quit
 ```
 
-Screens: Addon-Liste, Details, Einstellungen.
+Tasten im Addons-Tab: `s` neu scannen, `r` auf Updates prüfen, `u`
+gewähltes Addon aktualisieren, `U` alle verwalteten Addons
+aktualisieren, `a` Add-Dialog, `f` suchen, `i`/`I` Filter für
+Spielversion und Installation, `d`/`enter` Details, `tab` oder
+`1`/`2`/`3` Tabs wechseln, `q` beenden. `s` und `U` stehen nicht in
+der Tastenhilfe.
+
+Screens: Addons, Explore (Suche in den Provider-Katalogen), Settings,
+dazu Details und der Add-Dialog.
 
 ## 9. CLI
 
 ```
 wowtui               # TUI
 wowtui scan          # Installationen und Addons neu einlesen
-wowtui list          # Addons mit Version und Status
+wowtui list          # gescannte Addons mit Version und Interface-Nummern
+wowtui installs      # bekannte Installationen
+wowtui rename <install-path> <title>
 wowtui add github:WeakAuras/WeakAuras2
 wowtui add https://github.com/WeakAuras/WeakAuras2
 wowtui add github:Owner/Repo --source tag
+wowtui add github:Owner/Repo --flavor classic-era
+wowtui add github:Owner/Repo --install <install-path>
+wowtui add gitlab:Group/Project
+wowtui add git:https://example.com/addon.git
+wowtui add direct:https://example.com/addon.zip
+wowtui add curseforge:<id>
 wowtui check         # auf Updates prüfen
 wowtui update WeakAuras
 wowtui update --all
 wowtui update --all --dry-run
+wowtui map           # Provider-Kandidaten für nicht verwaltete Addons
+wowtui adopt <install-path> <folder> <reference>
+wowtui providers     # Status und Reihenfolge
+wowtui providers enable|disable <name>
+wowtui providers order <name>...
+wowtui providers test <name>
 ```
 
-CLI und TUI verwenden denselben AddonService. Das hilft bei Skripten,
+`add --flavor` hat `retail` als Default und akzeptiert alle zwölf
+Flavor-IDs aus Abschnitt 5. Gibt es mehrere Installationen dieses
+Flavors, verlangt `add` eine Auswahl mit `--install`.
+
+`update --all` macht nach einem fehlgeschlagenen Addon mit den übrigen
+weiter, schließt mit einer Zeile wie
+`summary: 3 updated, 5 current, 1 failed` (bei `--dry-run`:
+`summary: 3 to update, 5 current, 1 failed (dry run)`) und endet mit
+Exit-Status 1, wenn ein Addon fehlgeschlagen ist.
+
+CLI und TUI verwenden denselben `service.Service`. Das hilft bei Skripten,
 Tests ohne Terminal, Headless-Nutzung und Debugging.
 
 ## 10. Meilensteine
@@ -467,7 +712,7 @@ gebunden, ein Key wird nie mitgeliefert.
 |---|---|---|
 | GitHub-Repos ohne ZIP-Artefakt am Release | Import schlägt fehl | Klare Fehlermeldung, Verhalten wie bei WowUp dokumentieren |
 | Unsaubere Versionsformate | Falsche Update-Entscheidungen | Auflösungsreihenfolge aus Abschnitt 4, Hashvergleich als letzte Stufe |
-| Flavor-Mismatch | Falsches Release für Classic/PTR | Update Planner filtert nach GameFlavor |
+| Flavor-Mismatch | Falsches Release für Classic/PTR | Provider wählen nach dem GameType des Flavors, Test-Clients teilen den Spieltyp ihres Basis-Clients |
 | bwrap nicht verfügbar oder User-Namespaces deaktiviert | Sandbox fehlt | Fallback auf internen Extractor, Warnung, Strict Mode |
 | CurseForge-ToS | Provider rechtlich/technisch instabil | Nur mit eigenem API-Key des Users, kein mitgelieferter Key, ToS-Einhaltung bleibt Sache von User und Projekt |
 | Mehrere Ordner pro Paket | Falsche Zuordnung bei Updates | Paket-Modell statt Ordner-Modell, Registry-Metadaten |

@@ -37,7 +37,7 @@ func addonColumns() []table.Column {
 
 func (m *Model) resizeTable() {
 	if m.height > 8 {
-		m.table.SetHeight(m.height - 8)
+		m.table.SetHeight(m.height - 8 - len(m.noticeLines()))
 	}
 }
 

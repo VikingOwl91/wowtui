@@ -110,7 +110,7 @@ func (m *Model) rebuildExploreTable() {
 
 func (m *Model) resizeExploreTable() {
 	if m.height > 10 {
-		m.exploreTable.SetHeight(m.height - 11)
+		m.exploreTable.SetHeight(m.height - 11 - len(m.noticeLines()))
 	}
 }
 

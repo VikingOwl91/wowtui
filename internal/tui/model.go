@@ -2,12 +2,14 @@ package tui
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"somegit.dev/vikingowl/wowtui/internal/config"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
@@ -80,6 +82,20 @@ type opResult struct {
 	err      error
 }
 
+const dismissKey = "ctrl+x"
+
+type noticeKind int
+
+const (
+	noticeError noticeKind = iota
+	noticeWarning
+)
+
+type notice struct {
+	kind noticeKind
+	text string
+}
+
 type Model struct {
 	deps Deps
 
@@ -113,6 +129,7 @@ type Model struct {
 	busy           bool
 	busyMsg        string
 	errMsg         string
+	notices        []notice
 	filter         int
 	searching      bool
 	filterQuery    string
@@ -219,6 +236,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if e.Message != "" {
 			m.busyMsg = e.Message
 		}
+		m.collectNotice(e)
 		m.applyEvent(e)
 		return m, waitForEvent(m.eventChan)
 
@@ -238,6 +256,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == dismissKey && m.noticeVisible() {
+		m.notices = nil
+		m.errMsg = ""
+		return m, nil
+	}
 	switch m.screen {
 	case screenAddons:
 		return m.handleAddonsKey(msg)
@@ -257,6 +280,8 @@ func (m *Model) View() string {
 	if m.width == 0 {
 		return "loading..."
 	}
+	m.resizeTable()
+	m.resizeExploreTable()
 
 	var body string
 	switch m.screen {
@@ -272,7 +297,11 @@ func (m *Model) View() string {
 		body = m.settingsView()
 	}
 
-	return m.headerView() + "\n" + contentPanel.Render(body) + "\n" + footerBar.Render(m.footerView())
+	notices := ""
+	if lines := m.noticeLines(); len(lines) > 0 {
+		notices = noticeBar.Render(strings.Join(lines, "\n")) + "\n"
+	}
+	return m.headerView() + "\n" + contentPanel.Render(body) + "\n" + notices + footerBar.Render(m.footerView())
 }
 
 func (m *Model) headerView() string {
@@ -303,10 +332,102 @@ func (m *Model) footerView() string {
 	if m.busy {
 		return statusBusy.Render(m.spinner.View() + " " + m.busyMsg)
 	}
-	if m.errMsg != "" {
-		return errStyle.Render(m.errMsg)
+	help := m.helpText()
+	if m.noticeVisible() {
+		help = dismissKey + " dismiss · " + help
 	}
-	return helpStyle.Render(m.helpText())
+	return helpStyle.Render(help)
+}
+
+func (m *Model) collectNotice(e service.Event) {
+	var kind noticeKind
+	switch e.Stage {
+	case service.StageWarning:
+		kind = noticeWarning
+	case service.StageError:
+		kind = noticeError
+	default:
+		return
+	}
+	text := e.Message
+	if text == "" && e.Err != nil {
+		text = e.Err.Error()
+	}
+	if text != "" {
+		m.notices = append(m.notices, notice{kind: kind, text: text})
+	}
+}
+
+func (m *Model) noticeEntries() []notice {
+	var entries []notice
+	seen := map[notice]bool{}
+	add := func(kind noticeKind, text string) {
+		for _, line := range strings.Split(text, "\n") {
+			n := notice{kind: kind, text: line}
+			if strings.TrimSpace(line) == "" || seen[n] {
+				continue
+			}
+			seen[n] = true
+			entries = append(entries, n)
+		}
+	}
+	add(noticeError, m.errMsg)
+	for _, kind := range []noticeKind{noticeError, noticeWarning} {
+		for _, n := range m.notices {
+			if n.kind == kind {
+				add(kind, n.text)
+			}
+		}
+	}
+	return entries
+}
+
+func (m *Model) noticeVisible() bool {
+	return !m.busy && len(m.noticeEntries()) > 0
+}
+
+const maxNoticeLines = 5
+
+// noticeLimit caps notices at half of the rows the explore table would get,
+// since the explore screen has the tallest chrome.
+func (m *Model) noticeLimit() int {
+	return max(1, min(maxNoticeLines, (m.height-11)/2))
+}
+
+func (m *Model) noticeLines() []string {
+	if m.busy {
+		return nil
+	}
+	entries := m.noticeEntries()
+	more := 0
+	if limit := m.noticeLimit(); len(entries) > limit {
+		more = len(entries) - (limit - 1)
+		entries = entries[:limit-1]
+	}
+	width := m.width - noticeBar.GetHorizontalFrameSize() - 2
+	lines := make([]string, 0, len(entries)+1)
+	for _, n := range entries {
+		text := truncateText(n.text, width)
+		if n.kind == noticeWarning {
+			lines = append(lines, warnStyle.Render("! "+text))
+		} else {
+			lines = append(lines, errStyle.Render("✗ "+text))
+		}
+	}
+	if more > 0 {
+		lines = append(lines, dimStyle.Render("+"+strconv.Itoa(more)+" more"))
+	}
+	return lines
+}
+
+func truncateText(s string, width int) string {
+	if lipgloss.Width(s) <= width {
+		return s
+	}
+	if width < 2 {
+		return ""
+	}
+	return lipgloss.NewStyle().MaxWidth(width-1).Render(s) + "…"
 }
 
 func (m *Model) helpText() string {
@@ -341,6 +462,7 @@ func waitForEvent(ch chan service.Event) tea.Cmd {
 func (m *Model) startOp(kind opKind, run func(svc *service.Service) opResult) tea.Cmd {
 	m.busy = true
 	m.errMsg = ""
+	m.notices = nil
 	m.opKind = kind
 	m.eventChan = make(chan service.Event, 64)
 	m.resultChan = make(chan opResult, 1)
@@ -368,7 +490,7 @@ func (m *Model) finishOp() (tea.Model, tea.Cmd) {
 	}
 
 	if result.err != nil {
-		m.errMsg = result.err.Error()
+		m.notices = append([]notice{{kind: noticeError, text: result.err.Error()}}, m.notices...)
 	}
 
 	switch kind {

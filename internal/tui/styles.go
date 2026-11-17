@@ -29,6 +29,7 @@ var (
 	labelStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)
 	dimStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 	errStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	warnStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
 	headerStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
 	sectionTitle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("81"))
 	searchBox    = lipgloss.NewStyle().
@@ -47,4 +48,5 @@ var (
 	footerBar = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("245")).
 			Padding(0, 1)
+	noticeBar = lipgloss.NewStyle().Padding(0, 1)
 )

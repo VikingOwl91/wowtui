@@ -48,9 +48,21 @@ func (t *Toc) Version() string {
 }
 
 func (t *Toc) Interface() int {
-	num, err := strconv.Atoi(t.Get("Interface"))
-	if err != nil {
+	nums := t.Interfaces()
+	if len(nums) == 0 {
 		return 0
 	}
-	return num
+	return nums[0]
+}
+
+func (t *Toc) Interfaces() []int {
+	var nums []int
+	for _, part := range strings.Split(t.Get("Interface"), ",") {
+		num, err := strconv.Atoi(strings.TrimSpace(part))
+		if err != nil || num <= 0 {
+			continue
+		}
+		nums = append(nums, num)
+	}
+	return nums
 }

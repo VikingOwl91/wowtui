@@ -3,6 +3,7 @@ package addon
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -85,6 +86,47 @@ func TestParseTocInvalidInterface(t *testing.T) {
 	}
 	if got := toc.Interface(); got != 0 {
 		t.Errorf("Interface = %d, want 0", got)
+	}
+}
+
+func TestParseTocMultiValueInterface(t *testing.T) {
+	path := writeToc(t, t.TempDir(), "Test.toc", "## Interface: 110200, 50500, 11507\n")
+	toc, err := ParseToc(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := toc.Interfaces(), []int{110200, 50500, 11507}; !slices.Equal(got, want) {
+		t.Errorf("Interfaces = %v, want %v", got, want)
+	}
+	if got := toc.Interface(); got != 110200 {
+		t.Errorf("Interface = %d, want 110200 (first listed value)", got)
+	}
+}
+
+func TestParseTocInterfacesSkipsInvalidEntries(t *testing.T) {
+	path := writeToc(t, t.TempDir(), "Test.toc", "## Interface: 110200,,abc, 0, -5,11507 ,\n")
+	toc, err := ParseToc(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := toc.Interfaces(), []int{110200, 11507}; !slices.Equal(got, want) {
+		t.Errorf("Interfaces = %v, want %v", got, want)
+	}
+}
+
+func TestParseTocInterfacesEmpty(t *testing.T) {
+	for _, content := range []string{"## Title: x\n", "## Interface: notanumber\n", "## Interface:\n"} {
+		path := writeToc(t, t.TempDir(), "Test.toc", content)
+		toc, err := ParseToc(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := toc.Interfaces(); len(got) != 0 {
+			t.Errorf("Interfaces(%q) = %v, want empty", content, got)
+		}
+		if got := toc.Interface(); got != 0 {
+			t.Errorf("Interface(%q) = %d, want 0", content, got)
+		}
 	}
 }
 

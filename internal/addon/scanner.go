@@ -45,12 +45,13 @@ func (f *Folder) Interfaces() []int {
 	seen := map[int]bool{}
 	var nums []int
 	for _, toc := range f.Tocs {
-		n := toc.Interface()
-		if n == 0 || seen[n] {
-			continue
+		for _, n := range toc.Interfaces() {
+			if seen[n] {
+				continue
+			}
+			seen[n] = true
+			nums = append(nums, n)
 		}
-		seen[n] = true
-		nums = append(nums, n)
 	}
 	sort.Ints(nums)
 	return nums

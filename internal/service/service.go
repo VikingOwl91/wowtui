@@ -546,7 +546,7 @@ func providerUnavailable(name string) error {
 		return fmt.Errorf("provider %q is paused pending upstream approval", name)
 	}
 	if name == "curseforge" {
-		return fmt.Errorf("provider %q is paused pending approved third-party API access", name)
+		return fmt.Errorf("provider %q requires WOWTUI_CURSEFORGE_API_KEY or providers.curseforge.api_key", name)
 	}
 	if name == "wago" {
 		return fmt.Errorf("provider %q is paused pending approval", name)

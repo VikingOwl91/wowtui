@@ -133,11 +133,35 @@ api_key = "wago"
 		t.Errorf("wago state = %q", cfg.Providers.State("wago"))
 	}
 	if cfg.Providers.Enabled("curseforge") {
-		t.Error("curseforge should be disabled by default")
+		t.Error("curseforge should be disabled without an API key")
+	}
+	if cfg.Providers.State("curseforge") != "requires-api-key" {
+		t.Errorf("curseforge state = %q", cfg.Providers.State("curseforge"))
 	}
 	order := cfg.Providers.Order()
 	if order[0] != "github" || order[1] != "wago" {
 		t.Errorf("order = %v", order)
+	}
+}
+
+func TestCurseForgeIsEnabledByAPIKey(t *testing.T) {
+	path := writeConfig(t, `
+[providers.curseforge]
+enabled = false
+api_key = "cf-key"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Providers.Enabled("curseforge") {
+		t.Error("curseforge should be enabled when an API key is configured")
+	}
+	if cfg.Providers.State("curseforge") != "enabled" {
+		t.Errorf("curseforge state = %q", cfg.Providers.State("curseforge"))
+	}
+	if err := cfg.Providers.SetEnabled("curseforge", true); err == nil {
+		t.Error("expected key-controlled CurseForge toggle to be rejected")
 	}
 }
 

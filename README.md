@@ -25,7 +25,7 @@ provider catalog are still evolving.
 | Generic Git | Available | HTTPS/SSH repositories via tags or shallow branch clones |
 | Direct URL | Available | ZIP URLs with ETag, Last-Modified, or SHA-256 identity |
 | Wago | Pending approval | Kept as a planned integration; no stable public read/download API was verified |
-| CurseForge | Pending approval | Adapter ready; activation requires approved third-party API access |
+| CurseForge | Key-gated | Enabled only when a local API key is configured; it is never bundled with wowtui |
 | WowUpHub | Pending upstream approval | Adapter implemented, activation paused until WowUp confirms third-party use |
 
 ## Features
@@ -124,16 +124,20 @@ enabled = true
 api_key = ""
 
 [providers.curseforge]
-enabled = false
 api_key = ""
 ```
+
+CurseForge activates automatically when `api_key` is non-empty, or when
+`WOWTUI_CURSEFORGE_API_KEY` is present in the process environment. The normal
+binary also reads a `.env` file in its current directory; quotes preserve `$`
+characters in a key. Do not put a CurseForge key in a distributed build or
+commit it to version control.
 
 Provider settings can also be managed from the CLI:
 
 ```bash
 ./wowtui providers
 ./wowtui providers enable gitlab
-./wowtui providers disable curseforge
 ./wowtui providers order github gitlab direct
 ```
 

@@ -1,4 +1,5 @@
 /wowtui
 /wowtui.exe
 /dist/
+.env
 *.local.toml

@@ -52,12 +52,15 @@ type ProviderConfig struct {
 
 var defaultProviderOrder = []string{"wowuphub", "wago", "curseforge", "github", "gitlab", "git", "direct"}
 var retiredProviders = map[string]bool{}
-var pausedProviders = map[string]bool{"wowuphub": true, "wago": true, "curseforge": true}
-var pausedProviderStates = map[string]string{"wowuphub": "pending-upstream", "wago": "pending-approval", "curseforge": "pending-approval"}
+var pausedProviders = map[string]bool{"wowuphub": true, "wago": true}
+var pausedProviderStates = map[string]string{"wowuphub": "pending-upstream", "wago": "pending-approval"}
 
 func (p Providers) Enabled(name string) bool {
 	if retiredProviders[name] || pausedProviders[name] {
 		return false
+	}
+	if name == "curseforge" {
+		return p.CurseForge.APIKey != ""
 	}
 	var configured *bool
 	switch name {
@@ -65,8 +68,6 @@ func (p Providers) Enabled(name string) bool {
 		configured = p.GitHub.Enabled
 	case "wago":
 		configured = p.Wago.Enabled
-	case "curseforge":
-		configured = p.CurseForge.Enabled
 	case "gitlab":
 		configured = p.GitLab.Enabled
 	case "git":
@@ -107,6 +108,9 @@ func (p *Providers) SetEnabled(name string, enabled bool) error {
 	if enabled && pausedProviders[name] {
 		return fmt.Errorf("provider %q is paused pending upstream approval", name)
 	}
+	if name == "curseforge" {
+		return fmt.Errorf("provider %q is enabled when its API key is configured", name)
+	}
 	value := enabled
 	switch name {
 	case "github":
@@ -119,8 +123,6 @@ func (p *Providers) SetEnabled(name string, enabled bool) error {
 		p.WowUpHub.Enabled = &value
 	case "wago":
 		p.Wago.Enabled = &value
-	case "curseforge":
-		p.CurseForge.Enabled = &value
 	case "direct":
 		p.Direct.Enabled = &value
 	default:
@@ -135,6 +137,12 @@ func (p Providers) State(name string) string {
 	}
 	if pausedProviders[name] {
 		return pausedProviderStates[name]
+	}
+	if name == "curseforge" {
+		if p.Enabled(name) {
+			return "enabled"
+		}
+		return "requires-api-key"
 	}
 	if name == "github" || name == "direct" || name == "gitlab" || name == "git" || name == "curseforge" {
 		if p.Enabled(name) {

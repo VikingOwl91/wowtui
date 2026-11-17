@@ -189,12 +189,11 @@ Die CLI stellt dafür `wowtui providers`,
 Reihenfolge und den Aktivierungsstatus in den Settings.
 
 GitHub, GitLab, Generic Git, Direct, WowUpHub und CurseForge sind implementiert.
-GitHub, GitLab, Generic Git und Direct sind standardmäßig aktiv. CurseForge bleibt
-bis zur Genehmigung des Third-Party-Zugangs pausiert. WowUpHub bleibt bis zur Antwort
+GitHub, GitLab, Generic Git und Direct sind standardmäßig aktiv. CurseForge wird
+aktiv, sobald ein lokaler API-Key konfiguriert ist. WowUpHub bleibt bis zur Antwort
 der WowUp-Entwickler auf eine Anfrage zur Drittanbieter-Nutzung
 pausiert. Wago bleibt bis zur Klärung der offiziellen Client-API auf
-pending-approval. CurseForge benötigt einen genehmigten
-API-Key für Drittanbieter-Clients.
+pending-approval. CurseForge benötigt einen API-Key für Drittanbieter-Clients.
 
 ### GitHub ohne Releases (Fallback-Kette)
 

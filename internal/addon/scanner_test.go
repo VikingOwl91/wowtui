@@ -3,6 +3,7 @@ package addon
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -52,6 +53,21 @@ func TestScanFolderInterfaces(t *testing.T) {
 	got := folders[0].Interfaces()
 	if len(got) != 2 || got[0] != 40402 || got[1] != 110200 {
 		t.Errorf("Details interfaces = %v, want [40402 110200]", got)
+	}
+}
+
+func TestScanFolderInterfacesIncludesMultiValueLists(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "Interface", "AddOns", "Multi")
+	writeToc(t, dir, "Multi.toc", "## Interface: 110200, 50500, 11507\n")
+	writeToc(t, dir, "Multi_Cata.toc", "## Interface: 40402, 50500\n")
+
+	folders, err := Scan(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := folders[0].Interfaces(), []int{11507, 40402, 50500, 110200}; !slices.Equal(got, want) {
+		t.Errorf("Interfaces = %v, want %v", got, want)
 	}
 }
 

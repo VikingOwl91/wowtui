@@ -85,16 +85,15 @@ func probePath(path string, requireInterface bool) ([]Installation, error) {
 	}
 
 	var installs []Installation
-	for _, name := range []string{"_retail_", "_classic_", "_classic_era_", "_beta_", "_ptr_"} {
-		sub := filepath.Join(path, name)
+	for _, client := range clientDirs {
+		sub := filepath.Join(path, client.dir)
 		if !dirExists(sub) {
 			continue
 		}
 		if requireInterface && !dirExists(filepath.Join(sub, "Interface")) {
 			continue
 		}
-		flavor, _ := FlavorFromDirName(name)
-		installs = append(installs, Installation{Path: sub, Flavor: flavor})
+		installs = append(installs, Installation{Path: sub, Flavor: client.flavor})
 	}
 	return installs, nil
 }

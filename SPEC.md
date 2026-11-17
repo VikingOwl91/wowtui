@@ -129,6 +129,8 @@ internal/
 │   ├── reference.go
 │   ├── manager.go
 │   ├── assets.go
+│   ├── releasejson.go
+│   ├── httpcache.go
 │   ├── tags.go
 │   ├── github.go
 │   ├── gitlab.go
@@ -222,7 +224,11 @@ Regeln:
 - Ein Provider ohne gültigen Key wird übersprungen und meldet einen
   klaren Fehler, statt still zu scheitern
 - GitHub funktioniert ohne Token, mit Token nur für höhere
-  Rate-Limits
+  Rate-Limits (laut GitHub-Doku 60 Anfragen pro Stunde ohne, 5000 mit
+  Token). Antwortet die API mit `403` oder `429` und
+  `X-RateLimit-Remaining: 0`, meldet wowtui ein erschöpftes Rate-Limit
+  mit Reset-Zeit, sofern GitHub sie mitschickt, und ohne Token mit dem
+  Hinweis auf `WOWTUI_GITHUB_TOKEN` oder `providers.github.token`
 - Direct-URL braucht keinen Key
 
 Provider können zusätzlich aktiviert/deaktiviert und priorisiert werden:
@@ -261,7 +267,11 @@ Viele Repos haben keine Releases oder keine ZIP-Artefakte. Der
 GitHub-Provider nutzt deshalb eine Fallback-Kette:
 
 1. Neuestes stabiles Release mit passendem ZIP-Asset für den Spieltyp
-   des Flavors (Auswahl siehe Abschnitt 5)
+   des Flavors. Hat das Release ein `release.json` (BigWigs-Packager),
+   entscheidet dessen Eintrag für den Spieltyp; listet es Builds, aber
+   keinen für diesen Spieltyp, bricht wowtui mit einem Fehler ab, der
+   die unterstützten Spieltypen nennt, ohne zu Schritt 2 zu gehen.
+   Sonst Auswahl über die Asset-Namen (beides siehe Abschnitt 5)
 2. Release vorhanden, aber ohne passendes ZIP-Asset: Quellarchiv des
    Release-Tags
 3. Kein Release: Quellarchiv des neuesten Tags (semver-Sortierung,
@@ -304,6 +314,33 @@ sind, warnt wowtui bei Tag- und Branch-Archiven, wenn `.pkgmeta` oder
 `pkgmeta.yaml` `externals` listet (diese Bibliotheken können dann
 fehlen) oder eine `.toc` noch `@project-version@` enthält. Die Warnung
 empfiehlt `--source release`.
+
+### HTTP-Cache für die GitHub-API
+
+GitHub-API-Antworten liegen in `$XDG_CACHE_HOME/wowtui/http`, wenn
+`XDG_CACHE_HOME` ein absoluter Pfad ist, sonst in
+`~/.cache/wowtui/http` (`cmd/root.go` `httpCacheDir`,
+`internal/provider/httpcache.go`):
+
+- Je gecachter API-GET-URL eine Datei `<SHA-256 der URL>.json` mit
+  URL, `ETag`, `Last-Modified` und Body
+- Gespeichert werden nur `200`-Antworten mit `ETag` oder
+  `Last-Modified` und höchstens 4 MiB Body. Request-Header und damit
+  der Token landen nie im Cache. Verzeichnis 0700, Dateien 0600
+- Folgeanfragen schicken die gespeicherten Werte als `If-None-Match`
+  und `If-Modified-Since`; ein `304` wird aus dem Cache beantwortet
+- Unlesbare, beschädigte oder zu einer anderen URL gehörende Einträge
+  werden ignoriert und neu geholt. Ist das Verzeichnis nicht
+  schreibbar, läuft wowtui ohne Cache
+- Downloads (Release-Assets, `release.json`, Quellarchive) werden nie
+  gecacht
+- Noch keine Größenbegrenzung; das Verzeichnis darf jederzeit gelöscht
+  werden
+
+Laut GitHub-Doku zählt ein `304` nur dann nicht gegen das primäre
+Rate-Limit, wenn der Request korrekt mit `Authorization`-Header
+autorisiert ist. Ohne Token spart der Cache also Bandbreite, aber kein
+Kontingent.
 
 ### Datenmodell
 
@@ -429,11 +466,22 @@ Reiner Semver-Vergleich reicht nicht. Versionen kommen vor als
 - Dieselbe Addon-Quelle kann pro Flavor ein anderes Release brauchen.
   Ausgewählt wird nach dem Spieltyp des Flavors, nicht nach
   "neueste ZIP":
-  - GitHub: Ein einzelnes ZIP-Asset wird immer genommen. Bei mehreren
-    gewinnt das Asset, dessen Name den Spieltyp trägt (Tokens nach den
-    Dateinamen des BigWigs-Packagers: `vanilla`/`era`/`classicera`,
-    `bcc`/`tbc`, `wrath`/`wotlkc`, `titan`, `cata`/`cataclysm`,
-    `mists`, `forever`/`camelot`, `retail`/`mainline`). Ein nacktes
+  - GitHub mit `release.json` (vom BigWigs-Packager geschrieben): Es
+    gilt der Build, den die Datei für den Spieltyp nennt, volle Builds
+    vor `nolib`. PTR- und Beta-Clients nutzen dabei den Spieltyp ihres
+    Basis-Clients. Packager-`classic` ist Vanilla, `bcc` ist TBC.
+    Listet die Datei Builds, aber keinen für den Spieltyp, scheitert
+    die Installation mit einem Fehler, der die unterstützten Spieltypen
+    nennt. Ist `release.json` nicht ladbar, größer als 1 MiB, kaputt,
+    ohne bekannten Packager-Flavor oder nennt es keine ZIP-Datei des
+    Releases, greift die Namensauswahl. `release.json` wird ohne Token
+    geladen
+  - GitHub nach Namen: Ein einzelnes ZIP-Asset wird immer genommen.
+    Bei mehreren gewinnt das Asset, dessen Name den Spieltyp trägt
+    (Tokens nach den Dateinamen des BigWigs-Packagers:
+    `vanilla`/`era`/`classicera`, `bcc`/`tbc`, `wrath`/`wotlkc`,
+    `titan`, `cata`/`cataclysm`, `mists`, `forever`/`camelot`,
+    `retail`/`mainline`). Ein nacktes
     `-classic` gilt wie beim Packager als Vanilla und steht hinter
     expliziten Vanilla-Tokens. Danach kommt ein Asset ohne
     Spieltyp-Token, sonst das Quellarchiv des Release-Tags
@@ -711,6 +759,7 @@ gebunden, ein Key wird nie mitgeliefert.
 | Risiko | Auswirkung | Gegenmaßnahme |
 |---|---|---|
 | GitHub-Repos ohne ZIP-Artefakt am Release | Import schlägt fehl | Klare Fehlermeldung, Verhalten wie bei WowUp dokumentieren |
+| GitHub-Rate-Limit (60 Anfragen pro Stunde ohne Token) | `check` und `update --all` scheitern bei vielen Addons | HTTP-Cache mit bedingten Requests (mit Token zählt ein `304` nicht), Fehlermeldung mit Reset-Zeit und Token-Hinweis |
 | Unsaubere Versionsformate | Falsche Update-Entscheidungen | Auflösungsreihenfolge aus Abschnitt 4, Hashvergleich als letzte Stufe |
 | Flavor-Mismatch | Falsches Release für Classic/PTR | Provider wählen nach dem GameType des Flavors, Test-Clients teilen den Spieltyp ihres Basis-Clients |
 | bwrap nicht verfügbar oder User-Namespaces deaktiviert | Sandbox fehlt | Fallback auf internen Extractor, Warnung, Strict Mode |

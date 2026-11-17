@@ -129,7 +129,10 @@ api_key = ""
 
 CurseForge activates automatically when `api_key` is non-empty, or when
 `WOWTUI_CURSEFORGE_API_KEY` is present in the process environment. The normal
-binary also reads a `.env` file in its current directory; quotes preserve `$`
+binary also reads a `.env` file in its current directory, but only for
+`WOWTUI_GITHUB_TOKEN`, `WOWTUI_WAGO_API_KEY`, and `WOWTUI_CURSEFORGE_API_KEY`.
+Every other variable in that file is ignored, and a variable that is already
+set in the process environment wins over the file. Quotes preserve `$`
 characters in a key. Do not put a CurseForge key in a distributed build or
 commit it to version control.
 

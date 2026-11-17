@@ -150,12 +150,18 @@ func (g *GitHub) latestRelease(ctx context.Context, addon RemoteAddon, flavor wo
 	for _, asset := range rel.Assets {
 		names = append(names, asset.Name)
 	}
-	picked, err := PickAsset(names, flavor)
+	picked, ok, err := g.releaseJSONAsset(ctx, rel.Assets, names, flavor)
 	if err != nil {
-		if rel.TagName == "" {
-			return Release{}, fmt.Errorf("%s: %w", addon.ID, err)
+		return Release{}, fmt.Errorf("%s (flavor %s): %w", addon.ID, flavor, err)
+	}
+	if !ok {
+		picked, err = PickAsset(names, flavor)
+		if err != nil {
+			if rel.TagName == "" {
+				return Release{}, fmt.Errorf("%s: %w", addon.ID, err)
+			}
+			return g.tagArchive(addon.ID, rel.TagName), nil
 		}
-		return g.tagArchive(addon.ID, rel.TagName), nil
 	}
 
 	for _, asset := range rel.Assets {

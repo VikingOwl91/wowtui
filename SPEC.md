@@ -37,15 +37,16 @@ Nicht in 0.1:
 - Suche über mehrere Plattformen
 - Automatische Migration fremd installierter Addons
 - Abhängigkeiten zwischen Addons
-- CurseForge, Wago
+- Wago
 
 ### Danach
 
 - v0.2: Wago als zweiter Provider (dokumentierte API, API-Key nötig)
 - v0.3+: SQLite statt JSON, sobald mehrere Installationen,
   Releasehistorien oder umfangreiche Metadaten dazukommen
-- CurseForge erst, wenn offizieller API-Zugang für das Nutzungsszenario
-  geklärt ist (ToS, Downloadfreigaben)
+- CurseForge nur mit eigenem API-Key des Users, wowtui liefert nie einen
+  Key mit; die Einhaltung der CurseForge-ToS (Nutzungsbedingungen,
+  Downloadfreigaben) bleibt Sache des Users und des Projekts
 
 ## 3. Tech Stack
 
@@ -158,7 +159,7 @@ token = ""          # optional, hebt GitHub-Rate-Limits an
 api_key = ""        # erforderlich für den Wago-Provider
 
 [providers.curseforge]
-api_key = ""        # erforderlich, Provider selbst erst nach v0.1
+api_key = ""        # erforderlich, eigener Key des Users, nie mitgeliefert
 ```
 
 Regeln:
@@ -457,7 +458,8 @@ debuggt werden müssen.
 **M5, Wago Provider.** Zweiter Provider, API-Key-Konfiguration.
 
 **M6, Ausbau.** SQLite, mehrere Installationen komfortabel verwalten,
-Releasehistorie. CurseForge nur nach geklärtem API-Zugang.
+Releasehistorie. CurseForge bleibt an den eigenen API-Key des Users
+gebunden, ein Key wird nie mitgeliefert.
 
 ## 11. Risiken
 
@@ -467,7 +469,7 @@ Releasehistorie. CurseForge nur nach geklärtem API-Zugang.
 | Unsaubere Versionsformate | Falsche Update-Entscheidungen | Auflösungsreihenfolge aus Abschnitt 4, Hashvergleich als letzte Stufe |
 | Flavor-Mismatch | Falsches Release für Classic/PTR | Update Planner filtert nach GameFlavor |
 | bwrap nicht verfügbar oder User-Namespaces deaktiviert | Sandbox fehlt | Fallback auf internen Extractor, Warnung, Strict Mode |
-| CurseForge-ToS | Provider rechtlich/technisch instabil | Nicht in 0.1, erst nach Klärung |
+| CurseForge-ToS | Provider rechtlich/technisch instabil | Nur mit eigenem API-Key des Users, kein mitgelieferter Key, ToS-Einhaltung bleibt Sache von User und Projekt |
 | Mehrere Ordner pro Paket | Falsche Zuordnung bei Updates | Paket-Modell statt Ordner-Modell, Registry-Metadaten |
 
 ## 12. Teststrategie

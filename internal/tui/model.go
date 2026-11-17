@@ -2,12 +2,14 @@ package tui
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"somegit.dev/vikingowl/wowtui/internal/config"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
@@ -278,6 +280,8 @@ func (m *Model) View() string {
 	if m.width == 0 {
 		return "loading..."
 	}
+	m.resizeTable()
+	m.resizeExploreTable()
 
 	var body string
 	switch m.screen {
@@ -356,30 +360,74 @@ func (m *Model) collectNotice(e service.Event) {
 
 func (m *Model) noticeEntries() []notice {
 	var entries []notice
-	if m.errMsg != "" {
-		entries = append(entries, notice{kind: noticeError, text: m.errMsg})
+	seen := map[notice]bool{}
+	add := func(kind noticeKind, text string) {
+		for _, line := range strings.Split(text, "\n") {
+			n := notice{kind: kind, text: line}
+			if strings.TrimSpace(line) == "" || seen[n] {
+				continue
+			}
+			seen[n] = true
+			entries = append(entries, n)
+		}
 	}
-	return append(entries, m.notices...)
+	add(noticeError, m.errMsg)
+	for _, kind := range []noticeKind{noticeError, noticeWarning} {
+		for _, n := range m.notices {
+			if n.kind == kind {
+				add(kind, n.text)
+			}
+		}
+	}
+	return entries
 }
 
 func (m *Model) noticeVisible() bool {
 	return !m.busy && len(m.noticeEntries()) > 0
 }
 
+const maxNoticeLines = 5
+
+// noticeLimit caps notices at half of the rows the explore table would get,
+// since the explore screen has the tallest chrome.
+func (m *Model) noticeLimit() int {
+	return max(1, min(maxNoticeLines, (m.height-11)/2))
+}
+
 func (m *Model) noticeLines() []string {
-	if !m.noticeVisible() {
+	if m.busy {
 		return nil
 	}
 	entries := m.noticeEntries()
-	lines := make([]string, 0, len(entries))
+	more := 0
+	if limit := m.noticeLimit(); len(entries) > limit {
+		more = len(entries) - (limit - 1)
+		entries = entries[:limit-1]
+	}
+	width := m.width - noticeBar.GetHorizontalFrameSize() - 2
+	lines := make([]string, 0, len(entries)+1)
 	for _, n := range entries {
+		text := truncateText(n.text, width)
 		if n.kind == noticeWarning {
-			lines = append(lines, warnStyle.Render("! "+n.text))
+			lines = append(lines, warnStyle.Render("! "+text))
 		} else {
-			lines = append(lines, errStyle.Render("✗ "+n.text))
+			lines = append(lines, errStyle.Render("✗ "+text))
 		}
 	}
+	if more > 0 {
+		lines = append(lines, dimStyle.Render("+"+strconv.Itoa(more)+" more"))
+	}
 	return lines
+}
+
+func truncateText(s string, width int) string {
+	if lipgloss.Width(s) <= width {
+		return s
+	}
+	if width < 2 {
+		return ""
+	}
+	return lipgloss.NewStyle().MaxWidth(width-1).Render(s) + "…"
 }
 
 func (m *Model) helpText() string {

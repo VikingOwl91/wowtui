@@ -465,7 +465,11 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		maxDownload = defaultMaxDownload
 	}
 
-	workDir, err := os.MkdirTemp("", "wowtui-")
+	addonsDir := filepath.Join(installPath, "Interface", "AddOns")
+	if err := os.MkdirAll(addonsDir, 0o755); err != nil {
+		return nil, "", err
+	}
+	workDir, err := os.MkdirTemp(filepath.Dir(addonsDir), ".wowtui-work-")
 	if err != nil {
 		return nil, "", err
 	}
@@ -505,10 +509,6 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 	}
 
 	ev(StageInstall, "installing")
-	addonsDir := filepath.Join(installPath, "Interface", "AddOns")
-	if err := os.MkdirAll(addonsDir, 0o755); err != nil {
-		return nil, "", err
-	}
 	result, err := installer.Install(installer.InstallPlan{
 		AddonsDir:  addonsDir,
 		StagingDir: staging,

@@ -168,7 +168,7 @@ func installWithMover(plan InstallPlan, move func(src, dst string) error) (*Inst
 		}
 	}
 
-	rollbackDir, err := os.MkdirTemp("", "wowtui-rollback-")
+	rollbackDir, err := os.MkdirTemp(filepath.Dir(plan.AddonsDir), ".wowtui-rollback-")
 	if err != nil {
 		return nil, err
 	}

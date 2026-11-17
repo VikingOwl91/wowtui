@@ -816,6 +816,79 @@ func TestAddWarnsWhenReplacingUnmanagedFolder(t *testing.T) {
 	}
 }
 
+func hiddenTempDirs(t *testing.T, dir string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, entry := range entries {
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), ".wowtui-") {
+			names = append(names, entry.Name())
+		}
+	}
+	return names
+}
+
+func recordWorkDirs(t *testing.T, svc *Service, out *captured, interfaceDir string) *[]string {
+	t.Helper()
+	var seen []string
+	svc.OnEvent = func(e Event) {
+		out.emit(e)
+		if e.Stage == StageExtract {
+			for _, name := range hiddenTempDirs(t, interfaceDir) {
+				if _, err := os.Stat(filepath.Join(interfaceDir, name, "archive.zip")); err == nil {
+					seen = append(seen, name)
+				}
+			}
+		}
+	}
+	return &seen
+}
+
+func TestAddKeepsWorkDirInsideInterface(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 100, Tag: "v1.0.0", AssetName: "a.zip"},
+		zipContent: addonZip(t, "1.0.0"),
+	}
+	svc, install, out := newTestService(t, fp)
+	interfaceDir := filepath.Join(install.Path, "Interface")
+	seen := recordWorkDirs(t, svc, out, interfaceDir)
+
+	ref := provider.Reference{Provider: "github", ID: "Owner/MyAddon"}
+	if err := svc.Add(context.Background(), ref, wow.Retail, install, ""); err != nil {
+		t.Fatal(err)
+	}
+	if len(*seen) != 1 {
+		t.Fatalf("work dir with archive not found inside %s during install, got %v", interfaceDir, *seen)
+	}
+	if left := hiddenTempDirs(t, interfaceDir); len(left) != 0 {
+		t.Errorf("temp dirs left behind after success: %v", left)
+	}
+}
+
+func TestAddRemovesWorkDirOnFailure(t *testing.T) {
+	fp := &fakeProvider{
+		release:    provider.Release{Kind: provider.KindRelease, ID: 100, Tag: "v1.0.0", AssetName: "a.zip"},
+		zipContent: buildZip(t, map[string]string{"README.md": "no toc here"}),
+	}
+	svc, install, out := newTestService(t, fp)
+	interfaceDir := filepath.Join(install.Path, "Interface")
+	seen := recordWorkDirs(t, svc, out, interfaceDir)
+
+	ref := provider.Reference{Provider: "github", ID: "Owner/MyAddon"}
+	if err := svc.Add(context.Background(), ref, wow.Retail, install, ""); err == nil {
+		t.Fatal("expected install of an archive without toc to fail")
+	}
+	if len(*seen) != 1 {
+		t.Fatalf("work dir with archive not found inside %s during install, got %v", interfaceDir, *seen)
+	}
+	if left := hiddenTempDirs(t, interfaceDir); len(left) != 0 {
+		t.Errorf("temp dirs left behind after failure: %v", left)
+	}
+}
+
 func TestScanPreservesManagedAddons(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	svc, install, _ := newTestService(t, &fakeProvider{})

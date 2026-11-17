@@ -272,6 +272,75 @@ func TestInstallRollsBackOnFailure(t *testing.T) {
 	}
 }
 
+func assertNoTempDirs(t *testing.T, dir string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), ".wowtui-") {
+			t.Errorf("temp dir %s left behind in %s", entry.Name(), dir)
+		}
+	}
+}
+
+func assertRollbackDirBesideAddons(t *testing.T, addonsDir, asideDst string) {
+	t.Helper()
+	if asideDst == "" {
+		t.Fatal("old folder was never moved aside")
+	}
+	rollbackDir := filepath.Dir(asideDst)
+	if filepath.Dir(rollbackDir) != filepath.Dir(addonsDir) {
+		t.Errorf("rollback dir %s is not directly inside %s", rollbackDir, filepath.Dir(addonsDir))
+	}
+	if !strings.HasPrefix(filepath.Base(rollbackDir), ".") {
+		t.Errorf("rollback dir %s is not hidden", rollbackDir)
+	}
+}
+
+func TestInstallKeepsRollbackDirBesideAddonsDir(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+
+	var asideDst string
+	mover := func(src, dst string) error {
+		if src == filepath.Join(addonsDir, "Alpha") {
+			asideDst = dst
+		}
+		return MoveDir(src, dst)
+	}
+	if _, err := installWithMover(plan, mover); err != nil {
+		t.Fatal(err)
+	}
+	assertRollbackDirBesideAddons(t, addonsDir, asideDst)
+	assertNoTempDirs(t, filepath.Dir(addonsDir))
+}
+
+func TestInstallRemovesRollbackDirOnFailure(t *testing.T) {
+	plan, addonsDir := installPlan(t)
+	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")
+	stageAddon(t, plan.StagingDir, "Alpha", "## Version: new-a")
+	stageAddon(t, plan.StagingDir, "Beta", "## Version: new-b")
+
+	var asideDst string
+	mover := func(src, dst string) error {
+		if src == filepath.Join(addonsDir, "Alpha") {
+			asideDst = dst
+		}
+		if src == filepath.Join(plan.StagingDir, "Beta") {
+			return errors.New("simulated failure")
+		}
+		return MoveDir(src, dst)
+	}
+	if _, err := installWithMover(plan, mover); err == nil {
+		t.Fatal("expected install to fail")
+	}
+	assertRollbackDirBesideAddons(t, addonsDir, asideDst)
+	assertNoTempDirs(t, filepath.Dir(addonsDir))
+}
+
 func TestInstallReportsReplacedFolders(t *testing.T) {
 	plan, addonsDir := installPlan(t)
 	stageAddon(t, addonsDir, "Alpha", "## Version: old-a")

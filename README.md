@@ -35,7 +35,10 @@ the interface and provider catalog are still evolving.
   [Flavors](#flavors))
 - Parse addon `.toc` metadata and source hints
 - Install addons from GitHub releases, tags, branches, GitLab releases, or ZIP URLs
-- Pick release assets by the game type of the target client
+- Pick release assets by the game type of the target client, from the BigWigs
+  packager's `release.json` when a GitHub release ships one
+- Cache GitHub API responses on disk and revalidate them with conditional
+  requests
 - Check and update individual or all managed addons
 - Backup existing addon folders before replacement
 - Transactional installation with rollback on failure
@@ -164,10 +167,20 @@ game type. A tie leaves the flavor empty.
 
 Providers select builds by game type:
 
-- GitHub uses a release's only ZIP asset as is. With several ZIP assets it
-  picks the one whose name carries a game type token from the BigWigs packager
-  names (`vanilla`/`era`/`classicera`, `bcc`/`tbc`, `wrath`/`wotlkc`, `titan`,
-  `cata`/`cataclysm`, `mists`, `forever`/`camelot`, `retail`/`mainline`). A
+- GitHub first reads the release's `release.json` asset, if it has one (the
+  BigWigs packager writes it). The build listed for the client's game type
+  wins, and a full build beats a `nolib` build. The packager's `classic` means
+  vanilla and `bcc` means tbc. If `release.json` lists builds but none for
+  that game type, the install fails with an error that names the game types
+  it supports. A `release.json` that cannot be downloaded, is larger than
+  1 MiB, is malformed, has no known packager flavor, or names a file that is
+  not a ZIP asset of the release is ignored. wowtui downloads it without the
+  GitHub token.
+- Without a usable `release.json`, GitHub uses a release's only ZIP asset as
+  is. With several ZIP assets it picks the one whose name carries a game type
+  token from the BigWigs packager names (`vanilla`/`era`/`classicera`,
+  `bcc`/`tbc`, `wrath`/`wotlkc`, `titan`, `cata`/`cataclysm`, `mists`,
+  `forever`/`camelot`, `retail`/`mainline`). A
   bare `-classic` asset counts as vanilla, as in the packager convention, and
   ranks below an explicit vanilla token. If no asset names the game type, an
   asset without any game type token is used. If there is none, wowtui installs
@@ -240,6 +253,34 @@ supported. They are never stored in the addon registry. An environment value
 overrides the matching `config.toml` value for the running process only: when
 `providers enable`, `disable`, or `order` rewrite `config.toml`, they keep the
 credential the file had and never write the one from the environment.
+
+## GitHub API Cache
+
+wowtui keeps GitHub API responses in `$XDG_CACHE_HOME/wowtui/http` when
+`XDG_CACHE_HOME` is an absolute path, otherwise in `~/.cache/wowtui/http`.
+Each cached API GET URL gets one file, named after the SHA-256 of the URL, that
+holds the URL, the `ETag` and `Last-Modified` values, and the response body.
+Only `200` responses with `ETag` or `Last-Modified` and a body of at most
+4 MiB are stored. Request headers, and with them the token, are never written. The
+directory is created with mode 0700, the files get 0600.
+
+The next request for a cached URL sends the stored values as `If-None-Match`
+and `If-Modified-Since`, and a `304 Not Modified` is answered from the cache. An
+entry that is unreadable, damaged, or belongs to another URL is ignored and the
+URL is fetched in full again. If the directory cannot be written, wowtui works
+without the cache. Downloads (release assets, `release.json`, source archives)
+are never cached. The cache has no size limit yet; deleting the directory is
+safe.
+
+The cache saves rate limit only with a token. According to the GitHub REST API
+docs, a `304` leaves the primary rate limit untouched only when the request
+carries a valid `Authorization` header. Without a token, the cache
+saves bandwidth, but every request still counts against the 60 requests per
+hour for unauthenticated clients; with a token the limit is 5,000 per hour.
+When GitHub answers `403` or `429` with `X-RateLimit-Remaining: 0`, wowtui
+reports that the rate limit is exhausted, adds the reset time when GitHub sends
+one, and points to `WOWTUI_GITHUB_TOKEN` or `providers.github.token` when no
+token is configured.
 
 ## Security Model
 

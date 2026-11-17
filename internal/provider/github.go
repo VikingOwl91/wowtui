@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +26,7 @@ type GitHub struct {
 	token   string
 	apiBase string
 	webBase string
+	cache   *httpCache
 }
 
 func NewGitHub(token string) *GitHub {
@@ -38,6 +41,12 @@ func NewGitHub(token string) *GitHub {
 func (g *GitHub) SetAPIBase(base string) {
 	g.apiBase = base
 	g.webBase = base
+}
+
+// SetCacheDir keeps API responses in dir for conditional requests. An empty
+// dir disables the cache.
+func (g *GitHub) SetCacheDir(dir string) {
+	g.cache = newHTTPCache(dir)
 }
 
 type ghAsset struct {
@@ -150,12 +159,18 @@ func (g *GitHub) latestRelease(ctx context.Context, addon RemoteAddon, flavor wo
 	for _, asset := range rel.Assets {
 		names = append(names, asset.Name)
 	}
-	picked, err := PickAsset(names, flavor)
+	picked, ok, err := g.releaseJSONAsset(ctx, rel.Assets, names, flavor)
 	if err != nil {
-		if rel.TagName == "" {
-			return Release{}, fmt.Errorf("%s: %w", addon.ID, err)
+		return Release{}, fmt.Errorf("%s (flavor %s): %w", addon.ID, flavor, err)
+	}
+	if !ok {
+		picked, err = PickAsset(names, flavor)
+		if err != nil {
+			if rel.TagName == "" {
+				return Release{}, fmt.Errorf("%s: %w", addon.ID, err)
+			}
+			return g.tagArchive(addon.ID, rel.TagName), nil
 		}
-		return g.tagArchive(addon.ID, rel.TagName), nil
 	}
 
 	for _, asset := range rel.Assets {
@@ -276,6 +291,15 @@ func (g *GitHub) get(ctx context.Context, url string, out any) (int, error) {
 	if g.token != "" {
 		req.Header.Set("Authorization", "Bearer "+g.token)
 	}
+	cached, haveCached := g.cache.load(url)
+	if haveCached {
+		if cached.ETag != "" {
+			req.Header.Set("If-None-Match", cached.ETag)
+		}
+		if cached.LastModified != "" {
+			req.Header.Set("If-Modified-Since", cached.LastModified)
+		}
+	}
 
 	resp, err := g.client.Do(req)
 	if err != nil {
@@ -283,10 +307,40 @@ func (g *GitHub) get(ctx context.Context, url string, out any) (int, error) {
 	}
 	defer resp.Body.Close()
 
+	if (resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests) && resp.Header.Get("X-RateLimit-Remaining") == "0" {
+		return resp.StatusCode, g.rateLimitError(resp.Header.Get("X-RateLimit-Reset"))
+	}
+	if resp.StatusCode == http.StatusNotModified && haveCached {
+		if out != nil {
+			if err := json.Unmarshal(cached.Body, out); err != nil {
+				return http.StatusOK, fmt.Errorf("decoding cached github response: %w", err)
+			}
+		}
+		return http.StatusOK, nil
+	}
 	if resp.StatusCode == http.StatusOK && out != nil {
-		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		head, err := io.ReadAll(io.LimitReader(resp.Body, maxCachedBody+1))
+		if err != nil {
+			return resp.StatusCode, fmt.Errorf("reading github response: %w", err)
+		}
+		if err := json.NewDecoder(io.MultiReader(bytes.NewReader(head), resp.Body)).Decode(out); err != nil {
 			return resp.StatusCode, fmt.Errorf("decoding github response: %w", err)
 		}
+		g.cache.store(cachedResponse{URL: url, ETag: resp.Header.Get("ETag"), LastModified: resp.Header.Get("Last-Modified"), Body: head})
 	}
 	return resp.StatusCode, nil
+}
+
+func (g *GitHub) rateLimitError(reset string) error {
+	msg := "github api rate limit exhausted"
+	if g.token != "" {
+		msg += " for the configured token"
+	}
+	if seconds, err := strconv.ParseInt(reset, 10, 64); err == nil {
+		msg += ", resets at " + time.Unix(seconds, 0).Format("15:04:05 MST")
+	}
+	if g.token == "" {
+		msg += "; a token via WOWTUI_GITHUB_TOKEN or providers.github.token raises the limit"
+	}
+	return errors.New(msg)
 }

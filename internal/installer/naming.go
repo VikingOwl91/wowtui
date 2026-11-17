@@ -27,6 +27,10 @@ func tocFolderNames(tocBase string) []string {
 	return names
 }
 
+func safeFolderName(name string) bool {
+	return name != "" && !strings.HasPrefix(name, ".") && !strings.ContainsAny(name, "/\\\x00")
+}
+
 func folderNameForTocs(current string, tocBases []string) string {
 	if len(tocBases) == 0 {
 		return current

@@ -94,7 +94,7 @@ func normalizeRootNames(roots []StagedRoot) []StagedRoot {
 		}
 		bases = append(bases, strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())))
 	}
-	if name := folderNameForTocs(root.Name, bases); name != root.Name {
+	if name := folderNameForTocs(root.Name, bases); name != root.Name && safeFolderName(name) {
 		root.Name = name
 		roots[0] = root
 	}

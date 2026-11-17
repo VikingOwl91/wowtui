@@ -373,13 +373,31 @@ func (s *Service) UpdateAll(ctx context.Context, dryRun bool) error {
 		return err
 	}
 	total := len(reg.Addons)
+	var failures updateFailures
 	for i := range reg.Addons {
-		if err := s.updateAddon(ctx, reg, &reg.Addons[i], dryRun, i+1, total); err != nil {
-			return err
+		addon := &reg.Addons[i]
+		if err := s.updateAddon(ctx, reg, addon, dryRun, i+1, total); err != nil {
+			s.emit(Event{Ref: addon.Ref, Stage: StageError, Message: fmt.Sprintf("failed to update %s: %v", addon.Ref, err), Index: i + 1, Total: total, Err: err})
+			failures = append(failures, fmt.Errorf("%s: %w", addon.Ref, err))
 		}
+	}
+	if len(failures) > 0 {
+		return failures
 	}
 	return nil
 }
+
+type updateFailures []error
+
+func (f updateFailures) Error() string {
+	msgs := make([]string, 0, len(f))
+	for _, err := range f {
+		msgs = append(msgs, err.Error())
+	}
+	return "update failed: " + strings.Join(msgs, "; ")
+}
+
+func (f updateFailures) Unwrap() []error { return f }
 
 func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon *registry.Addon, dryRun bool, index, total int) error {
 	ev := func(stage Stage, msg string) {

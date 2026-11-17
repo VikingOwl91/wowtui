@@ -4,14 +4,18 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+
+	"somegit.dev/vikingowl/wowtui/internal/registry"
 )
 
 type fakeGitHub struct {
@@ -350,4 +354,104 @@ func TestAddDirectURL(t *testing.T) {
 	if !strings.Contains(out, "current") {
 		t.Errorf("check output: %s", out)
 	}
+}
+
+func executeCmd(args ...string) (string, error) {
+	root := NewRootCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs(args)
+	err := root.Execute()
+	return buf.String(), err
+}
+
+func setupUpdateAllWithFailingAddon(t *testing.T) (cfgPath, tocPath string) {
+	t.Helper()
+	gh := newFakeGitHub(t, buildCmdZip(t, "1.0.0"))
+	cfgPath, installPath := setupAddEnv(t, gh)
+	tocPath = filepath.Join(installPath, "Interface", "AddOns", "TestAddon", "TestAddon.toc")
+	runCmd(t, "add", "github:Owner/TestAddon", "--config", cfgPath)
+
+	regPath := registry.DefaultPath()
+	reg, err := registry.Load(regPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	missing := registry.Addon{Provider: "github", Ref: "Owner/Missing", Name: "Owner/Missing", Flavor: "retail", InstallPath: installPath, Folders: []string{"Missing"}, Version: "v1.0.0", Source: "auto"}
+	reg.Addons = append([]registry.Addon{missing}, reg.Addons...)
+	if err := reg.Save(regPath); err != nil {
+		t.Fatal(err)
+	}
+
+	gh.bump("v2.0.0", buildCmdZip(t, "2.0.0"))
+	return cfgPath, tocPath
+}
+
+func assertTocFile(t *testing.T, path, want string) {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != want {
+		t.Errorf("toc = %q, want %q", content, want)
+	}
+}
+
+func TestUpdateAllContinuesPastFailingAddon(t *testing.T) {
+	cfgPath, tocPath := setupUpdateAllWithFailingAddon(t)
+
+	out, err := executeCmd("update", "--all", "--dry-run", "--config", cfgPath)
+	if err == nil || !strings.Contains(err.Error(), "Owner/Missing") {
+		t.Fatalf("dry run error = %v, want failure naming Owner/Missing\noutput: %s", err, out)
+	}
+	if !strings.Contains(out, "dry run") || !strings.Contains(out, "1 to update, 0 current, 1 failed") {
+		t.Errorf("dry run output: %s", out)
+	}
+	assertTocFile(t, tocPath, "## Version: 1.0.0")
+
+	out, err = executeCmd("update", "--all", "--config", cfgPath)
+	if err == nil || !strings.Contains(err.Error(), "Owner/Missing") {
+		t.Fatalf("update error = %v, want failure naming Owner/Missing\noutput: %s", err, out)
+	}
+	if strings.Contains(err.Error(), "Owner/TestAddon") {
+		t.Errorf("error = %v names an addon that did not fail", err)
+	}
+	if !strings.Contains(out, "1 updated, 0 current, 1 failed") {
+		t.Errorf("update output: %s", out)
+	}
+	assertTocFile(t, tocPath, "## Version: 2.0.0")
+}
+
+func TestExecuteHelperProcess(t *testing.T) {
+	if os.Getenv("WOWTUI_EXECUTE_HELPER") != "1" {
+		return
+	}
+	args := os.Args
+	for i, arg := range args {
+		if arg == "--" {
+			args = args[i+1:]
+			break
+		}
+	}
+	os.Args = append([]string{"wowtui"}, args...)
+	Execute()
+	os.Exit(0)
+}
+
+func TestUpdateAllExitStatusOnFailure(t *testing.T) {
+	cfgPath, tocPath := setupUpdateAllWithFailingAddon(t)
+
+	child := exec.Command(os.Args[0], "-test.run=^TestExecuteHelperProcess$", "--", "update", "--all", "--config", cfgPath)
+	child.Env = append(os.Environ(), "WOWTUI_EXECUTE_HELPER=1")
+	out, err := child.CombinedOutput()
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+		t.Fatalf("exit = %v, want status 1\noutput: %s", err, out)
+	}
+	if !strings.Contains(string(out), "Owner/Missing") {
+		t.Errorf("output does not name the failed addon: %s", out)
+	}
+	assertTocFile(t, tocPath, "## Version: 2.0.0")
 }

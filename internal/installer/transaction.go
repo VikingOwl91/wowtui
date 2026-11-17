@@ -144,6 +144,9 @@ func installWithMover(plan InstallPlan, move func(src, dst string) error) (*Inst
 	}
 
 	for _, root := range roots {
+		if !safeFolderName(root.Name) {
+			return nil, fmt.Errorf("refusing to install %q: not a plain folder name", root.Name)
+		}
 		target := filepath.Join(plan.AddonsDir, root.Name)
 		info, err := os.Stat(target)
 		if err == nil && !info.IsDir() {

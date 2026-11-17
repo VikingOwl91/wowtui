@@ -49,11 +49,23 @@ func registryPath(cmd *cobra.Command) string {
 	return regPath
 }
 
+func httpCacheDir() string {
+	if xdg := os.Getenv("XDG_CACHE_HOME"); filepath.IsAbs(xdg) {
+		return filepath.Join(xdg, "wowtui", "http")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".cache", "wowtui", "http")
+}
+
 func buildProviders(cfg *config.Config) map[string]provider.Provider {
 	gh := provider.NewGitHub(cfg.Providers.GitHub.Token)
 	if base := os.Getenv("WOWTUI_GITHUB_API"); base != "" {
 		gh.SetAPIBase(base)
 	}
+	gh.SetCacheDir(httpCacheDir())
 	hub := provider.NewWowUpHub()
 	if base := os.Getenv("WOWTUI_WOWUPHUB_API"); base != "" {
 		hub.SetBaseURL(base)

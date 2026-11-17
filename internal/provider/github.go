@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -24,6 +25,7 @@ type GitHub struct {
 	token   string
 	apiBase string
 	webBase string
+	cache   *httpCache
 }
 
 func NewGitHub(token string) *GitHub {
@@ -38,6 +40,12 @@ func NewGitHub(token string) *GitHub {
 func (g *GitHub) SetAPIBase(base string) {
 	g.apiBase = base
 	g.webBase = base
+}
+
+// SetCacheDir keeps API responses in dir for conditional requests. An empty
+// dir disables the cache.
+func (g *GitHub) SetCacheDir(dir string) {
+	g.cache = newHTTPCache(dir)
 }
 
 type ghAsset struct {
@@ -282,6 +290,15 @@ func (g *GitHub) get(ctx context.Context, url string, out any) (int, error) {
 	if g.token != "" {
 		req.Header.Set("Authorization", "Bearer "+g.token)
 	}
+	cached, haveCached := g.cache.load(url)
+	if haveCached {
+		if cached.ETag != "" {
+			req.Header.Set("If-None-Match", cached.ETag)
+		}
+		if cached.LastModified != "" {
+			req.Header.Set("If-Modified-Since", cached.LastModified)
+		}
+	}
 
 	resp, err := g.client.Do(req)
 	if err != nil {
@@ -289,10 +306,23 @@ func (g *GitHub) get(ctx context.Context, url string, out any) (int, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotModified && haveCached {
+		if out != nil {
+			if err := json.Unmarshal(cached.Body, out); err != nil {
+				return http.StatusOK, fmt.Errorf("decoding cached github response: %w", err)
+			}
+		}
+		return http.StatusOK, nil
+	}
 	if resp.StatusCode == http.StatusOK && out != nil {
-		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		head, err := io.ReadAll(io.LimitReader(resp.Body, maxCachedBody+1))
+		if err != nil {
+			return resp.StatusCode, fmt.Errorf("reading github response: %w", err)
+		}
+		if err := json.NewDecoder(io.MultiReader(bytes.NewReader(head), resp.Body)).Decode(out); err != nil {
 			return resp.StatusCode, fmt.Errorf("decoding github response: %w", err)
 		}
+		g.cache.store(cachedResponse{URL: url, ETag: resp.Header.Get("ETag"), LastModified: resp.Header.Get("Last-Modified"), Body: head})
 	}
 	return resp.StatusCode, nil
 }

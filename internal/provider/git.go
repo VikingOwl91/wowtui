@@ -143,16 +143,23 @@ func zipDirectory(root, output, prefix string) error {
 		if info.IsDir() {
 			return nil
 		}
-		data, err := os.ReadFile(path)
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("git checkout entry %q is a symlink, which is not allowed", filepath.ToSlash(rel))
+		}
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("git checkout entry %q has unsupported file type %v", filepath.ToSlash(rel), info.Mode().Type())
+		}
+		src, err := os.Open(path)
 		if err != nil {
 			return err
 		}
+		defer src.Close()
 		name := filepath.ToSlash(filepath.Join(prefix, rel))
 		entry, err := writer.Create(name)
 		if err != nil {
 			return err
 		}
-		_, err = entry.Write(data)
+		_, err = io.Copy(entry, src)
 		return err
 	})
 	if closeErr := writer.Close(); err == nil {

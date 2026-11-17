@@ -153,7 +153,7 @@ func (p Providers) State(name string) string {
 		}
 		return "requires-api-key"
 	}
-	if name == "github" || name == "direct" || name == "gitlab" || name == "git" || name == "curseforge" {
+	if name == "github" || name == "direct" || name == "gitlab" || name == "git" {
 		if p.Enabled(name) {
 			return "enabled"
 		}

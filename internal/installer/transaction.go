@@ -82,20 +82,15 @@ func normalizeRootNames(roots []StagedRoot) []StagedRoot {
 		return roots
 	}
 
-	base := ""
+	var bases []string
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.EqualFold(filepath.Ext(entry.Name()), ".toc") {
 			continue
 		}
-		name := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
-		if base == "" {
-			base = name
-		} else if base != name {
-			return roots
-		}
+		bases = append(bases, strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())))
 	}
-	if base != "" && base != root.Name {
-		root.Name = base
+	if name := folderNameForTocs(root.Name, bases); name != root.Name {
+		root.Name = name
 		roots[0] = root
 	}
 	return roots

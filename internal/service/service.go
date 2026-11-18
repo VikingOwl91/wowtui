@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"somegit.dev/vikingowl/wowtui/internal/addon"
+	"somegit.dev/vikingowl/wowtui/internal/index"
 	"somegit.dev/vikingowl/wowtui/internal/installer"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
 	"somegit.dev/vikingowl/wowtui/internal/registry"
@@ -24,6 +25,8 @@ type Service struct {
 	BackupRoot   string
 	MaxDownload  int64
 	OnEvent      EmitFunc
+	// Index is the verified addon index, nil when none is loaded.
+	Index *index.Index
 }
 
 type UpdateStatus struct {
@@ -193,7 +196,7 @@ func (s *Service) MapUnmanaged(inactive func(provider string) Availability) ([]M
 			if folderOwner(reg, installation.Path, "", folder.Name) != nil {
 				continue
 			}
-			for _, candidate := range mapFolderHints(installation, folder) {
+			for _, candidate := range mapFolderHints(installation, folder, s.Index) {
 				candidate.Availability = s.mappingAvailability(candidate.Provider, inactive)
 				candidates = append(candidates, candidate)
 			}
@@ -203,6 +206,7 @@ func (s *Service) MapUnmanaged(inactive func(provider string) Availability) ([]M
 		return cmp.Or(
 			cmp.Compare(a.InstallPath, b.InstallPath),
 			cmp.Compare(a.Folder, b.Folder),
+			cmp.Compare(indexRank(a), indexRank(b)),
 			cmp.Compare(a.Provider, b.Provider),
 			cmp.Compare(a.Reference, b.Reference),
 		)
@@ -273,16 +277,36 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 	return reg.Save(s.RegistryPath)
 }
 
-func mapFolderHints(installation registry.Installation, folder registry.Folder) []MappingCandidate {
+// indexRank sorts index candidates first. Index reasons are added before any
+// hint reason, so an index candidate's reason starts with one.
+func indexRank(c MappingCandidate) int {
+	if strings.HasPrefix(c.Reason, "index:") {
+		return 0
+	}
+	return 1
+}
+
+func mapFolderHints(installation registry.Installation, folder registry.Folder, idx *index.Index) []MappingCandidate {
 	var candidates []MappingCandidate
 	add := func(providerName, ref, reason string) {
 		for i := range candidates {
 			if candidates[i].Provider == providerName && candidates[i].Reference == ref {
-				candidates[i].Reason += "," + reason
+				if !slices.Contains(strings.Split(candidates[i].Reason, ","), reason) {
+					candidates[i].Reason += "," + reason
+				}
 				return
 			}
 		}
 		candidates = append(candidates, MappingCandidate{InstallPath: installation.Path, Flavor: installation.Flavor, Folder: folder.Name, Version: folder.Version, Provider: providerName, Reference: ref, Reason: reason})
+	}
+	for _, match := range indexMatches(idx, folder) {
+		ref, err := provider.ParseReference(match.entry.Source)
+		if err != nil {
+			continue
+		}
+		for _, reason := range match.reasons {
+			add(ref.Provider, provider.FormatReference(ref), reason)
+		}
 	}
 	for _, key := range []string{"x-source-repo", "x-website"} {
 		if value := folder.Hints[key]; value != "" {
@@ -301,6 +325,50 @@ func mapFolderHints(installation registry.Installation, folder registry.Folder) 
 		add("curseforge", "curseforge:"+id, "x-curse-project-id")
 	}
 	return candidates
+}
+
+type indexMatch struct {
+	entry   index.Entry
+	reasons []string
+}
+
+// indexMatches returns the index entries that install folder or carry one of
+// its provider ID hints, in the order first matched, each with its match
+// reasons and "unreviewed" when no human reviewed the entry.
+func indexMatches(idx *index.Index, folder registry.Folder) []indexMatch {
+	if idx == nil {
+		return nil
+	}
+	var matches []indexMatch
+	add := func(entry index.Entry, reason string) {
+		for i := range matches {
+			if matches[i].entry.ID == entry.ID {
+				matches[i].reasons = append(matches[i].reasons, reason)
+				return
+			}
+		}
+		matches = append(matches, indexMatch{entry: entry, reasons: []string{reason}})
+	}
+	for _, entry := range idx.ByFolder(folder.Name) {
+		add(entry, "index:folder")
+	}
+	for _, hint := range []struct{ key, kind string }{
+		{"x-curse-project-id", index.KindCurseForge},
+		{"x-wago-id", index.KindWago},
+		{"x-wowi-id", index.KindWoWInterface},
+	} {
+		if id := folder.Hints[hint.key]; id != "" {
+			if entry, ok := idx.ByProviderID(hint.kind, id); ok {
+				add(entry, "index:"+hint.kind)
+			}
+		}
+	}
+	for i := range matches {
+		if !matches[i].entry.Reviewed {
+			matches[i].reasons = append(matches[i].reasons, "unreviewed")
+		}
+	}
+	return matches
 }
 
 func hintReference(key, value string) (provider.Reference, bool) {

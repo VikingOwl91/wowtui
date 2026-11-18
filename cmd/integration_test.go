@@ -154,6 +154,9 @@ func TestAddCheckUpdateFlow(t *testing.T) {
 	tocPath := filepath.Join(installPath, "Interface", "AddOns", "TestAddon", "TestAddon.toc")
 
 	out := runCmd(t, "add", "github:Owner/TestAddon", "--config", cfgPath)
+	if !strings.Contains(out, "extract backend: ") {
+		t.Fatalf("add did not report its extraction backend: %s", out)
+	}
 	if !strings.Contains(out, "installed") {
 		t.Fatalf("add output: %s", out)
 	}
@@ -166,6 +169,9 @@ func TestAddCheckUpdateFlow(t *testing.T) {
 	}
 
 	out = runCmd(t, "check", "--config", cfgPath)
+	if strings.Contains(out, "extract backend: ") {
+		t.Fatalf("check started extraction: %s", out)
+	}
 	if !strings.Contains(out, "current") {
 		t.Errorf("check output: %s", out)
 	}
@@ -178,6 +184,9 @@ func TestAddCheckUpdateFlow(t *testing.T) {
 	}
 
 	out = runCmd(t, "update", "--all", "--dry-run", "--config", cfgPath)
+	if strings.Contains(out, "extract backend: ") {
+		t.Fatalf("dry-run started extraction: %s", out)
+	}
 	if !strings.Contains(out, "dry run") {
 		t.Errorf("dry-run output: %s", out)
 	}
@@ -190,6 +199,9 @@ func TestAddCheckUpdateFlow(t *testing.T) {
 	}
 
 	out = runCmd(t, "update", "TestAddon", "--config", cfgPath)
+	if !strings.Contains(out, "extract backend: ") {
+		t.Fatalf("update did not report its extraction backend: %s", out)
+	}
 	if !strings.Contains(out, "updating") {
 		t.Errorf("update output: %s", out)
 	}

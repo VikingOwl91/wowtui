@@ -147,6 +147,9 @@ type Model struct {
 }
 
 func New(deps Deps) *Model {
+	if deps.Config == nil {
+		deps.Config = &config.Config{}
+	}
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 
@@ -188,6 +191,7 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) buildService(onEvent service.EmitFunc) *service.Service {
 	return &service.Service{
 		Providers:    m.deps.Providers,
+		Security:     m.deps.Config.Security,
 		RegistryPath: m.deps.RegistryPath,
 		BackupRoot:   m.deps.BackupRoot,
 		OnEvent:      onEvent,

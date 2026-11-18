@@ -125,7 +125,7 @@ func TestSourceArchivePackagerWarnings(t *testing.T) {
 				}
 			}
 
-			warnings := eventsWithStage(out, StageWarning)
+			warnings := addonWarnings(out)
 			if len(warnings) != len(tc.warnings) {
 				t.Fatalf("got %d warnings, want %d: %+v", len(warnings), len(tc.warnings), warnings)
 			}

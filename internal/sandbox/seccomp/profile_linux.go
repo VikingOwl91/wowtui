@@ -17,7 +17,7 @@ const (
 	load   = unix.BPF_LD | unix.BPF_W | unix.BPF_ABS
 	equal  = unix.BPF_JMP | unix.BPF_JEQ | unix.BPF_K
 	ret    = unix.BPF_RET | unix.BPF_K
-	deny   = unix.SECCOMP_RET_ERRNO | uint32(unix.EPERM)
+	deny   = unix.SECCOMP_RET_KILL_PROCESS
 )
 
 // Profile returns a native sock_filter array in the raw format of bwrap --seccomp.
@@ -46,6 +46,20 @@ func Profile() ([]byte, error) {
 		{Code: equal, K: unix.SYS_CLONE, Jf: uint8(len(cloneRule))},
 	}
 	filter = append(filter, cloneRule...)
+	// Go optionally labels anonymous VMAs. Terminal detection in the Go UI
+	// dependencies queries TCGETS at package initialization, even in worker
+	// mode. The worker uses pipes and does not require either feature.
+	for _, probe := range []struct{ nr, offset, request, errno uint32 }{
+		{unix.SYS_PRCTL, arg0, unix.PR_SET_VMA, uint32(unix.EINVAL)},
+		{unix.SYS_IOCTL, arg0 + 8, unix.TCGETS, uint32(unix.ENOTTY)},
+	} {
+		filter = append(filter,
+			unix.SockFilter{Code: equal, K: probe.nr, Jf: 4},
+			unix.SockFilter{Code: load, K: probe.offset},
+			unix.SockFilter{Code: equal, K: probe.request, Jf: 1},
+			unix.SockFilter{Code: ret, K: unix.SECCOMP_RET_ERRNO | probe.errno},
+			unix.SockFilter{Code: ret, K: deny})
+	}
 	allow := []uint32{
 		// bwrap execs the worker after installing the filter. Its PID 1
 		// reaper also runs under this profile and uses wait4.

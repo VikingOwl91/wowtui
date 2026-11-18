@@ -5,6 +5,8 @@ package seccomp
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,6 +59,13 @@ func TestNativeProfile(t *testing.T) {
 				cmd.ExtraFiles = []*os.File{f}
 			}
 			out, err := cmd.CombinedOutput()
+			if mode == "filtered" {
+				var exitErr *exec.ExitError
+				if !errors.As(err, &exitErr) || exitErr.ExitCode() != 128+int(unix.SIGSYS) || !bytes.Contains(out, []byte("calling getpgid")) {
+					t.Fatalf("want SIGSYS at getpgid; got %v\n%s", err, out)
+				}
+				return
+			}
 			if err != nil || !bytes.Contains(out, []byte("PASS")) {
 				t.Fatalf("probe failed: %v\n%s", err, out)
 			}
@@ -69,17 +78,9 @@ func TestProfileProbe(t *testing.T) {
 	if mode == "" {
 		t.Skip("native probe subprocess only")
 	}
+	fmt.Fprintln(os.Stdout, "calling getpgid")
 	_, err := unix.Getpgid(0)
-	switch mode {
-	case "plain":
-		if err != nil {
-			t.Fatal(err)
-		}
-	case "filtered":
-		if err != unix.EPERM {
-			t.Fatalf("getpgid returned %v, want EPERM", err)
-		}
-	default:
-		t.Fatalf("unknown probe mode %q", mode)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

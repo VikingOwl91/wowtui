@@ -220,8 +220,7 @@ func (w *world) contents(repo, path string) Response {
 		if !ok || !strings.HasPrefix(file, dirPrefix) {
 			continue
 		}
-		name, rest, nested := strings.Cut(strings.TrimPrefix(file, dirPrefix), "/")
-		_ = rest
+		name, _, nested := strings.Cut(strings.TrimPrefix(file, dirPrefix), "/")
 		if nested {
 			seen[name] = "dir"
 		} else if _, isDir := seen[name]; !isDir {

@@ -47,6 +47,8 @@ the interface and provider catalog are still evolving.
 - Warn when a tag or branch source archive needs the BigWigs packager
 - Safe ZIP extraction with Zip Slip, symlink, file-count, and size checks
 - SHA-256 archive hashes
+- Map unmanaged addons to providers from TOC hints and an optional signed
+  addon index, and adopt them without replacing files
 - Provider enable/disable state and configurable priority order
 - Installation-specific display titles and multi-install support
 - Non-blocking TUI operations with structured progress events
@@ -122,11 +124,12 @@ files:
 
 ```bash
 ./wowtui map
+./wowtui map --adoptable
 ./wowtui adopt "/path/to/_retail_" WeakAuras github:Owner/WeakAuras
 ```
 
 `adopt` refuses a folder that another managed addon in the same installation
-already owns.
+already owns. See [Mapping Unmanaged Addons](#mapping-unmanaged-addons).
 
 ## Flavors
 
@@ -193,13 +196,135 @@ Providers select builds by game type:
   not selected by flavor. wowtui installs the addon folders the archive
   contains.
 
+## Mapping Unmanaged Addons
+
+`wowtui map` lists provider candidates for installed addon folders that no
+managed addon owns. It prints one row per candidate with the columns
+`FOLDER`, `FLAVOR`, `PROVIDER`, `AVAILABILITY`, `REFERENCE`, `REASON`, and
+`INSTALL`, sorted by installation path, folder, provider, and reference, so
+repeated runs print the same order. `--adoptable` keeps only candidates whose
+provider is active.
+
+Candidates come from the folder's TOC hints and, when an index is configured,
+from the [Addon Index](#addon-index):
+
+- `X-Source-Repo` and `X-Website` yield a GitHub, GitLab, or WowUp reference,
+  or a CurseForge reference with a numeric project ID. `X-Source-Repo` also
+  yields a `git:` reference when the value is an https, ssh, or git URL that
+  names a repository below an owner. A plain web page never becomes a `direct`
+  or `git` candidate.
+- `X-Curse-Project-ID` yields `curseforge:<id>`. `X-Wago-ID` and `X-WoWI-ID`
+  yield `wago:<id>` and `wowinterface:<id>`, which are informational: wowtui
+  has no active provider for them.
+- Several hints that point to the same provider and reference become one row,
+  and `REASON` lists the hint keys, comma separated.
+
+The `REFERENCE` column holds the prefixed form that `adopt` and `add` accept:
+`github:`, `gitlab:`, `wowup:`, `curseforge:`, or `git:`. A legacy
+`https://wow.curseforge.com/projects/<slug>` URL is read as a CurseForge
+reference, never as a direct download. CurseForge resolves numeric IDs, so
+`map` does not suggest a slug from such a URL.
+
+`AVAILABILITY` tells whether `adopt` can use the candidate right now:
+
+| Value | Meaning |
+| --- | --- |
+| `active` | The provider is enabled and `adopt` works |
+| `paused` | WowUpHub and Wago, paused pending upstream approval |
+| `needs-api-key` | CurseForge without a configured API key |
+| `disabled` | The provider was turned off with `providers disable` |
+| `unsupported` | wowtui has no provider for this reference, such as `wowinterface:` |
+
+## Addon Index
+
+The addon index is an optional, signed list of addon packages. It helps
+`map` recognize installed folders, and it gives addons short names:
+`wowtui add index:<id>` and `wowtui adopt <install-path> <folder> index:<id>`.
+
+An index is a JSON file plus a detached signature in `<file>.sig`. wowtui
+verifies the signature with the public key from the config before it parses
+anything. The format is described in [SPEC.md](SPEC.md). The repository ships
+no index, only a test fixture: build one with the
+[maintainer tool](#maintainers-building-the-index) or get one from someone you
+trust.
+
+```bash
+./wowtui index use --path /path/to/index.json --public-key <base64-key>
+./wowtui index status
+./wowtui index search weakauras
+./wowtui add index:weakauras
+./wowtui adopt "/path/to/_retail_" WeakAuras index:weakauras
+```
+
+- `index use` loads and verifies the file with the given key, and only then
+  saves `[index] path` and `public_key` in the config. The signature file is
+  always `<path>.sig`.
+- `index status` prints the path, the key fingerprint (`sha256:` and the first
+  16 hex digits of the SHA-256 of the key), whether the index loads, the entry
+  count, and the build time. It exits with an error when the index does not
+  load.
+- `index search <query>` matches the entry ID or name, ignoring case, and
+  prints ID, name, source, folders, game types, whether a person reviewed the
+  entry, and funding links.
+- `add index:<id>` resolves the entry to its source and installs from there.
+  It prints `index:<id> is github:Owner/Repo`, with `(unreviewed)` appended
+  when the entry is not reviewed.
+- `adopt ... index:<id>` registers every folder of the entry that the
+  installation has, under the entry's source. The folder you name must be one
+  of the entry's folders. It refuses when another managed addon owns any of
+  those folders.
+- `map` adds index candidates. `REASON` is `index:folder` when an entry lists
+  the folder (compared ignoring case), `index:curseforge`, `index:wago`, or
+  `index:wowinterface` when the folder's TOC ID matches the entry's ID, and
+  `unreviewed` is added when the entry is not reviewed. Index candidates come
+  first within a folder.
+
+If a configured index fails to load (missing file, bad signature, invalid
+content), `map`, `add`, and `adopt` print one line
+`warning: index not loaded, continuing without it: <reason>` to stderr and go
+on without it. An `index:<id>` reference is the exception: it fails with
+`index not loaded` or `no index configured`, because there is nothing to
+resolve it with. `check` and `update` never read the index.
+
+Trust model: the index holds metadata and source references only, never a
+download URL. Entries may point at GitHub or GitLab repositories only. wowtui
+always resolves releases from the source repository through the normal
+provider, with the same release selection, archive checks, backup, and
+rollback as for any other reference. A valid signature shows that the file
+comes from the holder of the key you configured. It says nothing about the
+addon code. An entry that is not reviewed was generated, not checked by a
+person.
+
+Open points:
+
+- The index is read from a local file only. There is no download or update
+  mechanism yet.
+- There is no rollback protection: wowtui does not remember the build time of
+  an earlier index, so it accepts an older, validly signed file.
+- The TUI does not use the index.
+- Index candidates in `map` and `add index:<id>` do not check the entry's game
+  types against the installation's flavor.
+
 ## Terminal UI
 
-The TUI has three tabs: Addons, Explore (provider search), and Settings. `tab`
-or `1`, `2`, `3` switch between them. On the Addons tab, `s` rescans, `r`
-checks for updates, `u` updates the selected addon, `U` updates all managed
-addons, `a` opens the add dialog, `f` searches, `i` and `I` cycle the game
-version and installation filters, and `d` shows details.
+The TUI has three tabs: Addons, Explore (provider search), and Settings. On
+the Addons tab, `tab` or `2` opens Explore and `3` opens Settings. On the
+Settings tab, `tab`, `esc`, or `1` go back to Addons and `2` opens Explore.
+On the Addons tab, `s` rescans, `r` checks for updates, `u` updates the
+selected addon, `U` updates all managed addons, `a` opens the add dialog, `f`
+searches, `i` and `I` cycle the game version and installation filters, and
+`d` shows details.
+
+Keys you type stay in the focused input. Explore opens with its search field
+focused, so `q`, `a`, `d`, `/`, `1`, and `3` are text there. Only `enter`
+(search), `esc` (clear the field and leave it), `tab`, `shift+tab`, and
+`ctrl+c` act. After `esc` or a search, the table keys work: `a` installs the
+selected result, `d` shows its details, `/` focuses the field again, `tab`
+opens Settings, and `shift+tab` or `1` returns to Addons. `a` does nothing
+while another operation runs. In the add dialog, the reference field takes
+every key, `q` included; `q` quits only from the other fields. The `f` filter
+on the Addons tab takes keys the same way until `enter` or `esc`. The TUI
+does not use the addon index.
 
 Warnings and errors from an operation stay in a notice bar above the key help
 until you press `ctrl+x` or start the next operation. The bar shows up to five
@@ -229,7 +354,14 @@ api_key = ""
 
 [providers.curseforge]
 api_key = ""
+
+[index]
+path = "/home/user/.local/share/wowtui/index.json"
+public_key = "<base64 ed25519 public key>"
 ```
+
+The `[index]` section is optional and is normally written by
+`wowtui index use`. See [Addon Index](#addon-index).
 
 CurseForge activates automatically when `api_key` is non-empty, or when
 `WOWTUI_CURSEFORGE_API_KEY` is present in the process environment. The normal
@@ -319,6 +451,52 @@ built by the BigWigs packager; the warning suggests `--source release`.
 Bubblewrap sandboxing is planned as an optional isolation layer around the
 archive worker on Linux. The internal extractor remains the mandatory baseline
 so the application also works without Bubblewrap.
+
+## Maintainers: Building the Index
+
+`tools/indexbuild` builds and signs an index. It is a maintainer tool, not part
+of the `wowtui` binary, and runs from a checkout:
+
+```bash
+go run ./tools/indexbuild keygen   --out DIR
+go run ./tools/indexbuild discover --registry registry.json --out candidates.json --cache DIR
+go run ./tools/indexbuild build    --candidates candidates.json --key signing.key --out index.json
+```
+
+- `keygen` writes `signing.key` (mode 0600, the base64 ed25519 seed) and
+  `signing.pub` (the base64 public key to give to users) into `--out`. It
+  refuses to overwrite existing files. Keep the private key out of version
+  control.
+- `discover` reads the folder names and TOC hints of a wowtui `registry.json`
+  (not the installation paths) and looks up each addon's GitHub repository.
+  It writes `candidates.json` and a review file, by default `--out` with
+  `.json` replaced by `.review.json` (`--review` overrides it). The review
+  file lists what needs a person: ambiguous, filtered, unresolved, and
+  conflicting lookups, hints that could not be confirmed or that disagree, and
+  API errors. `--mirror-owners` takes a comma separated list of GitHub
+  accounts whose repositories are copies and never count as originals
+  (default `hippuli`, empty for none).
+- `build` turns `candidates.json` into `index.json` and `index.json.sig`. It
+  skips packages the index cannot hold and prints each as a warning. It
+  verifies the pair with the same loader wowtui uses before it writes
+  anything, and it refuses a private key file that group or others can
+  access. Every entry it writes has `reviewed` set to false, and every source
+  is a GitHub repository.
+
+All GitHub access goes through `gh api` with GET requests only: code search,
+repository, contents, and release reads. `gh` keeps the credentials; the tool
+never reads, stores, or passes a token. Every response, misses and 404s
+included, is cached in the `--cache` directory, so a rerun makes no repeated
+calls. Delete the directory to fetch fresh data. Code search requests are
+spaced at least seven seconds apart. On a rate limit answer (`403` or `429`
+with `Retry-After` or `X-RateLimit-Remaining: 0`) the tool waits for the
+reset, at most 15 minutes per wait and six waits per request. Server errors
+are retried up to four attempts, ten seconds apart.
+
+Output is deterministic: packages, folders, and IDs are sorted, entry IDs
+depend only on the set of repositories, `generated_at` is the newest fetch
+time of any answer used, and ed25519 signatures are deterministic. The same
+candidates and key give byte-identical `index.json` and `index.json.sig`.
 
 ## Development
 

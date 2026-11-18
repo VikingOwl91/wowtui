@@ -64,15 +64,6 @@ type cand struct {
 
 func (g *cand) key() string { return strings.ToLower(g.Repo) }
 
-func (g *cand) folderNames() []string {
-	names := make([]string, 0, len(g.Folders))
-	for _, name := range g.Folders {
-		names = append(names, name)
-	}
-	slices.SortFunc(names, compareFold)
-	return names
-}
-
 func compareFold(a, b string) int {
 	if c := strings.Compare(strings.ToLower(a), strings.ToLower(b)); c != 0 {
 		return c

@@ -103,6 +103,13 @@ func ParseReference(s string) (Reference, error) {
 			}
 			return Reference{}, fmt.Errorf("invalid CurseForge addon URL %q", s)
 		}
+		if u.Host == "wow.curseforge.com" {
+			parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+			if len(parts) >= 2 && parts[0] == "projects" && parts[1] != "" {
+				return Reference{Provider: "curseforge", ID: parts[1]}, nil
+			}
+			return Reference{}, fmt.Errorf("invalid CurseForge addon URL %q", s)
+		}
 		if err := validateDirectURL(s); err != nil {
 			return Reference{}, err
 		}

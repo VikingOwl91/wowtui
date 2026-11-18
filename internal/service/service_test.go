@@ -700,7 +700,7 @@ func TestMapAndAdoptUnmanagedAddon(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	candidates, err := svc.MapUnmanaged()
+	candidates, err := svc.MapUnmanaged(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -782,7 +782,7 @@ func TestMapUnmanagedSkipsManagedFolderCaseInsensitive(t *testing.T) {
 	seedUnmanagedFolder(t, svc, install.Path, "MyAddon",
 		registry.Addon{Provider: "github", Ref: "Other/Suite", Flavor: "retail", InstallPath: install.Path, Folders: []string{"myaddon"}, Version: "v1", Source: "auto"})
 
-	candidates, err := svc.MapUnmanaged()
+	candidates, err := svc.MapUnmanaged(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

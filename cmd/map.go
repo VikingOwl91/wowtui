@@ -3,19 +3,24 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"slices"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
+	"somegit.dev/vikingowl/wowtui/internal/config"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
+	"somegit.dev/vikingowl/wowtui/internal/service"
 )
 
 func newMapCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "map",
 		Short: "Show provider candidates for unmanaged installed addons",
 		RunE:  runMap,
 	}
+	cmd.Flags().Bool("adoptable", false, "show only candidates whose provider is active")
+	return cmd
 }
 
 func runMap(cmd *cobra.Command, _ []string) error {
@@ -23,21 +28,48 @@ func runMap(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	adoptable, _ := cmd.Flags().GetBool("adoptable")
 	svc := newService(cmd, cfg)
-	candidates, err := svc.MapUnmanaged()
+	candidates, err := svc.MapUnmanaged(func(name string) service.Availability {
+		return inactiveAvailability(cfg.Providers, name)
+	})
 	if err != nil {
 		return err
+	}
+	if adoptable {
+		candidates = slices.DeleteFunc(candidates, func(c service.MappingCandidate) bool {
+			return c.Availability != service.AvailabilityActive
+		})
+		if len(candidates) == 0 {
+			fmt.Fprintln(cmd.OutOrStdout(), "no adoptable provider candidates found")
+			return nil
+		}
 	}
 	if len(candidates) == 0 {
 		fmt.Fprintln(cmd.OutOrStdout(), "no provider candidates found")
 		return nil
 	}
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "FOLDER\tFLAVOR\tPROVIDER\tREFERENCE\tREASON\tINSTALL")
+	fmt.Fprintln(w, "FOLDER\tFLAVOR\tPROVIDER\tAVAILABILITY\tREFERENCE\tREASON\tINSTALL")
 	for _, candidate := range candidates {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", candidate.Folder, candidate.Flavor, candidate.Provider, candidate.Reference, candidate.Reason, candidate.InstallPath)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", candidate.Folder, candidate.Flavor, candidate.Provider, candidate.Availability, candidate.Reference, candidate.Reason, candidate.InstallPath)
 	}
 	return w.Flush()
+}
+
+func inactiveAvailability(providers config.Providers, name string) service.Availability {
+	if !slices.Contains(config.KnownProviders(), name) {
+		return service.AvailabilityUnsupported
+	}
+	switch providers.State(name) {
+	case "pending-upstream", "pending-approval":
+		return service.AvailabilityPaused
+	case "requires-api-key":
+		return service.AvailabilityNeedsAPIKey
+	case "disabled":
+		return service.AvailabilityDisabled
+	}
+	return service.AvailabilityUnsupported
 }
 
 func newAdoptCmd() *cobra.Command {

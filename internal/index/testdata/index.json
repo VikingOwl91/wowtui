@@ -1,0 +1,40 @@
+{
+  "format": 1,
+  "generated_at": "2026-11-18T10:00:00Z",
+  "entries": [
+    {
+      "id": "bossmods",
+      "name": "Boss Mods",
+      "source": "github:ExampleOrg/BossMods",
+      "folders": ["BossMods", "BossMods_Core", "BossMods_Options"],
+      "game_types": ["mainline", "mists", "vanilla"],
+      "ids": {"curseforge": "12345", "wago": "aB3dE5fG", "wowinterface": "6789"},
+      "release_json": true,
+      "funding": [
+        {"platform": "github", "handle": "exampleorg"},
+        {"platform": "ko_fi", "handle": "example"}
+      ],
+      "reviewed": true
+    },
+    {
+      "id": "bossmods-classic-extras",
+      "name": "Boss Mods Classic Extras",
+      "source": "gitlab:example-group/addons/bossmods-extras",
+      "folders": ["BossMods_Extras", "bossmods_core"],
+      "game_types": ["vanilla", "tbc"],
+      "release_json": false,
+      "reviewed": true
+    },
+    {
+      "id": "questhelper",
+      "name": "Quest Helper",
+      "source": "https://github.com/ExampleDev/QuestHelper",
+      "folders": ["QuestHelper"],
+      "game_types": ["mainline"],
+      "ids": {"curseforge": "555"},
+      "release_json": false,
+      "funding": [{"platform": "custom", "handle": "https://example.com/donate"}],
+      "reviewed": false
+    }
+  ]
+}

@@ -15,9 +15,37 @@ type Config struct {
 	WoW       WoW       `toml:"wow"`
 	Providers Providers `toml:"providers"`
 	Index     Index     `toml:"index,omitempty"`
+	Security  Security  `toml:"security"`
 
 	fileCredentials credentials
 	envCredentials  credentials
+}
+
+// Security controls which isolation layers are required for archive extraction.
+// Empty fields in a programmatically constructed Config use automatic selection.
+type Security struct {
+	Sandbox string `toml:"sandbox"`
+	Seccomp string `toml:"seccomp"`
+}
+
+func (s Security) withDefaults() Security {
+	if s.Sandbox == "" {
+		s.Sandbox = "auto"
+	}
+	if s.Seccomp == "" {
+		s.Seccomp = "auto"
+	}
+	return s
+}
+
+func (s Security) validate() error {
+	if s.Sandbox != "auto" && s.Sandbox != "required" {
+		return errors.New("security.sandbox must be auto or required")
+	}
+	if s.Seccomp != "auto" && s.Seccomp != "required" {
+		return errors.New("security.seccomp must be auto or required")
+	}
+	return nil
 }
 
 type credentials struct {
@@ -200,7 +228,7 @@ func (p *Providers) SetOrder(order []string) error {
 }
 
 func Load(path string) (*Config, error) {
-	cfg := &Config{}
+	cfg := &Config{Security: Security{}.withDefaults()}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -212,12 +240,19 @@ func Load(path string) (*Config, error) {
 	if err := toml.Unmarshal(data, cfg); err != nil {
 		return nil, err
 	}
+	if err := cfg.Security.validate(); err != nil {
+		return nil, err
+	}
 	applyEnv(cfg)
 	return cfg, nil
 }
 
 func Save(path string, cfg *Config) error {
 	out := *cfg
+	out.Security = out.Security.withDefaults()
+	if err := out.Security.validate(); err != nil {
+		return err
+	}
 	out.Providers.GitHub.Token = persistedCredential(cfg.Providers.GitHub.Token, cfg.envCredentials.githubToken, cfg.fileCredentials.githubToken)
 	out.Providers.Wago.APIKey = persistedCredential(cfg.Providers.Wago.APIKey, cfg.envCredentials.wagoAPIKey, cfg.fileCredentials.wagoAPIKey)
 	out.Providers.CurseForge.APIKey = persistedCredential(cfg.Providers.CurseForge.APIKey, cfg.envCredentials.curseForgeAPIKey, cfg.fileCredentials.curseForgeAPIKey)

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"somegit.dev/vikingowl/wowtui/internal/addon"
+	"somegit.dev/vikingowl/wowtui/internal/index"
 	"somegit.dev/vikingowl/wowtui/internal/installer"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
 	"somegit.dev/vikingowl/wowtui/internal/registry"
@@ -24,6 +25,8 @@ type Service struct {
 	BackupRoot   string
 	MaxDownload  int64
 	OnEvent      EmitFunc
+	// Index is the verified addon index, nil when none is loaded.
+	Index *index.Index
 }
 
 type UpdateStatus struct {
@@ -193,7 +196,7 @@ func (s *Service) MapUnmanaged(inactive func(provider string) Availability) ([]M
 			if folderOwner(reg, installation.Path, "", folder.Name) != nil {
 				continue
 			}
-			for _, candidate := range mapFolderHints(installation, folder) {
+			for _, candidate := range mapFolderHints(installation, folder, s.Index) {
 				candidate.Availability = s.mappingAvailability(candidate.Provider, inactive)
 				candidates = append(candidates, candidate)
 			}
@@ -203,6 +206,7 @@ func (s *Service) MapUnmanaged(inactive func(provider string) Availability) ([]M
 		return cmp.Or(
 			cmp.Compare(a.InstallPath, b.InstallPath),
 			cmp.Compare(a.Folder, b.Folder),
+			cmp.Compare(indexRank(a), indexRank(b)),
 			cmp.Compare(a.Provider, b.Provider),
 			cmp.Compare(a.Reference, b.Reference),
 		)
@@ -220,7 +224,18 @@ func (s *Service) mappingAvailability(name string, inactive func(string) Availab
 	return inactive(name)
 }
 
+// Adopt registers an installed folder as managed by ref. An index reference
+// adopts every folder of the index entry that the installation has, and
+// folderName must be one of them.
 func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref provider.Reference) error {
+	var entry *index.Entry
+	if ref.Provider == "index" {
+		resolved, source, err := s.resolveIndexReference(ref)
+		if err != nil {
+			return err
+		}
+		entry, ref = &resolved, source
+	}
 	reg, err := registry.Load(s.RegistryPath)
 	if err != nil {
 		return err
@@ -244,8 +259,29 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 	if !found {
 		return fmt.Errorf("unmanaged folder %q not found in %s", folderName, installPath)
 	}
-	if owner := folderOwner(reg, installPath, ref.ID, folder.Name); owner != nil {
-		return fmt.Errorf("refusing to adopt %s in %s: folder %s is managed by %s", ref.ID, installPath, folder.Name, owner.Ref)
+	folders := []string{folder.Name}
+	if entry != nil {
+		if !containsFold(entry.Folders, folder.Name) {
+			return fmt.Errorf("folder %s is not one of index entry %s's folders (%s)", folder.Name, entry.ID, strings.Join(entry.Folders, ", "))
+		}
+		folders = nil
+		for _, name := range entry.Folders {
+			for _, candidate := range installation.Folders {
+				if strings.EqualFold(candidate.Name, name) {
+					folders = append(folders, candidate.Name)
+					break
+				}
+			}
+		}
+	}
+	var conflicts []string
+	for _, name := range folders {
+		if owner := folderOwner(reg, installPath, ref.ID, name); owner != nil {
+			conflicts = append(conflicts, fmt.Sprintf("folder %s is managed by %s", name, owner.Ref))
+		}
+	}
+	if len(conflicts) > 0 {
+		return fmt.Errorf("refusing to adopt %s in %s: %s", ref.ID, installPath, strings.Join(conflicts, "; "))
 	}
 	p, ok := s.Providers[ref.Provider]
 	if !ok {
@@ -265,7 +301,7 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 		Author:      remote.Author,
 		Flavor:      installation.Flavor,
 		InstallPath: installPath,
-		Folders:     []string{folder.Name},
+		Folders:     folders,
 		Version:     folder.Version,
 		Source:      "auto",
 		InstalledAt: time.Now(),
@@ -273,21 +309,61 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 	return reg.Save(s.RegistryPath)
 }
 
-func mapFolderHints(installation registry.Installation, folder registry.Folder) []MappingCandidate {
+// resolveIndexReference returns the loaded index entry an index reference
+// names and the entry's source reference.
+func (s *Service) resolveIndexReference(ref provider.Reference) (index.Entry, provider.Reference, error) {
+	label := provider.FormatReference(ref)
+	if s.Index == nil {
+		return index.Entry{}, provider.Reference{}, fmt.Errorf("cannot resolve %s: no addon index is loaded", label)
+	}
+	for _, entry := range s.Index.Entries() {
+		if entry.ID != ref.ID {
+			continue
+		}
+		source, err := provider.ParseReference(entry.Source)
+		if err != nil {
+			return index.Entry{}, provider.Reference{}, fmt.Errorf("index entry %s: %w", entry.ID, err)
+		}
+		return entry, source, nil
+	}
+	return index.Entry{}, provider.Reference{}, fmt.Errorf("cannot resolve %s: index has no entry %q", label, ref.ID)
+}
+
+// indexRank sorts index candidates first. Index reasons are added before any
+// hint reason, so an index candidate's reason starts with one.
+func indexRank(c MappingCandidate) int {
+	if strings.HasPrefix(c.Reason, "index:") {
+		return 0
+	}
+	return 1
+}
+
+func mapFolderHints(installation registry.Installation, folder registry.Folder, idx *index.Index) []MappingCandidate {
 	var candidates []MappingCandidate
 	add := func(providerName, ref, reason string) {
 		for i := range candidates {
 			if candidates[i].Provider == providerName && candidates[i].Reference == ref {
-				candidates[i].Reason += "," + reason
+				if !slices.Contains(strings.Split(candidates[i].Reason, ","), reason) {
+					candidates[i].Reason += "," + reason
+				}
 				return
 			}
 		}
 		candidates = append(candidates, MappingCandidate{InstallPath: installation.Path, Flavor: installation.Flavor, Folder: folder.Name, Version: folder.Version, Provider: providerName, Reference: ref, Reason: reason})
 	}
+	for _, match := range indexMatches(idx, folder) {
+		ref, err := provider.ParseReference(match.entry.Source)
+		if err != nil {
+			continue
+		}
+		for _, reason := range match.reasons {
+			add(ref.Provider, provider.FormatReference(ref), reason)
+		}
+	}
 	for _, key := range []string{"x-source-repo", "x-website"} {
 		if value := folder.Hints[key]; value != "" {
 			if ref, ok := hintReference(key, value); ok {
-				add(ref.Provider, ref.ID, key)
+				add(ref.Provider, provider.FormatReference(ref), key)
 			}
 		}
 	}
@@ -301,6 +377,50 @@ func mapFolderHints(installation registry.Installation, folder registry.Folder) 
 		add("curseforge", "curseforge:"+id, "x-curse-project-id")
 	}
 	return candidates
+}
+
+type indexMatch struct {
+	entry   index.Entry
+	reasons []string
+}
+
+// indexMatches returns the index entries that install folder or carry one of
+// its provider ID hints, in the order first matched, each with its match
+// reasons and "unreviewed" when no human reviewed the entry.
+func indexMatches(idx *index.Index, folder registry.Folder) []indexMatch {
+	if idx == nil {
+		return nil
+	}
+	var matches []indexMatch
+	add := func(entry index.Entry, reason string) {
+		for i := range matches {
+			if matches[i].entry.ID == entry.ID {
+				matches[i].reasons = append(matches[i].reasons, reason)
+				return
+			}
+		}
+		matches = append(matches, indexMatch{entry: entry, reasons: []string{reason}})
+	}
+	for _, entry := range idx.ByFolder(folder.Name) {
+		add(entry, "index:folder")
+	}
+	for _, hint := range []struct{ key, kind string }{
+		{"x-curse-project-id", index.KindCurseForge},
+		{"x-wago-id", index.KindWago},
+		{"x-wowi-id", index.KindWoWInterface},
+	} {
+		if id := folder.Hints[hint.key]; id != "" {
+			if entry, ok := idx.ByProviderID(hint.kind, id); ok {
+				add(entry, "index:"+hint.kind)
+			}
+		}
+	}
+	for i := range matches {
+		if !matches[i].entry.Reviewed {
+			matches[i].reasons = append(matches[i].reasons, "unreviewed")
+		}
+	}
+	return matches
 }
 
 func hintReference(key, value string) (provider.Reference, bool) {
@@ -343,6 +463,18 @@ func gitRepositoryReference(rawURL string) (provider.Reference, bool) {
 }
 
 func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.GameFlavor, install wow.Installation, source string) error {
+	if ref.Provider == "index" {
+		entry, resolved, err := s.resolveIndexReference(ref)
+		if err != nil {
+			return err
+		}
+		msg := fmt.Sprintf("%s is %s", provider.FormatReference(ref), provider.FormatReference(resolved))
+		if !entry.Reviewed {
+			msg += " (unreviewed)"
+		}
+		s.emit(Event{Ref: resolved.ID, Stage: StageResolve, Message: msg})
+		ref = resolved
+	}
 	p, ok := s.Providers[ref.Provider]
 	if !ok {
 		return providerUnavailable(ref.Provider)

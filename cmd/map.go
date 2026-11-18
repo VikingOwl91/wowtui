@@ -30,6 +30,9 @@ func runMap(cmd *cobra.Command, _ []string) error {
 	}
 	adoptable, _ := cmd.Flags().GetBool("adoptable")
 	svc := newService(cmd, cfg)
+	if err := attachIndex(cmd, cfg, svc, false); err != nil {
+		return err
+	}
 	candidates, err := svc.MapUnmanaged(func(name string) service.Availability {
 		return inactiveAvailability(cfg.Providers, name)
 	})
@@ -87,10 +90,13 @@ func newAdoptCmd() *cobra.Command {
 				return err
 			}
 			svc := newService(cmd, cfg)
+			if err := attachIndex(cmd, cfg, svc, ref.Provider == "index"); err != nil {
+				return err
+			}
 			if err := svc.Adopt(context.Background(), args[0], args[1], ref); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "adopted %s from %s\n", args[1], ref.ID)
+			fmt.Fprintf(cmd.OutOrStdout(), "adopted %s from %s\n", args[1], provider.FormatReference(ref))
 			return nil
 		},
 	}

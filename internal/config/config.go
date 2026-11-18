@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -13,6 +14,7 @@ import (
 type Config struct {
 	WoW       WoW       `toml:"wow"`
 	Providers Providers `toml:"providers"`
+	Index     Index     `toml:"index,omitempty"`
 
 	fileCredentials credentials
 	envCredentials  credentials
@@ -26,6 +28,19 @@ type credentials struct {
 
 type WoW struct {
 	Paths []string `toml:"paths"`
+}
+
+// Index locates the signed addon index: the JSON file at Path, its detached
+// signature at Path + ".sig", and the base64 ed25519 PublicKey that signs it.
+type Index struct {
+	Path      string `toml:"path"`
+	PublicKey string `toml:"public_key"`
+}
+
+// Configured reports whether any index setting is present. A partly
+// configured index counts, so loading it reports the missing setting.
+func (i Index) Configured() bool {
+	return strings.TrimSpace(i.Path) != "" || strings.TrimSpace(i.PublicKey) != ""
 }
 
 type Providers struct {

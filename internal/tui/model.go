@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"somegit.dev/vikingowl/wowtui/internal/config"
+	"somegit.dev/vikingowl/wowtui/internal/index"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
 	"somegit.dev/vikingowl/wowtui/internal/registry"
 	"somegit.dev/vikingowl/wowtui/internal/service"
@@ -26,6 +28,8 @@ const (
 	screenDetails
 	screenAdd
 	screenSettings
+	screenImport
+	screenFileReview
 )
 
 type opKind int
@@ -39,6 +43,8 @@ const (
 	opAdd
 	opRename
 	opSearch
+	opImportMap
+	opImportApply
 )
 
 const (
@@ -48,10 +54,11 @@ const (
 )
 
 type Deps struct {
-	Config       *config.Config
-	Providers    map[string]provider.Provider
-	RegistryPath string
-	BackupRoot   string
+	LoadImportIndex func() (*index.Index, error)
+	Config          *config.Config
+	Providers       map[string]provider.Provider
+	RegistryPath    string
+	BackupRoot      string
 }
 
 type addonRow struct {
@@ -77,9 +84,12 @@ type serviceEventMsg service.Event
 type opClosedMsg struct{}
 
 type opResult struct {
-	statuses []service.UpdateStatus
-	remote   []provider.RemoteAddon
-	err      error
+	candidates  []service.MappingCandidate
+	importIndex *index.Index
+	imported    []service.ImportResult
+	statuses    []service.UpdateStatus
+	remote      []provider.RemoteAddon
+	err         error
 }
 
 const dismissKey = "ctrl+x"
@@ -97,7 +107,9 @@ type notice struct {
 }
 
 type Model struct {
-	deps Deps
+	importing importState
+	files     fileReview
+	deps      Deps
 
 	reg  *registry.Registry
 	rows []addonRow
@@ -190,11 +202,12 @@ func (m *Model) Init() tea.Cmd {
 
 func (m *Model) buildService(onEvent service.EmitFunc) *service.Service {
 	return &service.Service{
-		Providers:    m.deps.Providers,
-		Security:     m.deps.Config.Security,
-		RegistryPath: m.deps.RegistryPath,
-		BackupRoot:   m.deps.BackupRoot,
-		OnEvent:      onEvent,
+		Providers:            m.deps.Providers,
+		Security:             m.deps.Config.Security,
+		RegistryPath:         m.deps.RegistryPath,
+		BackupRoot:           m.deps.BackupRoot,
+		OnEvent:              onEvent,
+		LoadFingerprintIndex: m.deps.LoadImportIndex,
 	}
 }
 
@@ -274,6 +287,10 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleDetailsKey(msg)
 	case screenAdd:
 		return m.handleAddKey(msg)
+	case screenImport:
+		return m.handleImportKey(msg)
+	case screenFileReview:
+		return m.handleFileReviewKey(msg)
 	case screenSettings:
 		return m.handleSettingsKey(msg)
 	}
@@ -297,6 +314,10 @@ func (m *Model) View() string {
 		body = m.detailsView()
 	case screenAdd:
 		body = m.addView()
+	case screenImport:
+		body = m.importView()
+	case screenFileReview:
+		body = m.fileReviewView()
 	case screenSettings:
 		body = m.settingsView()
 	}
@@ -313,7 +334,7 @@ func (m *Model) headerView() string {
 	var rendered string
 	for i, t := range tabs {
 		active := false
-		if m.screen == screenAddons && i == 0 {
+		if (m.screen == screenAddons || m.screen == screenImport || m.screen == screenFileReview) && i == 0 {
 			active = true
 		}
 		if m.screen == screenExplore && i == 1 {
@@ -334,7 +355,11 @@ func (m *Model) headerView() string {
 
 func (m *Model) footerView() string {
 	if m.busy {
-		return statusBusy.Render(m.spinner.View() + " " + m.busyMsg)
+		message := m.busyMsg
+		if m.opKind == opImportApply {
+			message += " · esc stop"
+		}
+		return statusBusy.Render(m.spinner.View() + " " + message)
 	}
 	help := m.helpText()
 	if m.noticeVisible() {
@@ -440,10 +465,20 @@ func (m *Model) helpText() string {
 		if m.searching {
 			return "enter apply · esc cancel · type to search"
 		}
-		return "↑/↓ navigate · f search · i game version · I installation · d details · a add · r check · u update · tab explore · q quit"
+		return "↑/↓ navigate · m import · f search · i game version · I installation · d details · a add · r check · u update · tab explore · q quit"
 	case screenExplore:
 		return "enter search · ↑/↓ select · a install selected · esc clear · tab settings · q quit"
+	case screenImport:
+		return m.importHelp()
+	case screenFileReview:
+		if m.files.approval != nil {
+			return "↑↓/pg scroll · enter/esc keep files · y replace listed changes"
+		}
+		return "↑↓/pg scroll · esc back"
 	case screenDetails:
+		if m.detailRemote == nil && !m.detailRow.Managed {
+			return "m import · esc back"
+		}
 		return "esc back"
 	case screenAdd:
 		return "enter submit · esc cancel"
@@ -493,11 +528,25 @@ func (m *Model) finishOp() (tea.Model, tea.Cmd) {
 	default:
 	}
 
+	var review *service.LocalChangesError
+	if kind == opUpdate && errors.As(result.err, &review) {
+		m.showUpdateFiles(review)
+		return m, nil
+	}
 	if result.err != nil {
 		m.notices = append([]notice{{kind: noticeError, text: result.err.Error()}}, m.notices...)
 	}
+	if kind == opUpdateAll && errors.As(result.err, &review) {
+		m.notices = append([]notice{{kind: noticeError, text: "Select each affected addon and press u to review local changes."}}, m.notices...)
+	}
 
 	switch kind {
+	case opImportMap:
+		m.finishImportMap(result)
+		return m, nil
+	case opImportApply:
+		m.finishImportApply(result)
+		return m, m.loadRegistryCmd()
 	case opCheck:
 		m.mergeStatuses(result.statuses)
 	case opSearch:
@@ -535,7 +584,7 @@ func (m *Model) applyEvent(e service.Event) {
 		return
 	}
 	for i := range m.rows {
-		if m.rows[i].Managed && m.rows[i].Ref == e.Ref {
+		if m.rows[i].Managed && m.rows[i].Ref == e.Ref && m.rows[i].InstallPath == e.InstallPath {
 			m.rows[i].Status = stage
 		}
 	}
@@ -596,10 +645,17 @@ func (m *Model) selectedFlavor() wow.GameFlavor {
 	return wow.Retail
 }
 
-func (m *Model) startUpdate(ref string) tea.Cmd {
-	m.busyMsg = "updating " + ref + "..."
+func (m *Model) startUpdate(row addonRow) tea.Cmd {
+	m.busyMsg = "updating " + row.Ref + "..."
 	return m.startOp(opUpdate, func(svc *service.Service) opResult {
-		return opResult{err: svc.Update(context.Background(), ref, false)}
+		return opResult{err: svc.UpdateInstalled(context.Background(), row.InstallPath, row.Ref, false)}
+	})
+}
+
+func (m *Model) startReviewedUpdate(review *service.LocalChangesError) tea.Cmd {
+	m.busyMsg = "updating " + review.Ref + "..."
+	return m.startOp(opUpdate, func(svc *service.Service) opResult {
+		return opResult{err: svc.UpdateReviewed(context.Background(), review, false)}
 	})
 }
 

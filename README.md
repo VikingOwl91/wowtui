@@ -125,7 +125,8 @@ files:
 ```bash
 ./wowtui map
 ./wowtui map --adoptable
-./wowtui adopt "/path/to/_retail_" WeakAuras github:Owner/WeakAuras
+./wowtui map --changes
+./wowtui adopt "/path/to/_retail_" WeakAuras github:WeakAuras/WeakAuras2
 ```
 
 `adopt` refuses a folder that another managed addon in the same installation
@@ -205,8 +206,18 @@ managed addon owns. It prints one row per candidate with the columns
 repeated runs print the same order. `--adoptable` keeps only candidates whose
 provider is active.
 
-Candidates come from the folder's TOC hints and, when an index is configured,
-from the [Addon Index](#addon-index):
+wowtui ships file hashes for the five folders in the official WeakAuras
+5.21.1 and 5.22.1 releases. Matching works locally without a WowUp profile,
+provider credentials, or a configured index. A signed index can supply hashes
+for other releases. A matching TOC version identifies which release to check.
+wowtui reads the files in all declared folders and offers the package when a
+majority of its files match and at least half match in each folder.
+`release:fingerprint` in the reason column identifies these candidates.
+Use `map --changes` to list added, modified and missing paths once per release
+and installation.
+
+Other candidates come from TOC hints, the release changelog, local WowUp
+installation records and the optional [Addon Index](#addon-index).
 
 - `X-Source-Repo` and `X-Website` yield a GitHub, GitLab, or WowUp reference,
   or a CurseForge reference with a numeric project ID. `X-Source-Repo` also
@@ -218,6 +229,18 @@ from the [Addon Index](#addon-index):
   has no active provider for them.
 - Several hints that point to the same provider and reference become one row,
   and `REASON` lists the hint keys, comma separated.
+- A packaged `CHANGELOG.md` can identify a GitHub repository when its title
+  matches the folder or TOC title and both its release and comparison links
+  name the same repository and installed TOC version. The reason is
+  `packager:changelog`.
+
+On Linux, a scan looks for `preferences.json` and `addons.json` in the
+`WowUpCf` and `WowUp` directories under `$XDG_CONFIG_HOME` (by default
+`~/.config`). The installation ID links each package's folder list to its
+WoW client. A scanned folder with the same name in that client can match a
+recorded CurseForge project ID, GitHub owner/repository or WowUpHub ID,
+including a project's alternate provider IDs. These matches show
+`wowup:installed-folder` as their reason. Scans skip records marked ignored.
 
 The `REFERENCE` column holds the prefixed form that `adopt` and `add` accept:
 `github:`, `gitlab:`, `wowup:`, `curseforge:`, or `git:`. A legacy
@@ -229,7 +252,7 @@ reference, never as a direct download. CurseForge resolves numeric IDs, so
 
 | Value | Meaning |
 | --- | --- |
-| `active` | The provider is enabled and `adopt` works |
+| `active` | The provider is enabled locally. Import checks access to the project when registering a new package. |
 | `paused` | WowUpHub and Wago, paused pending upstream approval |
 | `needs-api-key` | CurseForge without a configured API key |
 | `disabled` | The provider was turned off with `providers disable` |
@@ -284,7 +307,10 @@ content), `map`, `add`, and `adopt` print one line
 `warning: index not loaded, continuing without it: <reason>` to stderr and go
 on without it. An `index:<id>` reference is the exception: it fails with
 `index not loaded` or `no index configured`, because there is nothing to
-resolve it with. `check` and `update` never read the index.
+resolve it with. Older registry entries can lack file hashes. For those
+entries, `check` and `update` consult the bundled manifests and any configured
+signed index. If the configured index cannot be verified, the lookup reports
+an error.
 
 Trust model: the index holds metadata and source references only, never a
 download URL. Entries may point at GitHub or GitLab repositories only. wowtui
@@ -301,7 +327,6 @@ Open points:
   mechanism yet.
 - There is no rollback protection: wowtui does not remember the build time of
   an earlier index, so it accepts an older, validly signed file.
-- The TUI does not use the index.
 - Index candidates in `map` and `add index:<id>` do not check the entry's game
   types against the installation's flavor.
 
@@ -323,8 +348,34 @@ selected result, `d` shows its details, `/` focuses the field again, `tab`
 opens Settings, and `shift+tab` or `1` returns to Addons. `a` does nothing
 while another operation runs. In the add dialog, the reference field takes
 every key, `q` included; `q` quits only from the other fields. The `f` filter
-on the Addons tab takes keys the same way until `enter` or `esc`. The TUI
-does not use the addon index.
+on the Addons tab takes keys the same way until `enter` or `esc`.
+
+### Import installed addons
+
+Press `s` on the Addons tab to refresh the scan, then `m` to import existing
+folders. The import screen shows source matches for the selected game and
+installation filters.
+
+Use the arrow keys to browse and Space to select a folder and its source.
+Press `a` to select all folders with a single match. Where a folder has
+several candidates, select the source you want with Space. Press
+Enter to review the batch and `y` to confirm. Import verifies the source and
+records the installed folders in the registry. It leaves their files in place.
+Folders selected for the same source in one installation are managed together.
+For a fingerprint match, selecting one row selects the whole release. Press
+`d` to inspect its folders and any file differences. Import rechecks the
+selection before registering it and records the original release hashes.
+
+When updating an addon with known file hashes, `u` shows local differences.
+Enter or Esc keeps the local copy. Press `y` to replace the reviewed files
+with the selected upstream release, even if the version is already current.
+A further edit requires a fresh review. Bulk updates skip affected packages
+and continue with the others. In the CLI, a single-addon `update` prints the
+file list and a `--replace-local=<token>` argument for that review. If you
+manage the same addon in multiple clients, use its full reference and choose
+the installation, e.g. `wowtui update WeakAuras/WeakAuras2 --install "/path/to/_retail_"`.
+New installs
+and successful updates save file hashes for future comparisons.
 
 Warnings and errors from an operation stay in a notice bar above the key help
 until you press `ctrl+x` or start the next operation. The bar shows up to five
@@ -485,6 +536,7 @@ of the `wowtui` binary, and runs from a checkout:
 ```bash
 go run ./tools/indexbuild keygen   --out DIR
 go run ./tools/indexbuild discover --registry registry.json --out candidates.json --cache DIR
+go run ./tools/indexbuild fingerprint --zip Addon-1.0.zip --version 1.0 --out manifest.json
 go run ./tools/indexbuild build    --candidates candidates.json --key signing.key --out index.json
 ```
 
@@ -501,6 +553,10 @@ go run ./tools/indexbuild build    --candidates candidates.json --key signing.ke
   API errors. `--mirror-owners` takes a comma separated list of GitHub
   accounts whose repositories are copies and never count as originals
   (default `hippuli`, empty for none).
+- `fingerprint` produces a manifest for a packaged release ZIP. Add it to the
+  package's `fingerprints` array in `candidates.json` before signing.
+  The builder selects format 2 when a package has manifests. The bundled
+  releases have [source checksums and reproduction instructions](internal/fingerprint/data/README.md).
 - `build` turns `candidates.json` into `index.json` and `index.json.sig`. It
   skips packages the index cannot hold and prints each as a warning. It
   verifies the pair with the same loader wowtui uses before it writes

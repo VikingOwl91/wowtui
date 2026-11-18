@@ -15,6 +15,10 @@ func (m *Model) handleDetailsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.detailRemote = nil
 		m.screen = screenAddons
 		return m, nil
+	case "m":
+		if m.detailRemote == nil && !m.detailRow.Managed {
+			return m, m.openImport(importFolder{m.detailRow.InstallPath, m.detailRow.Name})
+		}
 	case "a":
 		if m.detailRemote != nil && m.installCount() > 0 && !m.busy {
 			remote := *m.detailRemote
@@ -63,7 +67,7 @@ func (m *Model) detailsView() string {
 			}
 		}
 	} else {
-		lines = append(lines, dimStyle.Render("Not managed by wowtui. Install it via 'a' to manage updates."))
+		lines = append(lines, dimStyle.Render("Press m to import this installed folder for updates."))
 	}
 
 	lines = append(lines, "", labelStyle.Render("Install path:"))

@@ -25,13 +25,17 @@ import (
 	"time"
 	"unicode"
 
+	"somegit.dev/vikingowl/wowtui/internal/fingerprint"
 	"somegit.dev/vikingowl/wowtui/internal/installer"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
 	"somegit.dev/vikingowl/wowtui/internal/wow"
 )
 
-// FormatVersion is the only "format" value this package loads.
+// FormatVersion is the original, metadata-only index format.
 const FormatVersion = 1
+
+// FingerprintFormatVersion adds optional per-release file manifests to entries.
+const FingerprintFormatVersion = 2
 
 // Provider ID kinds, the keys of an entry's "ids" object.
 const (
@@ -40,7 +44,7 @@ const (
 	KindWoWInterface = "wowinterface"
 )
 
-// File is the JSON document of format 1. GeneratedAt is RFC 3339. Entries
+// File is a signed index document. GeneratedAt is RFC 3339. Entries
 // must be present, an empty list is valid.
 type File struct {
 	Format      int       `json:"format"`
@@ -71,6 +75,9 @@ type Entry struct {
 	ReleaseJSON bool           `json:"release_json"`
 	Funding     []Funding      `json:"funding,omitempty"`
 	Reviewed    bool           `json:"reviewed"`
+
+	// Fingerprints are optional starting with format 2.
+	Fingerprints []fingerprint.Release `json:"fingerprints,omitempty"`
 }
 
 // ProviderIDs holds an entry's catalog IDs. Empty means not set. A set value
@@ -125,11 +132,11 @@ func parse(data []byte) (*Index, error) {
 	if probe.Format == nil {
 		return nil, errors.New("index format is missing")
 	}
-	if *probe.Format != FormatVersion {
-		return nil, fmt.Errorf("unsupported index format %d, want %d", *probe.Format, FormatVersion)
+	if *probe.Format != FormatVersion && *probe.Format != FingerprintFormatVersion {
+		return nil, fmt.Errorf("unsupported index format %d, want %d or %d", *probe.Format, FormatVersion, FingerprintFormatVersion)
 	}
 
-	if err := checkKeys(data); err != nil {
+	if err := checkKeys(data, *probe.Format); err != nil {
 		return nil, fmt.Errorf("decode index: %w", err)
 	}
 	// The outer generated_at shadows File.GeneratedAt so a bad timestamp is
@@ -232,6 +239,23 @@ func validateEntry(entry Entry) []error {
 		seenFolders[folderKey(folder)] = true
 	}
 
+	versions := map[string]bool{}
+	for i, release := range entry.Fingerprints {
+		if err := release.Validate(); err != nil {
+			errs = append(errs, fmt.Errorf("fingerprints[%d]: %w", i, err))
+			continue
+		}
+		if versions[release.Version] {
+			errs = append(errs, fmt.Errorf("duplicate fingerprint version %q", release.Version))
+		}
+		versions[release.Version] = true
+		for _, folder := range release.Folders() {
+			if !slices.Contains(entry.Folders, folder) {
+				errs = append(errs, fmt.Errorf("fingerprint %q contains undeclared folder %q", release.Version, folder))
+			}
+		}
+	}
+
 	if len(entry.GameTypes) == 0 {
 		errs = append(errs, errors.New("game_types is empty"))
 	}
@@ -259,13 +283,13 @@ func validateEntry(entry Entry) []error {
 	return errs
 }
 
-var keyPattern = regexp.MustCompile(`^[a-z_]+$`)
+var keyPattern = regexp.MustCompile(`^[a-z0-9_]+$`)
 
 // checkKeys rejects duplicate object keys and keys that are not plain
 // lowercase ASCII. encoding/json matches keys ignoring case, including
 // Unicode folds such as "ſ" for "s"; every format key is lowercase ASCII, so
 // together with DisallowUnknownFields only exact key names are accepted.
-func checkKeys(data []byte) error {
+func checkKeys(data []byte, format int) error {
 	type object struct {
 		keys    map[string]bool
 		wantKey bool
@@ -290,7 +314,7 @@ func checkKeys(data []byte) error {
 				continue
 			}
 			key, _ := tok.(string)
-			if !keyPattern.MatchString(key) {
+			if !keyPattern.MatchString(key) || (format == FormatVersion && key == "fingerprints") {
 				return fmt.Errorf("unknown field %q", key)
 			}
 			if top.keys[key] {
@@ -374,5 +398,9 @@ func (e Entry) clone() Entry {
 	e.Folders = slices.Clone(e.Folders)
 	e.GameTypes = slices.Clone(e.GameTypes)
 	e.Funding = slices.Clone(e.Funding)
+	e.Fingerprints = slices.Clone(e.Fingerprints)
+	for i := range e.Fingerprints {
+		e.Fingerprints[i].Files = slices.Clone(e.Fingerprints[i].Files)
+	}
 	return e
 }

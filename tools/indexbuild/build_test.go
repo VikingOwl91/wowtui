@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"somegit.dev/vikingowl/wowtui/internal/fingerprint"
 	"somegit.dev/vikingowl/wowtui/internal/index"
 	"somegit.dev/vikingowl/wowtui/internal/wow"
 )
@@ -76,6 +77,18 @@ func TestBuildEntryFields(t *testing.T) {
 		if !strings.Contains(joined, needle) {
 			t.Errorf("warnings lack %q:\n%s", needle, joined)
 		}
+	}
+}
+
+func TestBuildFingerprintFormat(t *testing.T) {
+	pkg := simplePackage("o/Multi", "Addon")
+	pkg.Fingerprints = []fingerprint.Release{{Version: "v1", Files: []fingerprint.File{{Path: "Addon/main.lua", SHA256: strings.Repeat("0", 64)}}}}
+	res, err := Build(candidatesOf(pkg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.File.Format != index.FingerprintFormatVersion || !equalJSON(t, res.File.Entries[0].Fingerprints, pkg.Fingerprints) {
+		t.Fatal("versioned release manifests were not carried through to format 2")
 	}
 }
 

@@ -118,7 +118,7 @@ internal/
 │   ├── config.go
 │   └── dotenv.go
 ├── index/
-│   ├── index.go        (Format 1, Laden, Validierung, Abfragen)
+│   ├── index.go        (Format 1 und 2, Laden, Validierung, Abfragen)
 │   ├── sign.go         (ed25519, Schlüsselformate)
 │   └── funding.go
 ├── installer/
@@ -321,6 +321,21 @@ das passiert erst beim folgenden Update. `adopt` verweigert
 einen Ordner, den in derselben Installation schon ein anderes
 verwaltetes Addon besitzt.
 
+Für WeakAuras 5.21.1 und 5.22.1 enthält das Programm SHA-256-Werte je
+Datei für alle fünf Addon-Ordner. Beim Import grenzt die TOC-Version die
+Suche ein. Die Mehrheit der erwarteten Dateien im Paket und mindestens
+die Hälfte in jedem Ordner müssen übereinstimmen. `map --changes` zeigt
+hinzugefügte, geänderte und fehlende Dateien. Im Importdialog wählt die
+Leertaste das ganze erkannte Paket aus, `d` öffnet die Dateiliste.
+
+Der Import speichert die Hashes des Original-Releases. Nach Installation
+oder Update stammen die Vergleichswerte aus dem entpackten Archiv.
+Ein Einzelupdate fragt bei Abweichungen nach. Enter und Esc behalten
+die lokale Kopie, `y` bestätigt den Ersatz der geprüften Dateien. In der
+CLI bindet `--replace-local=<Token>` die Zustimmung an Installation,
+Addon und die festgestellten Änderungen. Ein Sammelupdate überspringt
+betroffene Pakete und meldet den Fehler.
+
 `wowtui map` (`cmd/map.go`, `internal/service/service.go`) gibt je
 Kandidat eine Zeile mit `FOLDER`, `FLAVOR`, `PROVIDER`, `AVAILABILITY`,
 `REFERENCE`, `REASON` und `INSTALL` aus, sortiert nach
@@ -340,6 +355,14 @@ zuerst innerhalb eines Ordners), damit die Ausgabe deterministisch ist:
 - Kandidaten mit gleichem Provider und gleicher Referenz werden je
   Ordner zu einer Zeile, die Hint-Schlüssel stehen kommagetrennt in
   `REASON`
+- Der Scan liest lokale WowUp-Profile unter `WowUpCf` und `WowUp` im
+  Konfigurationsverzeichnis. Über die Installations-ID ordnet er die
+  Paketordner dem jeweiligen Client zu. Vorhandene Ordner mit erfasster
+  Projekt-ID erhalten den Grund `wowup:installed-folder`. Als ignoriert
+  markierte Einträge werden übersprungen.
+- Der Kopf einer mitgelieferten `CHANGELOG.md` kann eine GitHub-Quelle
+  belegen. Dafür müssen Titel, TOC-Version, Release-Link und Vergleichslink
+  zusammenpassen. Der Grund lautet `packager:changelog`.
 - `REFERENCE` ist die einlesbare Präfixform (`FormatReference`):
   `github:`, `gitlab:`, `wowup:`, `curseforge:`, `git:`. Die alte
   URL `wow.curseforge.com/projects/<slug>` liest `ParseReference` als
@@ -444,7 +467,10 @@ die Schlüssel des Formats, klein und ASCII), bei Daten nach dem
 JSON-Dokument, bei fehlendem `generated_at` (RFC 3339) oder `entries`
 (eine leere Liste ist gültig) und bei jedem ungültigen Eintrag. Format 1
 hat keine optionalen Erweiterungsfelder; ein neues Feld braucht eine neue
-Formatnummer.
+Formatnummer. Format 2 erlaubt je Eintrag ein optionales Feld
+`fingerprints`. Jede Version enthält `version` und eine Liste `files`
+mit relativen Addon-Pfaden (`path`) und SHA-256-Werten (`sha256`).
+Die Ordner eines Manifests müssen im Eintrag deklariert sein.
 
 Regeln je Eintrag:
 
@@ -507,8 +533,10 @@ Base64-Textes werden abgelehnt, ein abschließender ist erlaubt.
   `warning: index not loaded, continuing without it: <Grund>` nach stderr
   und arbeiten ohne Index weiter. Bei einer `index:<id>`-Referenz ist
   das ein Fehler (`index not loaded` bzw. `no index configured`), ebenso
-  bei `index status` und `index search`. `check` und `update` lesen den
-  Index nicht
+  bei `index status` und `index search`. Für ältere Registry-Einträge
+  ohne Dateihashes suchen `check` und `update` im eingebauten Katalog und
+  bei konfiguriertem Index auch dort nach dem ursprünglichen Release.
+  Ein Fehler bei dieser Prüfung stoppt das Update des betroffenen Addons
 
 Offene Punkte:
 
@@ -517,7 +545,6 @@ Offene Punkte:
 - Kein Rollback-Schutz: wowtui merkt sich die Erzeugungszeit eines
   früheren Index nicht und akzeptiert auch eine ältere, gültig
   signierte Datei
-- Die TUI nutzt den Index nicht
 - Index-Kandidaten in `map` und `add index:<id>` werden nicht nach dem
   Spieltyp des Flavors gefiltert oder geprüft
 - Im Repository liegt kein fertiger Index, nur ein Test-Fixture
@@ -529,6 +556,7 @@ Wartungswerkzeug, nicht Teil des Binaries:
 ```
 go run ./tools/indexbuild keygen   --out DIR
 go run ./tools/indexbuild discover --registry FILE --out FILE --cache DIR [--review FILE] [--mirror-owners LIST]
+go run ./tools/indexbuild fingerprint --zip FILE --version TAG --out FILE
 go run ./tools/indexbuild build    --candidates FILE --key FILE --out FILE
 ```
 
@@ -826,12 +854,13 @@ Service meldet Fortschritt als Events über einen Channel
 
 ```go
 type Event struct {
-    Ref     string
-    Stage   Stage
-    Message string
-    Index   int    // Position bei update --all
-    Total   int
-    Err     error
+    Ref         string
+    InstallPath string
+    Stage       Stage
+    Message     string
+    Index       int    // Position bei update --all
+    Total       int
+    Err         error
 }
 
 type Stage string
@@ -899,10 +928,18 @@ Getippte Tasten bleiben im fokussierten Eingabefeld:
 - Die Suche (`f`) im Addons-Tab nimmt Tasten bis `enter` oder `esc`
   an
 
-Die TUI nutzt den Index nicht.
+Mit `m` öffnet man im Addons-Tab den Import vorhandener Addons. Die Liste
+berücksichtigt den Spiel- und Installationsfilter sowie die TOC-Hinweise,
+Release-Changelogs, lokale WowUp-Paketdaten und einen konfigurierten,
+signierten Index. Mit der Leertaste wählt man
+Ordner und Quelle aus. Mit `a` wählt man alle Ordner mit genau einer
+passenden Quelle aus. Enter zeigt die Auswahl zur Prüfung, `y` bestätigt.
+Der Import registriert ausgewählte Ordner derselben Quelle pro Installation
+als ein Addon und lässt die installierten Dateien unangetastet. Die
+Ergebnisansicht meldet erfolgreiche Zuordnungen und fehlgeschlagene Quellen.
 
 Screens: Addons, Explore (Suche in den Provider-Katalogen), Settings,
-dazu Details und der Add-Dialog.
+dazu Details, Import und der Add-Dialog.
 
 ## 9. CLI
 

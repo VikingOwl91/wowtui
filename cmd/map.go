@@ -3,7 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"slices"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -20,6 +22,7 @@ func newMapCmd() *cobra.Command {
 		RunE:  runMap,
 	}
 	cmd.Flags().Bool("adoptable", false, "show only candidates whose provider is active")
+	cmd.Flags().Bool("changes", false, "show files that differ from each matched release")
 	return cmd
 }
 
@@ -57,7 +60,32 @@ func runMap(cmd *cobra.Command, _ []string) error {
 	for _, candidate := range candidates {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", candidate.Folder, candidate.Flavor, candidate.Provider, candidate.Availability, candidate.Reference, candidate.Reason, candidate.InstallPath)
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return err
+	}
+	if changes, _ := cmd.Flags().GetBool("changes"); changes {
+		printReleaseChanges(cmd.OutOrStdout(), candidates)
+	}
+	return nil
+}
+
+func printReleaseChanges(out io.Writer, candidates []service.MappingCandidate) {
+	type packageKey struct{ path, ref, version string }
+	seen := map[packageKey]bool{}
+	for _, c := range candidates {
+		key := packageKey{c.InstallPath, c.Reference, c.ReleaseVersion}
+		if c.ReleaseVersion == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		fmt.Fprintf(out, "\n%s %s (%s)\n  folders: %s\n", c.Reference, c.ReleaseVersion, c.InstallPath, strings.Join(c.PackageFolders, ", "))
+		if len(c.FileChanges) == 0 {
+			fmt.Fprintln(out, "  all files match the release")
+		}
+		for _, change := range c.FileChanges {
+			fmt.Fprintf(out, "  %s %s\n", change.Kind, change.Path)
+		}
+	}
 }
 
 func inactiveAvailability(providers config.Providers, name string) service.Availability {

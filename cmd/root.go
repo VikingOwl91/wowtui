@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"somegit.dev/vikingowl/wowtui/internal/config"
+	"somegit.dev/vikingowl/wowtui/internal/index"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
 	"somegit.dev/vikingowl/wowtui/internal/registry"
 	"somegit.dev/vikingowl/wowtui/internal/service"
@@ -91,7 +92,7 @@ func buildProviders(cfg *config.Config) map[string]provider.Provider {
 func newService(cmd *cobra.Command, cfg *config.Config) *service.Service {
 	regPath := registryPath(cmd)
 	out := cmd.OutOrStdout()
-	return &service.Service{
+	svc := &service.Service{
 		Providers:    buildProviders(cfg),
 		Security:     cfg.Security,
 		RegistryPath: regPath,
@@ -102,4 +103,8 @@ func newService(cmd *cobra.Command, cfg *config.Config) *service.Service {
 			}
 		},
 	}
+	if cfg.Index.Configured() {
+		svc.LoadFingerprintIndex = func() (*index.Index, error) { return loadIndex(cfg.Index) }
+	}
+	return svc
 }

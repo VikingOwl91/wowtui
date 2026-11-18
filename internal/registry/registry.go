@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"somegit.dev/vikingowl/wowtui/internal/fingerprint"
 )
 
 type Registry struct {
@@ -28,22 +30,24 @@ type Folder struct {
 	Interfaces []int             `json:"interfaces,omitempty"`
 	TocFiles   []string          `json:"toc_files"`
 	Hints      map[string]string `json:"hints,omitempty"`
+	WowUpRefs  []string          `json:"wowup_refs,omitempty"`
 }
 
 type Addon struct {
-	Provider    string    `json:"provider"`
-	Ref         string    `json:"ref"`
-	Name        string    `json:"name"`
-	Author      string    `json:"author,omitempty"`
-	Flavor      string    `json:"flavor"`
-	InstallPath string    `json:"install_path"`
-	Folders     []string  `json:"folders"`
-	Version     string    `json:"version"`
-	Source      string    `json:"source,omitempty"`
-	ReleaseID   int64     `json:"release_id"`
-	AssetName   string    `json:"asset_name"`
-	SHA256      string    `json:"sha256"`
-	InstalledAt time.Time `json:"installed_at"`
+	ReleaseFiles []fingerprint.File `json:"release_files,omitempty"`
+	Provider     string             `json:"provider"`
+	Ref          string             `json:"ref"`
+	Name         string             `json:"name"`
+	Author       string             `json:"author,omitempty"`
+	Flavor       string             `json:"flavor"`
+	InstallPath  string             `json:"install_path"`
+	Folders      []string           `json:"folders"`
+	Version      string             `json:"version"`
+	Source       string             `json:"source,omitempty"`
+	ReleaseID    int64              `json:"release_id"`
+	AssetName    string             `json:"asset_name"`
+	SHA256       string             `json:"sha256"`
+	InstalledAt  time.Time          `json:"installed_at"`
 }
 
 func (r *Registry) FindAddon(ref, installPath string) *Addon {

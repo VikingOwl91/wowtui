@@ -99,6 +99,29 @@ type captured struct {
 	text   strings.Builder
 }
 
+func TestUpdateInstalledUsesSelectedClient(t *testing.T) {
+	fp := &fakeProvider{release: provider.Release{Kind: provider.KindRelease, Tag: "v2", ID: 2}}
+	svc, retail, events := newTestService(t, fp)
+	const ref = "Owner/MyAddon"
+	classic := filepath.Join(t.TempDir(), "_classic_")
+	reg := &registry.Registry{Addons: []registry.Addon{
+		{Provider: "github", Ref: ref, InstallPath: retail.Path, Version: "v1"},
+		{Provider: "github", Ref: ref, InstallPath: classic, Version: "v2"},
+	}}
+	if err := reg.Save(svc.RegistryPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.UpdateInstalled(t.Context(), classic, ref, true); err != nil {
+		t.Fatal(err)
+	}
+	if events.firstIndex(StageCurrent) < 0 {
+		t.Fatalf("checked the wrong installation: %s", events.String())
+	}
+	if err := svc.UpdateInstalled(t.Context(), "/other", ref, true); err == nil {
+		t.Fatal("selected an addon outside the requested installation")
+	}
+}
+
 func (c *captured) emit(e Event) {
 	c.events = append(c.events, e)
 	if e.Message != "" {

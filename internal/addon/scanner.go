@@ -10,12 +10,16 @@ import (
 )
 
 type Folder struct {
-	Name string
-	Tocs []*Toc
+	Name          string
+	Tocs          []*Toc
+	changelogRepo string
 }
 
 func (f *Folder) Hints() map[string]string {
 	hints := make(map[string]string)
+	if f.changelogRepo != "" {
+		hints["packager:changelog"] = f.changelogRepo
+	}
 	for _, toc := range f.Tocs {
 		for key, value := range toc.Fields {
 			if value == "" {
@@ -79,7 +83,9 @@ func Scan(installPath string) ([]*Folder, error) {
 		if len(tocs) == 0 {
 			continue
 		}
-		folders = append(folders, &Folder{Name: entry.Name(), Tocs: tocs})
+		folder := &Folder{Name: entry.Name(), Tocs: tocs}
+		folder.changelogRepo = changelogRepository(filepath.Join(addonsDir, entry.Name(), "CHANGELOG.md"), folder)
+		folders = append(folders, folder)
 	}
 
 	sort.Slice(folders, func(i, j int) bool { return folders[i].Name < folders[j].Name })

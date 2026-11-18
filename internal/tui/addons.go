@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"sort"
 	"strconv"
 	"strings"
@@ -149,20 +150,25 @@ func (m *Model) rebuildTable() {
 }
 
 func (m *Model) mergeStatuses(statuses []service.UpdateStatus) {
-	byRef := map[string]service.UpdateStatus{}
+	type record struct{ path, ref string }
+	byRecord := map[record]service.UpdateStatus{}
 	for _, s := range statuses {
-		byRef[s.Addon.Ref] = s
+		byRecord[record{s.Addon.InstallPath, s.Addon.Ref}] = s
 	}
 	for i := range m.rows {
 		row := &m.rows[i]
 		if !row.Managed {
 			continue
 		}
-		st, ok := byRef[row.Ref]
+		st, ok := byRecord[record{row.InstallPath, row.Ref}]
 		if !ok {
 			continue
 		}
+		var review *service.LocalChangesError
 		switch {
+		case errors.As(st.Error, &review):
+			row.Status = "local changes"
+			row.Latest = "-"
 		case st.Error != nil:
 			row.Status = "error"
 			row.Latest = "-"
@@ -235,12 +241,14 @@ func (m *Model) handleAddonsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.errMsg = "select a managed addon to update"
 			return m, nil
 		}
-		return m, m.startUpdate(row.Ref)
+		return m, m.startUpdate(row)
 	case "U":
 		if m.busy {
 			return m, nil
 		}
 		return m, m.startUpdateAll()
+	case "m":
+		return m, m.openImport(importFolder{})
 	case "a":
 		m.screen = screenAdd
 		m.addField = 0

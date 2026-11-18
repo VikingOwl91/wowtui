@@ -48,8 +48,8 @@ func TestLoadFormatVersion(t *testing.T) {
 		{name: "missing", omit: true, wantErr: "index format is missing"},
 		{name: "null", format: nil, wantErr: "index format is missing"},
 		{name: "zero", format: 0, wantErr: "unsupported index format 0"},
-		{name: "future", format: 2, wantErr: "unsupported index format 2"},
-		{name: "future with unknown fields", format: 2, extra: true, wantErr: "unsupported index format 2"},
+		{name: "future", format: 3, wantErr: "unsupported index format 3"},
+		{name: "future with unknown fields", format: 3, extra: true, wantErr: "unsupported index format 3"},
 		{name: "string", format: "1", wantErr: "decode index"},
 		{name: "fraction", format: 1.5, wantErr: "decode index"},
 	}

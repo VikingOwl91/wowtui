@@ -110,8 +110,12 @@ func Build(cands *Candidates) (BuildResult, error) {
 	}
 	slices.SortFunc(entries, func(a, b index.Entry) int { return strings.Compare(a.ID, b.ID) })
 
+	format := index.FormatVersion
 	taken := map[[2]string]string{}
 	for i := range entries {
+		if len(entries[i].Fingerprints) > 0 {
+			format = index.FingerprintFormatVersion
+		}
 		entries[i].IDs, warnings = claimIDs(entries[i], taken, warnings)
 	}
 	if entries == nil {
@@ -119,7 +123,7 @@ func Build(cands *Candidates) (BuildResult, error) {
 	}
 	slices.Sort(warnings)
 	return BuildResult{
-		File:     index.File{Format: index.FormatVersion, GeneratedAt: cands.GeneratedAt.UTC().Truncate(time.Second), Entries: entries},
+		File:     index.File{Format: format, GeneratedAt: cands.GeneratedAt.UTC().Truncate(time.Second), Entries: entries},
 		Warnings: warnings,
 	}, nil
 }
@@ -165,6 +169,7 @@ func entryFor(pkg Package, slug string) (index.Entry, []string, bool) {
 	}
 	entry := index.Entry{ID: slug, Source: provider.FormatReference(ref), ReleaseJSON: pkg.Release != nil && pkg.Release.ReleaseJSON}
 
+	entry.Fingerprints = pkg.Fingerprints
 	entry.Name = stripUIEscapes(pkg.Title)
 	if entry.Name == "" {
 		entry.Name = repoNamePart(pkg.Repo)

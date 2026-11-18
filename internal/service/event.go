@@ -16,12 +16,13 @@ const (
 )
 
 type Event struct {
-	Ref     string
-	Stage   Stage
-	Message string
-	Index   int
-	Total   int
-	Err     error
+	Ref         string
+	InstallPath string
+	Stage       Stage
+	Message     string
+	Index       int
+	Total       int
+	Err         error
 }
 
 type EmitFunc func(Event)

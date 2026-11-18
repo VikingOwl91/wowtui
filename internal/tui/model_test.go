@@ -77,7 +77,7 @@ func TestAutoScanOnEmptyRegistry(t *testing.T) {
 	})
 	model, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	mm := model.(*Model)
-	model, _ = mm.Update(registryLoadedMsg{reg: &registry.Registry{Version: 1}})
+	model, cmd := mm.Update(registryLoadedMsg{reg: &registry.Registry{Version: 1}})
 	mm = model.(*Model)
 
 	if !mm.autoScanned {
@@ -85,6 +85,11 @@ func TestAutoScanOnEmptyRegistry(t *testing.T) {
 	}
 	if !mm.busy {
 		t.Error("auto-scan should set busy")
+	}
+	// Finish the asynchronous scan while the fixture home is still active.
+	driveServiceOp(t, mm, cmd)
+	if len(mm.reg.Installations) != 0 {
+		t.Fatal("auto-scan found a client outside the fixture home")
 	}
 }
 

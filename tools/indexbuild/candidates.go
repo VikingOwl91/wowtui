@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"somegit.dev/vikingowl/wowtui/internal/fingerprint"
 	"somegit.dev/vikingowl/wowtui/internal/wow"
 )
 
@@ -42,6 +43,9 @@ type Package struct {
 	Release       *ReleaseInfo        `json:"release,omitempty"`
 	FundingYML    string              `json:"funding_yml,omitempty"`
 	Evidence      []Evidence          `json:"evidence"`
+
+	// Maintainers may attach manifests produced by the fingerprint subcommand.
+	Fingerprints []fingerprint.Release `json:"fingerprints,omitempty"`
 }
 
 type PkgmetaInfo struct {

@@ -1,0 +1,2969 @@
+{
+  "version": "5.22.1",
+  "files": [
+    {
+      "path": "WeakAuras/AnchorToWeakAuras.lua",
+      "sha256": "e903d1dc5322a112ddf47eacce6d52f20623bd6a841f6fb7201f1e22b1f0cf0a"
+    },
+    {
+      "path": "WeakAuras/Animations.lua",
+      "sha256": "63bf9567e3e1bb972a2e0d930e3abe1d96d9e5ac28aa4aa723a8528be3be528c"
+    },
+    {
+      "path": "WeakAuras/ArchiveTypes/Repository.lua",
+      "sha256": "588e4a06732d6aaa3fef4b3c3e1431344b675b32baf9e9e5828de09f99a5498b"
+    },
+    {
+      "path": "WeakAuras/AuraEnvironment.lua",
+      "sha256": "79713719cf78f3acb545d58ff1b10053a012d02fbdb641983b8203fb92075bc5"
+    },
+    {
+      "path": "WeakAuras/AuraEnvironmentWrappedSystems.lua",
+      "sha256": "72c22174418e64ad1098cbd74185be078cf5e01cb60cc4b8fb5f714f1aff43aa"
+    },
+    {
+      "path": "WeakAuras/AuraWarnings.lua",
+      "sha256": "29c9e3522cb6ba24d8494a78eba0da371948602239a6125729fafc8e760fc8fd"
+    },
+    {
+      "path": "WeakAuras/BaseRegions/CircularProgressTexture.lua",
+      "sha256": "f1be7481b02a78f2d98a35e19b1df5314f5bce827bc4f7703ee3cdf9051f4732"
+    },
+    {
+      "path": "WeakAuras/BaseRegions/LinearProgressTexture.lua",
+      "sha256": "847ec5c58e1fa96c1c10a9e138eb0dd0234f9a6d1e16c09d2810dce6fe443278"
+    },
+    {
+      "path": "WeakAuras/BaseRegions/StopMotion.lua",
+      "sha256": "7ca4ca431c766565c748e9e5ba1558e6878d73bec16742ea6ee5fa279b000b4e"
+    },
+    {
+      "path": "WeakAuras/BaseRegions/Texture.lua",
+      "sha256": "58d153363b03f13fbd70c1c11b1e825855c6562e11ebc4980d530a2a6d2a4514"
+    },
+    {
+      "path": "WeakAuras/BaseRegions/TextureCoords.lua",
+      "sha256": "0d1b701036066fe426ddb7d2f01076e4cf82c5ca57ef99ec625c93f47c1a26b6"
+    },
+    {
+      "path": "WeakAuras/Bindings.xml",
+      "sha256": "65a74542b7c390eee38b651f97d6ac5485ae7c4e17cd6366947e7f3a37ddc568"
+    },
+    {
+      "path": "WeakAuras/BossMods.lua",
+      "sha256": "2b835f6e6e814062b69d5015ef77418449ce8316f98a3fef68aa1f4a5bb0baf7"
+    },
+    {
+      "path": "WeakAuras/BuffTrigger2.lua",
+      "sha256": "8dec01cb7c48cbdef8ba602db87d9783d002a95b72382a5d0825d7cbd853d3ff"
+    },
+    {
+      "path": "WeakAuras/CHANGELOG.md",
+      "sha256": "627d46ae27e8fc6751a4974a9c9419e635a85f4803942f000187bdf7a23f6fe7"
+    },
+    {
+      "path": "WeakAuras/CODE_OF_CONDUCT.md",
+      "sha256": "856d7e7e6b8813328d2c4a300c65f2e85c4282079ce48c65ae8c36aa948878f0"
+    },
+    {
+      "path": "WeakAuras/Compatibility.lua",
+      "sha256": "9ab3c813e64d6523d872d933c95e70b595689d5214ce180a0f2f26355d1c02b1"
+    },
+    {
+      "path": "WeakAuras/Conditions.lua",
+      "sha256": "dbd1f3d5c1b77e9d8241ec648199953ad8581cc677cf79fa6fa4ef80eaac8b97"
+    },
+    {
+      "path": "WeakAuras/DebugLog.lua",
+      "sha256": "1fca39a0b848d494ec304216cbace9d6d57af43573957a507daf28860fa5e0d8"
+    },
+    {
+      "path": "WeakAuras/DefaultOptions.lua",
+      "sha256": "a36d79c535e5480648007ba1285ebf3521e496ddf802cf863632bf18dcbfbb68"
+    },
+    {
+      "path": "WeakAuras/DiscordList.lua",
+      "sha256": "48f368922b79bffc45c50ccfe10997f60e74ade58cc123996687f025e4fc9920"
+    },
+    {
+      "path": "WeakAuras/Dragonriding.lua",
+      "sha256": "e54558865be25a59399f0b50e26ee0b490a6df1c5e7c4669d64fd772566e77c0"
+    },
+    {
+      "path": "WeakAuras/Features.lua",
+      "sha256": "cbc8f9d69f64835f445a39f360c30e00f7962356c9718fb9f4d7bbf0f1535e22"
+    },
+    {
+      "path": "WeakAuras/GenericTrigger.lua",
+      "sha256": "61d9cec84254605740735d5ed4e49880ff3a9942a97022ec4df296802c2174b9"
+    },
+    {
+      "path": "WeakAuras/History.lua",
+      "sha256": "a179c3c42d77976d78a5aab34a4b3c05357204161bf5ed9bd4f7b17349526288"
+    },
+    {
+      "path": "WeakAuras/Init.lua",
+      "sha256": "9bcfd495c8e0d83f753ba19c731061ec2c30f7aded10f8d60fa744438466cdb9"
+    },
+    {
+      "path": "WeakAuras/LICENSE",
+      "sha256": "db296f2f7f35bca3a174efb0eb392b3b17bd94b341851429a3dff411b1c2fc73"
+    },
+    {
+      "path": "WeakAuras/Legendaries.lua",
+      "sha256": "3929130866c906e05e4b7b2ef4fc6679bede6eb08b2c5e6e40eae59b71bc8525"
+    },
+    {
+      "path": "WeakAuras/LibSpecializationWrapper.lua",
+      "sha256": "5141cc6902e595173d63f62ef38f2c0eeede02ae5df525618955304802517695"
+    },
+    {
+      "path": "WeakAuras/Libs/AceComm-3.0/AceComm-3.0.lua",
+      "sha256": "588c4688e8b00da3c093418558801de58906175b770bcc6596f5ab8967e19cfd"
+    },
+    {
+      "path": "WeakAuras/Libs/AceComm-3.0/AceComm-3.0.xml",
+      "sha256": "a79e85e5d4889d01bcf38a0944636ff4c74b085b4aabd880497bffb79deb6a43"
+    },
+    {
+      "path": "WeakAuras/Libs/AceComm-3.0/ChatThrottleLib.lua",
+      "sha256": "43fb93b5c70f1198ad37289d4568df0d8929d1326072486ba2e5abaa12d19701"
+    },
+    {
+      "path": "WeakAuras/Libs/AceSerializer-3.0/AceSerializer-3.0.lua",
+      "sha256": "02bb1f1375ebc7eec9ca4da8f83c0ca567ca0f11b73301e4b38d3c9adad05a5f"
+    },
+    {
+      "path": "WeakAuras/Libs/AceSerializer-3.0/AceSerializer-3.0.xml",
+      "sha256": "de1ec9e6d77039f669997e1dba09dbf1748138424a079054bcbc98ce0bc2ba7f"
+    },
+    {
+      "path": "WeakAuras/Libs/AceTimer-3.0/AceTimer-3.0.lua",
+      "sha256": "fc5dfb583ed585caef1d73e7d1faa47e53c8808215e45c0af7645b60b3407c5f"
+    },
+    {
+      "path": "WeakAuras/Libs/AceTimer-3.0/AceTimer-3.0.xml",
+      "sha256": "0d7db07cae9dcae62cb79d2071dd31460b561b3915c0187989ec6d2f40c2b60a"
+    },
+    {
+      "path": "WeakAuras/Libs/Archivist/Archivist.lua",
+      "sha256": "897b4a5d467e772375de4948a1bd87247ec8f7544f07f631d4714b173d885268"
+    },
+    {
+      "path": "WeakAuras/Libs/Archivist/Archivist.toc",
+      "sha256": "050ecae753c2d28afc96a476e05aeb6089a2e290cd5c424a5a29ec87de725db5"
+    },
+    {
+      "path": "WeakAuras/Libs/Archivist/Archivist.xml",
+      "sha256": "2421dae807e109bc0bde0f2c1de68c3ee80131d1f0c4784a6f1fff186f2a3dfd"
+    },
+    {
+      "path": "WeakAuras/Libs/Archivist/LICENSE.md",
+      "sha256": "08fe0ca93e14ebe79201634f42fe672d03ab6afa75d96ed22589ee65b5b35067"
+    },
+    {
+      "path": "WeakAuras/Libs/Archivist/libs/LibDeflate/LICENSE.txt",
+      "sha256": "7d3a95e5e06978064ed3f8e2b7c8f845e7fd8a405294727cc708f94cb83b8059"
+    },
+    {
+      "path": "WeakAuras/Libs/Archivist/libs/LibDeflate/LibDeflate.lua",
+      "sha256": "85ab086c1de018c64ce7ea451364429a1f0fa69cc16be2478968a057ac79b8ed"
+    },
+    {
+      "path": "WeakAuras/Libs/Archivist/libs/LibStub/LibStub.lua",
+      "sha256": "0f9e1233982248cb6cbdb2041f3e36b1d381f6fd1b13ed46f5ed6415ad215c7b"
+    },
+    {
+      "path": "WeakAuras/Libs/Archivist/stores/RawData.lua",
+      "sha256": "67c6a2f72e3cc696ba0ee0383752ae6855d9295820e1eb217157609b7a063c8d"
+    },
+    {
+      "path": "WeakAuras/Libs/Archivist/stores/ReadOnly.lua",
+      "sha256": "a4533069ebe7b604c0efca225d4184ffa0b59f14512e98462dd9c59ac8902b1a"
+    },
+    {
+      "path": "WeakAuras/Libs/CallbackHandler-1.0/CallbackHandler-1.0.lua",
+      "sha256": "d8a175f5823a999d8a188ee5e8e1133c393fd8c25b71931ab929d4691eff750b"
+    },
+    {
+      "path": "WeakAuras/Libs/CallbackHandler-1.0/CallbackHandler-1.0.xml",
+      "sha256": "5fc06440452a82be9554fc9650fa7de0b6df786c6d188d05d7d0ec4aa3e002fd"
+    },
+    {
+      "path": "WeakAuras/Libs/Chomp/Chomp.toc",
+      "sha256": "f085fdc35b76f66ee94f6a17dc4a44f5d6c6403f89c5576ddc491c8c48bb7565"
+    },
+    {
+      "path": "WeakAuras/Libs/Chomp/Chomp.xml",
+      "sha256": "eb37aaeaff74608911d823fd214ee95c755fcf4f12b281038813264098e7520b"
+    },
+    {
+      "path": "WeakAuras/Libs/Chomp/Internal.lua",
+      "sha256": "718d85abfaf3b47b8dbd2b519804a090b7828cd8ae5ac36d20f12eb1e70445f0"
+    },
+    {
+      "path": "WeakAuras/Libs/Chomp/LICENSE.txt",
+      "sha256": "baec690edbe2bc4ffcffa0ca45c138d37bd5db6bc77583eb0641a039fb8f40cd"
+    },
+    {
+      "path": "WeakAuras/Libs/Chomp/Public.lua",
+      "sha256": "5a44d14dc1cb4b8a0979e6fd9346bf0617609d62dc971d7b52608fc0d723c689"
+    },
+    {
+      "path": "WeakAuras/Libs/Chomp/README.md",
+      "sha256": "75282204d7c13cc825da00ece0359b91d258d8cd78f9fc633bab5cab7ec53bb4"
+    },
+    {
+      "path": "WeakAuras/Libs/Chomp/StringManip.lua",
+      "sha256": "d44acc7f05e17fe8455cf2922e562e84d761b1b498206c84e2f7f82264b4f0c2"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCompress/CHANGELOG.md",
+      "sha256": "6442d7882f5e6bf6054cad8c1b5a09e1db226c2c85af4c1eb0791c246ec521b9"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCompress/LICENSE",
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCompress/LibCompress.lua",
+      "sha256": "f091aa81ae3672319a90d6ed4548cf950c03301f727a2ab092bcd805e0fd6ed2"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCompress/LibCompress.toc",
+      "sha256": "6c4007c807dd4b297bc4666c94e6670118002c7cd99444e7a96c8e9a813862a0"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCompress/ReadMe.md",
+      "sha256": "32cca4841ccd4835c44475eb578b3f683f2f3bf676431d23d2417bed5c5bd435"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCompress/lib.xml",
+      "sha256": "ccc1dec54ab19a8352e551bb15470698dc7197131338383467e6290f4ca7fc35"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCustomGlow-1.0/LICENSE",
+      "sha256": "fe1c25533575333ef9934022382659bc0b470cef1fbb69ef0d45a9a52d2e9455"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCustomGlow-1.0/LibCustomGlow-1.0.lua",
+      "sha256": "d7ddb97f9cfa649f654c93d15150d8e6f881c79c22bb90856d7715188ce47d2e"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCustomGlow-1.0/LibCustomGlow-1.0.toc",
+      "sha256": "136bd78ae4a8897667d95da2b5020ebdff6c0bc3ece67fdf66b9b87ce4049822"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCustomGlow-1.0/LibCustomGlow-1.0.xml",
+      "sha256": "1ffae0fb15d7f2c22981dd269973f15a3147a56f1c61b48c3f49caa2956beaba"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCustomGlow-1.0/README.md",
+      "sha256": "5fe3d0963e875ef598ad9a8561b8db5b853b2e2dafb9d9da087ea9720a8690a2"
+    },
+    {
+      "path": "WeakAuras/Libs/LibCustomGlow-1.0/cspell.json",
+      "sha256": "6bf8ccae64cbe3f89b6f8c867292a69b3f6c91ab4b102ff3e2560687184ea28a"
+    },
+    {
+      "path": "WeakAuras/Libs/LibDBIcon-1.0/LibDBIcon-1.0.lua",
+      "sha256": "34b691e715853858e5c3f3f6363f1cf58b5cf1c2c0281d689e349b73b800cab8"
+    },
+    {
+      "path": "WeakAuras/Libs/LibDBIcon-1.0/lib.xml",
+      "sha256": "3c959d5954f2680f063baa3a7903cd347e8f4f9755cd9be639fa45a50238f85a"
+    },
+    {
+      "path": "WeakAuras/Libs/LibDataBroker-1.1/LibDataBroker-1.1.lua",
+      "sha256": "d79b3eada649684543bbbc3c511c2515e16d644f198fa991a201ee64d045b0f2"
+    },
+    {
+      "path": "WeakAuras/Libs/LibDataBroker-1.1/README.textile",
+      "sha256": "1824b7091f7535e822d3fc0138013e0370eb894efcf7cc2ef1babb81f7997fcf"
+    },
+    {
+      "path": "WeakAuras/Libs/LibDeflate/LICENSE.txt",
+      "sha256": "d789a4b3d104bb9f559b2f19048d356c67ea695dde4b1748f900ccb210a42450"
+    },
+    {
+      "path": "WeakAuras/Libs/LibDeflate/LibDeflate.lua",
+      "sha256": "b6cf1bdc38dfae0c2deadfcb2cbf4e53d9dee6fb8f0ad5a03820ccf3635b7195"
+    },
+    {
+      "path": "WeakAuras/Libs/LibDeflate/LibDeflate.toc",
+      "sha256": "8f5721b9a9cf6b7508db0669933fdd0a79e486f747e578f573c0ed5220fcc208"
+    },
+    {
+      "path": "WeakAuras/Libs/LibDeflate/lib.xml",
+      "sha256": "9c6487dd58a3ed9b53c3513dab32b063599d2f22b74ef50b4ed0c354df1a7c23"
+    },
+    {
+      "path": "WeakAuras/Libs/LibDispel/LICENSE.txt",
+      "sha256": "536bdac7304015c0efa10d77129e90f9919110bbe87627b76113c3902a47b6e0"
+    },
+    {
+      "path": "WeakAuras/Libs/LibDispel/LibDispel.lua",
+      "sha256": "a06704974644432ed3e8bc1375c22034fb69af7bcd29ad42f65ad6e6cdfce417"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/CallbackHandler-1.0/CallbackHandler-1.0.lua",
+      "sha256": "c03c7b3b2baa412af0cf80f16a862465097a667e1adda734058a69f756ef0d2f"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/CallbackHandler-1.0/CallbackHandler-1.0.xml",
+      "sha256": "5fc06440452a82be9554fc9650fa7de0b6df786c6d188d05d7d0ec4aa3e002fd"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/LICENCE.txt",
+      "sha256": "189b1af95d661151e054cea10c91b3d754e4de4d3fecfb074c1fb29476f7167b"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/LibGetFrame-1.0.lua",
+      "sha256": "106c8c4152c9405c19f1eca999c2422055dd24b9e610c0bc8dc34138d20da7e6"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/LibGetFrame-1.0.toc",
+      "sha256": "2477bc5bed80a1102d64dbd9fa6efbd5860205288d2e9b36587c62b57df9c429"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/LibGetFrame-1.0.xml",
+      "sha256": "8de3d9ffd113da98cda86f54ea0c76fdb041f5df647dbc228ea3495906032453"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/LibStub/LibStub.lua",
+      "sha256": "d34235c85f869505fdd9ef321d2420f69db7d2eb873d2b3bbf57584a314060fa"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/LibStub/LibStub.toc",
+      "sha256": "f1a1ad1e84b70453fc4362ad4696f0eb80c53476cbfff1bb9161448490401da9"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/LibStub/tests/test.lua",
+      "sha256": "5b473314c45bba15c57aa57b1c8aab35821fa732b03e4a44b9651d9b8e3020fa"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/LibStub/tests/test2.lua",
+      "sha256": "7c3caa8a85cc4048ea355a06f5c74918a85c1920d444547a26479783cadde3e7"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/LibStub/tests/test3.lua",
+      "sha256": "97d3dc9dc74b5e763f384d5e1a8b7bc66edd66bac36f43954ae9ad10f7658f9d"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/LibStub/tests/test4.lua",
+      "sha256": "78f9c01de14790bed483522cd7094c3f77c78bdc3e29c5ca098e00d23d264e5b"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/README.md",
+      "sha256": "181fe7d24ab44ad066ca1a66b937b612b3159638a937f802c08d5d7b463216dc"
+    },
+    {
+      "path": "WeakAuras/Libs/LibGetFrame-1.0/stylua.toml",
+      "sha256": "f57f12924977259da3cac0e177c1380958dd9935e93f03db870f13b5762f632d"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/LICENSE",
+      "sha256": "e3fdaf76f03ccf2bf5ec951f5e14eaf1178a6f6af8f7c9d321e3256fa31e25f9"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/LibRangeCheck-3.0.lua",
+      "sha256": "7e5d6430d7e9d1bd9036d2c8e19c547b6ab148a56aa2a6c126ed33ee0ab31892"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/LibRangeCheck-3.0.toc",
+      "sha256": "2422e47fb709612f56e7c28cd85dc7c997c48e9349aa926421e98812608916f1"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/LibRangeCheck-3.0_Cata.toc",
+      "sha256": "deaee3c16abf171e3a83b7f00873d6869daada525edce1e085efe5fd820824b4"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/LibRangeCheck-3.0_Mists.toc",
+      "sha256": "7506a3267ceb122c9ed6a1223cbf7ebffb4b5b25684aa297e249e5afd1bae15a"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/LibRangeCheck-3.0_TBC.toc",
+      "sha256": "7159f2753fc0a571f29b4f5e70d49236db0ca4491492a1e0b4cc0515f517c0e5"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/LibRangeCheck-3.0_Vanilla.toc",
+      "sha256": "e7c81d23a1d050f36eecf22bb269f47768645a2dd3ff9b9f0c16246131cce383"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/LibRangeCheck-3.0_Wrath.toc",
+      "sha256": "cb1b55208955fac1bf3e7428f59332b570b55c98f0d04130312e1ebbed3863d5"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/README.md",
+      "sha256": "4f39855bb819c24bbc9ce72342ded3f996db864aa6ef3a73e342ef12c9d8e951"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/cspell.json",
+      "sha256": "a7325ee0b43e7a4a47719ef1ab24148c55fdc5d11450ca09f3d09ee8dd36db92"
+    },
+    {
+      "path": "WeakAuras/Libs/LibRangeCheck-3.0/stylua.toml",
+      "sha256": "b410aea1651957d0cb75ba7788a2b83505b48fa53e8d032df57c7aff3066153b"
+    },
+    {
+      "path": "WeakAuras/Libs/LibSerialize/LibSerialize.lua",
+      "sha256": "d5f0005324a4f97b9d272e8f3c8379e5a539d8c4fdafbacc25c3b71a19cc53c0"
+    },
+    {
+      "path": "WeakAuras/Libs/LibSerialize/lib.xml",
+      "sha256": "8d217581427d094659aef5d08b5b6c9983b7e97080dcd149494dffbbc2099a4d"
+    },
+    {
+      "path": "WeakAuras/Libs/LibSharedMedia-3.0/LibSharedMedia-3.0.lua",
+      "sha256": "cfbb556ae5846738a5058a5820b7e2eac55c3df05328f67170779134745f061e"
+    },
+    {
+      "path": "WeakAuras/Libs/LibSharedMedia-3.0/lib.xml",
+      "sha256": "b4de98e3097db71406927fe7dcca508911bfd6e871b1bb744049fb4201f983cf"
+    },
+    {
+      "path": "WeakAuras/Libs/LibSpecialization/LibSpecialization.lua",
+      "sha256": "6396d738c9ef626a88bf0ef28c6f52e86e0dd6505dfc36ebbf19b0d35ffac115"
+    },
+    {
+      "path": "WeakAuras/Libs/LibSpellRange-1.0/LibSpellRange-1.0.lua",
+      "sha256": "3642f5439e57e1e11af94d47e241d608e7c15d4c001465ea707478e9174685f2"
+    },
+    {
+      "path": "WeakAuras/Libs/LibSpellRange-1.0/LibSpellRange-1.0.toc",
+      "sha256": "ffbb614d1e30a89f2e624572afb6dc37b49d39baf851496ab01a8254f0223a2c"
+    },
+    {
+      "path": "WeakAuras/Libs/LibSpellRange-1.0/README.md",
+      "sha256": "83e0dcfea72d7f8d76bd0f6dd21d8c0a3489b7dc6fdf498d98d455a618e7f5f1"
+    },
+    {
+      "path": "WeakAuras/Libs/LibSpellRange-1.0/lib.xml",
+      "sha256": "3ee21d237575f1b48bf6d1fe1c4abacaf4b383ea89a4862ff05a15adb73bc0c0"
+    },
+    {
+      "path": "WeakAuras/Libs/LibStub/LibStub.lua",
+      "sha256": "d34235c85f869505fdd9ef321d2420f69db7d2eb873d2b3bbf57584a314060fa"
+    },
+    {
+      "path": "WeakAuras/Libs/LibStub/LibStub.toc",
+      "sha256": "d6ef350c07edf6be550c586e32473776e310d212bf39962cafee04a8d415405f"
+    },
+    {
+      "path": "WeakAuras/Libs/LibStub/tests/test.lua",
+      "sha256": "5b473314c45bba15c57aa57b1c8aab35821fa732b03e4a44b9651d9b8e3020fa"
+    },
+    {
+      "path": "WeakAuras/Libs/LibStub/tests/test2.lua",
+      "sha256": "7c3caa8a85cc4048ea355a06f5c74918a85c1920d444547a26479783cadde3e7"
+    },
+    {
+      "path": "WeakAuras/Libs/LibStub/tests/test3.lua",
+      "sha256": "97d3dc9dc74b5e763f384d5e1a8b7bc66edd66bac36f43954ae9ad10f7658f9d"
+    },
+    {
+      "path": "WeakAuras/Libs/LibStub/tests/test4.lua",
+      "sha256": "78f9c01de14790bed483522cd7094c3f77c78bdc3e29c5ca098e00d23d264e5b"
+    },
+    {
+      "path": "WeakAuras/Libs/TaintLess/TaintLess.xml",
+      "sha256": "6e59660199ed92c4ded177c998e6eff714f4d244b7c22dc7d8c179f3cadc9cbc"
+    },
+    {
+      "path": "WeakAuras/Locales/deDE.lua",
+      "sha256": "d956c6c86769efc0cbd794dfdddbe36b87c6a518ef383ac81278f0aa6ce07cf0"
+    },
+    {
+      "path": "WeakAuras/Locales/enUS.lua",
+      "sha256": "0a9646ff8bd84adcd19e2e95aacc92f5e5f08243b3da73e7fda329309b3b3959"
+    },
+    {
+      "path": "WeakAuras/Locales/esES.lua",
+      "sha256": "448800d550959280629c2abf4a26c184e2a359bf34d115b2442a1c40aafd5c1e"
+    },
+    {
+      "path": "WeakAuras/Locales/esMX.lua",
+      "sha256": "6a5ecdca22686b5b7676b52fe1d0d0ada15347bf30acf3a8144a81adc6dfd623"
+    },
+    {
+      "path": "WeakAuras/Locales/frFR.lua",
+      "sha256": "e91382297efe6d5232e4b6d26031802aacf43c4b5e9dd5395dce86db94b32558"
+    },
+    {
+      "path": "WeakAuras/Locales/itIT.lua",
+      "sha256": "0c4eb6f26d82f50067248c19e6dc94bd3cb4efe816a04712a8cd5a13c58d5f65"
+    },
+    {
+      "path": "WeakAuras/Locales/koKR.lua",
+      "sha256": "e114e0c617b6432897911443b11d6ee652e9cff3ab8c331f59ceddb3a7723980"
+    },
+    {
+      "path": "WeakAuras/Locales/ptBR.lua",
+      "sha256": "25de81059d40e1c34adf1fb790146c2552b3d122c15dfc9a1e7c65149ba34c66"
+    },
+    {
+      "path": "WeakAuras/Locales/ruRU.lua",
+      "sha256": "c029bc6e8c6f1b563b202ea0fe7c441788fe6d93fe0c4ed69cb97370fd13aa23"
+    },
+    {
+      "path": "WeakAuras/Locales/zhCN.lua",
+      "sha256": "20206c84c8e1eee22dacac45bb0648022423762a7159c7fa8a73e55fbe048367"
+    },
+    {
+      "path": "WeakAuras/Locales/zhTW.lua",
+      "sha256": "99d53c577041e3705ae874c5f0a5c816b0b3822e0987eaf211d5cdaa732dafdf"
+    },
+    {
+      "path": "WeakAuras/Media/Creative Commons - Attribution 3.0.txt",
+      "sha256": "600ae522739d7e0c989eb5e66757d876a60704192719f2f5d5ba8908ab4588c4"
+    },
+    {
+      "path": "WeakAuras/Media/Creative Commons - Attribution-NonCommercial 3.0.txt",
+      "sha256": "0a89d5d75ca4d94217fb16ced5f6b0627f71aded996e0a0345d4af527e673f11"
+    },
+    {
+      "path": "WeakAuras/Media/Creative Commons - CC0 1.0.txt",
+      "sha256": "f4e7f373b9b996950337e8d41a4a2939c2d90b7725e9baf3d5084a22717ad328"
+    },
+    {
+      "path": "WeakAuras/Media/Creative Commons - Sampling Plus 1.0.txt",
+      "sha256": "f5c22a71e9adaa0b65a0210c21133dab51e1e07362c2d2239b1e0fe2ae0afa72"
+    },
+    {
+      "path": "WeakAuras/Media/Fira License.txt",
+      "sha256": "fe6a0e80de4f3d0d70bf36195293e40feec039f6c8a9ec38ddb296f121c38d9d"
+    },
+    {
+      "path": "WeakAuras/Media/Fonts/FiraMono-Medium.ttf",
+      "sha256": "5f9173ce3d05fadef74c7eed06570d54e4f75bd0cd9860726fb2987a7f848292"
+    },
+    {
+      "path": "WeakAuras/Media/Fonts/FiraSans-Heavy.ttf",
+      "sha256": "5d73c1aeed18e73ad0124d7428d8dc903858c939782be0470dda1a66ee11f21d"
+    },
+    {
+      "path": "WeakAuras/Media/Fonts/FiraSans-Medium.ttf",
+      "sha256": "7e7acee3fda79ae2cc3ec899f14f7a5b9e988b27a88f31a81a8ad4cb870b8987"
+    },
+    {
+      "path": "WeakAuras/Media/Fonts/FiraSansCondensed-Heavy.ttf",
+      "sha256": "7e7fa9af49f8d78ca178722fe183924ba6fa4c002e4eda52d5a48e0f9d214ebe"
+    },
+    {
+      "path": "WeakAuras/Media/Fonts/FiraSansCondensed-Medium.ttf",
+      "sha256": "fd71ceaf4731c9379d6a0c60be59809ba24dc8588688578160ff6e089f5f9407"
+    },
+    {
+      "path": "WeakAuras/Media/Fonts/PTSansNarrow-Bold.ttf",
+      "sha256": "572c58bcc509c6bacbf303a75fa6d4200444a6eab93b6e1a61d12b5776faa9c0"
+    },
+    {
+      "path": "WeakAuras/Media/Fonts/PTSansNarrow-Regular.ttf",
+      "sha256": "389bbc933a9071ccae96fef97488c2852aef9b69ff652b81688ee26ca4d5ecc0"
+    },
+    {
+      "path": "WeakAuras/Media/PT Sans License.txt",
+      "sha256": "b849a4430c2c9844d7961fe079369c9b32176600bb2c33a9efcb61687e8f679f"
+    },
+    {
+      "path": "WeakAuras/Media/Provided by.txt",
+      "sha256": "9529af4f62c8a059d5383e6eabb8b14991af942de8c375ed18ff5e5ebd94a6da"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/AcousticGuitar.ogg",
+      "sha256": "e81c2bf1f3a5982c5f120b84ec7993f700b9443e255970809adcaada305832be"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Adds.ogg",
+      "sha256": "627e5b16c8691172bccfc2838d31e6d8a57217c2f61dcc2867d7d66ee23df72c"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/AirHorn.ogg",
+      "sha256": "1e51b4be8e35e4bd99ecb82e4b056005f074f195490fa2cf75d206f450536f5e"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Applause.ogg",
+      "sha256": "c5c8449bdfc45d9f213e0b5778ba53c34897c4276d84ffbda919d8bf44b09948"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/BananaPeelSlip.ogg",
+      "sha256": "849e60ab30d6da08408f5d9048aae30803b82637554b78ad041b0dae703d68a7"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/BatmanPunch.ogg",
+      "sha256": "fe0282a2f932da7bb48dae5ce4282d910bcb7bcbdd120962c0d1b94b0dd56592"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/BikeHorn.ogg",
+      "sha256": "9ff25652a7ee693147601234c808b7a3aebae4579abf125204cb07b195c67623"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Blast.ogg",
+      "sha256": "5a19163856fc1e3df873e389c2b37f4e08113140ce54d5892da9acf4e0985780"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Bleat.ogg",
+      "sha256": "100963acae71f12416982fa1ce96fb8ffa98c59caa0a38e92753105dde2f6f55"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Boss.ogg",
+      "sha256": "d54df9d2dd60878d08f347dbef90afe252ec57f9bf532f58c3af38ba5018e85e"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/BoxingArenaSound.ogg",
+      "sha256": "a5c99cabbeb47f4d2f07c367f04421e77dd0b077ef2c2880e1d7f65f5eeaf948"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Brass.mp3",
+      "sha256": "735acb1ee913b10aed1b10f20b5cdb858847e88526621bd25a73ae9559a97ee5"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/CartoonVoiceBaritone.ogg",
+      "sha256": "458f9b03ff54a180768958056531afdd0f35cfa7601940c0d35e0917402354de"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/CartoonWalking.ogg",
+      "sha256": "f336d2595cd00567814a3b5d3169a25133a78966a520feb0c5997d82966580cd"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/CatMeow2.ogg",
+      "sha256": "b56fc3541563c2dafd2bb2b094c81ae991f32e0e16307cb43df615b9da0e27c0"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/ChickenAlarm.ogg",
+      "sha256": "381869a69d1a0beba079706dd7cf292efb701dd79b4fdbc4bf7c8519234fce65"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Circle.ogg",
+      "sha256": "c64d53820e2907ceb4f0f56b78fda31ba346dfae524b259bf154a2c82f5c405d"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/CowMooing.ogg",
+      "sha256": "0c6c7c78ffa9ffe7167cde4fb419b8021e077eb8011cf27a65a4a687f8729da6"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Cross.ogg",
+      "sha256": "41a0dc796fe0129f34de0300e293973fe122816a1cbffaf24ad09923fccf37d6"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Diamond.ogg",
+      "sha256": "28457cdc9713f6d2e425a510c91c8cf2e0248d4c7a7bfce3ddbe617dd5430fd0"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/DontRelease.ogg",
+      "sha256": "c319e64b2dfcc68402abb7158d7fa2120306b5c0d41c1ab2a22f8a05fee30d24"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/DoubleWhoosh.ogg",
+      "sha256": "36cf7796ebc7b1880f39c1af101f7ffd3c9e9ea3966b5d02dc94d430884b9b27"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Drums.ogg",
+      "sha256": "eb54325c4a527a7a806b8f5ef200a4224cf20b60ca50b388e1fb8b19ba363b17"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Empowered.ogg",
+      "sha256": "6d4d351a2d10161b812f4c227f15c8dc365e9438b534e0ea3834e9d50ecf3873"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/ErrorBeep.ogg",
+      "sha256": "081c0c686b6054df7faa62449b45d027546f3607c15316508564d920e50b2ee5"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Focus.ogg",
+      "sha256": "acf3d7fa0b52e218ebe6cdbd156e46fd4834d7a759692f4cf596b574b2767e3b"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Glass.mp3",
+      "sha256": "462583ba42ebf4fce37c23d23f742f274d72beb30537ca402fefad8b3bbddddd"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/GoatBleating.ogg",
+      "sha256": "06b5f75a0b962c67fa9b39250a71be9c4bf78c5f0504371eabbcc34bdeced0f7"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/HeartbeatSingle.ogg",
+      "sha256": "8113669b3ba48ade1952bc4f64d26328b7471aefe3e5093e52a23d48133af301"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Idiot.ogg",
+      "sha256": "081d12601d71cd720f0f8fcc16ed3203e5d59703d30cac4abcbed716a0fbde56"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/KittenMeow.ogg",
+      "sha256": "8228dd735bb3cf348ad50904b09fd1c7c1446df8bafaf57cfec3419b3f9641f5"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Left.ogg",
+      "sha256": "3b630719d05c9da12cd5525ab01ff64bab9c43f98d172035720edbfb662590bb"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Moon.ogg",
+      "sha256": "67d7afb776e1ac069467cca26b380cb4de062aa46b82f0a06ae75d7dbd407c14"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Next.ogg",
+      "sha256": "20674385cb681da35f2787228a0b4bd5894e3dba07d4935c55594ae945cd66c4"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/OhNo.ogg",
+      "sha256": "9d22a81bf60d17b04fa28038a88e5311845b9d0d45be64ec1d144068906e2809"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Portal.ogg",
+      "sha256": "a9fd605af033d4a6135c1cac4b5a13bd7ca28aca5944bd4f7d8f6cc9e87b6571"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Protected.ogg",
+      "sha256": "acb036937850ce2340a1425c22b4a5f75a3edaab35319292225dddf4e77a007d"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Release.ogg",
+      "sha256": "9ca6df04f2fa0771317394f73f2a8572d4f4a910cd8aaba6fef9408fe83beb61"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Right.ogg",
+      "sha256": "0d3edf1a1bf659b4b1587650c1138e5fd300d4962859b2b683a95d38fa5147f5"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/RingingPhone.ogg",
+      "sha256": "848ec6111bd861a3aea4c2591cdce07f1f744264c3332ef9b25460955e94de93"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/RoaringLion.ogg",
+      "sha256": "255c69f06db886ab703b92fce0ff8ec5c881f0ce3839e8d738ecdaf0762a11d1"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/RobotBlip.ogg",
+      "sha256": "07601e812f4dd9e0963282662d965e1aceeee253eb468caffb97e75025903c7d"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/RoosterChickenCalls.ogg",
+      "sha256": "91e172e2bb0fd74e9a5fb4a42056e2444c2a4796f5ae07cfaf0a247f916d235a"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/RunAway.ogg",
+      "sha256": "26f994e9433404d0825bba79fbbbd1cb7319d33a7d4766566bdec863e1de8221"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/SharpPunch.ogg",
+      "sha256": "c6751cecfb80e280a66bc35fce6ed005e6e22f251e1adc41b7cced851c4ff5bb"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/SheepBleat.ogg",
+      "sha256": "118d28ace5c0d1ef03dcdf653a9b15ba8bc46f819a33bbc65857bb55e7f10052"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Shotgun.ogg",
+      "sha256": "8dd7d0f08e67ef9ae74553a6d80cb76f4cf3f31d5840e79dc2b5679e8f336c6f"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Skull.ogg",
+      "sha256": "3d503a278c9165dc8c880803b84a69828b62f48350a1f56f1f1ac13c0d5a45a1"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Spread.ogg",
+      "sha256": "ce7a1865b669c5d46965bfff25997752b5b21ed731d0b148793ed55fd3d00116"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Square.ogg",
+      "sha256": "b709216ed6291e6255e3b2cdec70cc7d6a6f6230c6799f95db3a2e121fb0d3a5"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/SqueakyToyShort.ogg",
+      "sha256": "2a95c219959326fde20ca15ab1dce7d72578d5218cc357d92c5179ff0a7713a0"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/SquishFart.ogg",
+      "sha256": "5de26542bdf50b0cc83a2f625c107ed8ac949f9bd70fc8487bf791772914e916"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Stack.ogg",
+      "sha256": "18b40e795321bff16a3bad5053e549163d729581d9a9797da3b1fb7dc81e5207"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Star.ogg",
+      "sha256": "a81569814b09b5c2ae4f66a9b638d22564e60842eb50f90e9e63d4d7645c7eee"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Switch.ogg",
+      "sha256": "0ce6977e25be210692163062804db9d27407ce26af88c28de9f13b72100ace54"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/SynthChord.ogg",
+      "sha256": "1b824502c7e9c877f21e2a77affc6f2544d4bedb24597575ed9977b698acc470"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/TadaFanfare.ogg",
+      "sha256": "b439fe791b104be30d080870fd7ed92bb8945fe8679b668079804553574a3889"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Taunt.ogg",
+      "sha256": "f597a61b842ab720d20e47b36f4b44253f983a7d76dfe241259cc7eb6f6475fc"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/TempleBellHuge.ogg",
+      "sha256": "ea3b4adb80affddb2d7f77073cef423f5ccb28ad7de390aad071993f725d318f"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Torch.ogg",
+      "sha256": "42ef2181769739bf9841c05a54b014936dddbe7cb57aca1a9d32951c31b2693d"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Triangle.ogg",
+      "sha256": "6e6ea4adf5bbabaa1fee57148e6270f385e5ce5c36d108547696611a1e5b5d8f"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/WarningSiren.ogg",
+      "sha256": "3d872aaa2ad6e9ba30fd703ead3011814df6e90cf5fa07be02e7d77d48e6c86c"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/WaterDrop.ogg",
+      "sha256": "fb9422e9c5835078a229aa9410e0d497151f00aaaeedbb6cab9a21d295787f95"
+    },
+    {
+      "path": "WeakAuras/Media/Sounds/Xylophone.ogg",
+      "sha256": "0d5c3e891343f6a01f3591e75b0eabec43d1e735ab6c47d7190546a2870e9af3"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Border_DropShadow.blp",
+      "sha256": "d185b7e53045b9d641d019799f15aa715c0b16e3a01de2cf185da517129086ce"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Circle_AlphaGradient_In.tga",
+      "sha256": "df15b9d745d8d32817d34ef89614ad459a9d7898b33ce32c1cb6ff0cd0b12cee"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Circle_AlphaGradient_Out.tga",
+      "sha256": "adf3a632d33f8a7e6814dcdf38ce517251c980211a17d487ceb101aee90cd3cf"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Circle_Smooth.tga",
+      "sha256": "13dbfc3379002541fba878069bbe55b983a03563bb2c6bf30d599f48f67ccd88"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Circle_Smooth2.tga",
+      "sha256": "2f7b7248a95b55f6d33d4792bc488b87e8932b87162bf23f913410020da4ba27"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Circle_Smooth_Border.tga",
+      "sha256": "50eeea92a64573e26660aea66f27ac4332f04aa5239a939b04550b58e9365ee1"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Circle_Squirrel.tga",
+      "sha256": "89980c4d93087ca3b07c6ee1c3cc1e74d70721dca1c6922dd8edba6cf6a9c71f"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Circle_Squirrel_Border.tga",
+      "sha256": "a2d394f4456c6865740b4450100f3b561012564fd096c1061d622f2cd57cf928"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Circle_White.tga",
+      "sha256": "b640722764f70d7308a8a4371d60aa1166ca9be5b0600b9ac0051d51980e1e12"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Circle_White_Border.tga",
+      "sha256": "54a2e0442084520ff692c826bff75a737c849877e8d5b807a45c8a5c3a702b6b"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/GitHub.tga",
+      "sha256": "b8fbf5363478c518cd557280b1afbac5924a464b8e398615884a86ab38f2034f"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/PRDFrame.tga",
+      "sha256": "3d7c7310d4c445726db645b4cc72900f6f64522516b324047e1a0a5561746ec9"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/PRDFrameKui.tga",
+      "sha256": "5ce33bd05f78a874c2c9bacced2a323b62bf00751a93c7dec5a87fb45781876f"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Ring_10px.tga",
+      "sha256": "f27da9ed7e6b833d80369adf98ecaa92ce6a68e8a941a2603f4d55ae03ea86d5"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Ring_20px.tga",
+      "sha256": "188779d46d69bc4d062bba5e7e2d749276583da7bb7f3863bc097b1c867e2bee"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Ring_30px.tga",
+      "sha256": "b40325bcd2d5d1f2c086ec786c1625e5f56f2e3f29a5030147e6a765636b4a1b"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Ring_40px.tga",
+      "sha256": "bcc440588b9e31abff87b1075e8775fe66c4192e539d6f84c6a20ca73ef4a9cb"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Square_AlphaGradient.tga",
+      "sha256": "469dcf79e13e8736edf0c6cc88ee264ae05352513d26dcd674999b5d30886ea7"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Square_FullWhite.tga",
+      "sha256": "b400768752fe5b95e0db8f5ac98cd12e8003b4b8cffb4b2b551ed99b15117d43"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Square_Smooth.tga",
+      "sha256": "72f513644484ec4a9b394fec0e70cab6b1ee75f95c37c9be743fc916d54ed9a4"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Square_Smooth_Border.tga",
+      "sha256": "81cc715934777e007849e333c147be1a08988c12d6fef6aeae0ec460dc400b8a"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Square_Smooth_Border2.tga",
+      "sha256": "2fd38638a7b123b7885e4febe890075b499efaba870441b735b921f30d43e568"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Square_Squirrel.tga",
+      "sha256": "9a2c0ac17dc52b7b2725feefbdade73d485f1c6da1e4288799f7b1d071c5314a"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Square_Squirrel_Border.tga",
+      "sha256": "5c3050ba0e31f38881bf0d794e453b1ce0dec75d0a6fd092e7b48e7a6ed72b07"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Square_White.tga",
+      "sha256": "0db905d9359a73e7a114985fbba23fd04ca8f728b9aa4adbac280139e0c5d9b6"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Square_White_Border.tga",
+      "sha256": "7c1936980fe3672d7238e4a5dc6335fab6585e61212c6c6e504bafc18973cf27"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Statusbar_Clean.blp",
+      "sha256": "7051858786441969359af37927c195f5cc85e8fa87486cbae3062fb31e63aa0a"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Statusbar_Stripes.blp",
+      "sha256": "89044b0f43db290ad7e9347b95a0ac8fd7348639f1f92c447c74510d34d0b3d8"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Statusbar_Stripes_Thick.blp",
+      "sha256": "25bdf4928ec9e20d7e3b1542461a6dca45f1d314617ce868297f7a646dca17dd"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Statusbar_Stripes_Thin.blp",
+      "sha256": "0104eee1998e3b7c9802cc95f6eccb4bc2008eb14fbe64221d0cfa6b12062989"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/StripedTexture.tga",
+      "sha256": "910a6c25ad729e322c7877354c2e624fb23b0b0dc571d97372e17127ff6d1741"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Trapezoid.tga",
+      "sha256": "e253cefde06ae2671f1f9aaa5624b4d9dc6b5f112ae9e594db7a8af19709f629"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/Triangle45.tga",
+      "sha256": "9de3912aaa267cbfb3c303d9d6e9b804a5591a3724d839169cbd09457a21737f"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/add.tga",
+      "sha256": "6a6f9ca6fa034d5a64923170f461e6d81b29d999b38e23a780512ad888f0d65e"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/arrows_target.tga",
+      "sha256": "dcf1fb0dc4680948d4aec46120068c9c24471a34bbe7532d9130e64054e3d45d"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/browse.tga",
+      "sha256": "c84bb2c9f92caa00d0d8e52f66f916120db0aea6004830a7457055f3af76945f"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/bug_report.tga",
+      "sha256": "a40d01ba85cb74b7820eda309fb870a8894934b97e4f90781fcbbc1559c6ecec"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/bullet1.tga",
+      "sha256": "c6c564233369b20b52b9fdd224185d08c21b70132367229c6e5461033a12bb8e"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/bullet2.tga",
+      "sha256": "2a91f0731f9a69bd8952194c54ad5e6aaca25374b50bd7f20f54264ff846d053"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/bullet3.tga",
+      "sha256": "ae133aec32d607b3214060eaed7a819c6d3abc0ba170f88a905ab28a3be3e7bc"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/cancel-icon.tga",
+      "sha256": "5f380406d140dc2c7f55277e21e651e9d2d3525c54c937108118af64ffe2d219"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/cancel-mark.tga",
+      "sha256": "a7841e79940ecc801e84d94f56a1fdc33ff213db7527a28e5de30b5ac99cac25"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/circle_border5.tga",
+      "sha256": "42a89b129fb5c27e54569fe6154e1d9c9e0e0a55eb15619e0a95f3c9b6c6989d"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/collapse.tga",
+      "sha256": "531047b6e738d2c107e3391ff7e733344723fc92e604a9a42f83ea195011308a"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/delete.tga",
+      "sha256": "5edddd9687ca9cd9348e4b1359b9b99c639abb1d8f274f6d3895149d44605774"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/discord.tga",
+      "sha256": "6eb600ad5271e743846eb757511985675216754a4816ef0984b30b09c0fc2cbb"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/downleft.tga",
+      "sha256": "1b894ad74487ecd076db70a0e7c063f60b95d8e009a2694e2fdf1e7c5d163f6a"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/downright.tga",
+      "sha256": "6ca98c7515f91aaffeab80c817edfd5095b033c95942a1efc9f950de3194c78c"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/duplicate.tga",
+      "sha256": "38d51ef647abc0c5a6346ed46116786843c7a914d1988dcac57a12852588161f"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/edge-example.tga",
+      "sha256": "cbc09f504ccd706396c7c2698a90853789de123b20a38b2cfdada47cae96bfc8"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/edit.tga",
+      "sha256": "81b81ee8f2813370f2c3213900e976884602efc62681ea317371a939277f18e7"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/editdown.tga",
+      "sha256": "4ba021e2a02ae0031dd5ecfefb7b11d1393f53e6f8af76f8fc121b22421fe343"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/emoji.tga",
+      "sha256": "4cfe010f9abae8d6009c678747dea412d485f860e31a02d63ca203ad5cffe6f8"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/exclamation-mark.tga",
+      "sha256": "7da07f1712a98124de03ca6529e5e0025b03e27849e30c71be82d5f7e47cd4f3"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/expand.tga",
+      "sha256": "961151c599ad92781c87df0a3dbf364226cec74e0312631617cf131fab1056af"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/eyes.tga",
+      "sha256": "df2817491d3df0188049ac064bb460c070377a49aee98aba3cb6c10008a7e7b2"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/gear.tga",
+      "sha256": "a55c0e2ca29fbd20686943c963eea78a4fe2c2d39c7a114dda47958579f22e96"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/geardown.tga",
+      "sha256": "6feb6d5f9d3f842f70f83c0b81a9746f0136608343e1c4ff8dfb8f1b779af7de"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/icon.blp",
+      "sha256": "dcf337fd22fb5985367ec52ccbdc2568a7fce25c2fb9d3bffd30f094855103a6"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/importsmall.tga",
+      "sha256": "8a23828d71a888faae83f80737fe8ff0494b1ef078e34389597ed18b75378ad9"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/info.tga",
+      "sha256": "93a8f94789c308850cc316b5ac46677752e377fcaf56528ccf26c6235c9e5147"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/interrupt.tga",
+      "sha256": "f4bdc9f8c60ef75930621816f72c851a93e4b59edd95fbc99ddde3d99dc7d6bd"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/loaded.tga",
+      "sha256": "03348224738a4e21f6d3dc2b51c5b721096f66aed94f26a30e9bcc4eb3110d3d"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/lockPosition.tga",
+      "sha256": "1dd96e873aaeca04958a97d1fdcc102d180d7362be185a0e7e8638ef02f59c29"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/logo_256.tga",
+      "sha256": "096a39723207ec25d2c29b2aa92ec3a1751b88ae057e48f28a789cfbecf3cb8c"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/logo_256_round.tga",
+      "sha256": "9f8ff82abf542e3811e621ad30ec4c7b93316c071318ce5df3ac9fc7b1018065"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/logo_256_round_pride.tga",
+      "sha256": "f0ba764b76fdf37e1f0141e67dbd27851e6fa93e4a8b74ee7b11a30752b17ffa"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/logo_64.tga",
+      "sha256": "69e5bc1122f32c103dcdaa7b599eaa69f7c8821de6c04cc6cf0493d47a3569b4"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/logo_64_nobg.tga",
+      "sha256": "76fb7f2b18f63f89779948d16835bcdace23ffe43cb13f7982038b102d226a65"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/magnetic.tga",
+      "sha256": "344846989e7d6aabb961e2d64f160ddc698e2997e60854418190d936a9d6552a"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/movedown.tga",
+      "sha256": "367e83f5e1c91dd5ab8ec8a5184cc91bf96577cc3e69fc0f43980f80db715382"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/moveup.tga",
+      "sha256": "f0e617d358e87fd192f6dfa7a4a3333b722b31c4c6538cfd981cc1963e5f82cf"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/newaura.tga",
+      "sha256": "b17f72bcf8fd295be263fa08ba00f0467f896d6f6fa3b98ca8b084dc8ad93e79"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/offscreen.tga",
+      "sha256": "9f91ece03af4c6cfd46f9d7e0b6ba493c634b1542084e2f109401d3bf08b469f"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/ok-icon.tga",
+      "sha256": "bdca14daf67a79ecab88cba9c0eda1bd6de0a63b8f3ad54925e8a723a43f00c7"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/rainbowbar.tga",
+      "sha256": "01e45d599872177795b1edbff208d2e7898692145a06751378393e297b1d2e54"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/reset.tga",
+      "sha256": "2e42def7252ee11fda4a7817c7a8305ee1458d46d9ea384cbec32bdcebe0abf8"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/ring_glow3.tga",
+      "sha256": "8acdcd8a7b1d9f671949fb53831ece56576b2640614d655606ed0a0116945de1"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/sidebar.tga",
+      "sha256": "69644b7f4f1adde33b5706f758fd2abe6347fde9ff4a10a41eb8971a40a0dce3"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/spinboxleft.tga",
+      "sha256": "799473836d872e143cefe20d41f6425c208243265edf6775aa7b6a24deea9dae"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/spinboxlefth.tga",
+      "sha256": "759165040d9bc3144402202bd758c21e821052a95af70c53040ed1543ef47349"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/spinboxleftp.tga",
+      "sha256": "a423d1cdb3f4b80e39f306c5f82423b06789267a63db29168ea4b4ca39be6f8d"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/spinboxoverlay.tga",
+      "sha256": "52593c22ba0aaf6fe398de0cf52ce5dd0f96d2f0db6f705980907169e4273be9"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/spinboxright.tga",
+      "sha256": "bdb7d58b47b187b0d508dff7049ce67050f702e0a3be9b0231c95d9e3eb10546"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/spinboxrighth.tga",
+      "sha256": "21c7b84cf3b85d2d5bc7978cf664f4e02a394567705c7f7e737aab719da49f15"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/spinboxrightp.tga",
+      "sha256": "553e140cfec94c817915dffbc1cd5bf3360a592961e3f99862ce4f226b61b7c2"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/square_border_10px.tga",
+      "sha256": "136dc9daf93637c347da2b42455f6bc2c12fd5f4c9b4917decf0a687c46dc64b"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/square_border_1px.tga",
+      "sha256": "e98a61f0670dc5f1a0092ef32ae43e702a7cbd869a52a12f9db4e8fed5a1e2f7"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/square_border_5px.tga",
+      "sha256": "36d0f6d9822bd769b2d4b02d311704e02c6d2566701eb7e81d5608ac15d36b06"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/square_mini.tga",
+      "sha256": "e4a7f9d821b6e3800f8c5393200d3c118eacc0a9e8ecb5fd01f1f77db00d9a52"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/standby.tga",
+      "sha256": "3ddf1da87453a6abeaf7873c2e582fe717ee020904ef91dc09184f10c5e35846"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/stopmotion.blp",
+      "sha256": "be2903254ba1f1bc57cc4ee6d8d3a392370602f54a72e95ad07409e290652c6e"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/stripe-bar.tga",
+      "sha256": "f12fc4c125e9a28c0f7fcf23f4e9f35ba73c1c9ead373a6fe2b52c66844d21d7"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/stripe-rainbow-bar.tga",
+      "sha256": "2755d90e7844766a032ee234bbc9f0742512b2703f9cc7163f720ec190c57d49"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/swipe-example.tga",
+      "sha256": "84f07fad4ee9f1bc5027283b949759f311f5b5f6d2bdbe84da37282f257c25fd"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/target_indicator.tga",
+      "sha256": "58d3f26810bc9bcf1332fbd532ad8b12ce5fcda70e261e8230df042b6bd43de3"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/target_indicator_glow.tga",
+      "sha256": "dfec27f2dd81589e8884b424035cdf14496067ec9b76517cb1d90a66273ab0af"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/targeting-mark.tga",
+      "sha256": "d15bfac85263c4a54c8dde48b21e7eed15968ff39d8fc424433912b11239c4d5"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/template.tga",
+      "sha256": "954c7ca7511fd05e486aeb9cc1b8af454b1723d61be7ff0118bad01e84b68ca5"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/triangle-border.tga",
+      "sha256": "a05931b373f146f78092957c53bc0e62e4daaa269f8f09c50fc640b18b39f2b2"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/triangle.tga",
+      "sha256": "b3cee8fd662b7dc85a26f32ff58d129ab7d179fa9a8f5780a06e352886d22873"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/unloaded.tga",
+      "sha256": "6b7002b67cd2377167c4c7e0cc4edae9c78e09750979c12239992481af661e84"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/upleft.tga",
+      "sha256": "365842484d6ba82251f6c17e66a56147f543efb59942143ebc83785d4498ab65"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/upright.tga",
+      "sha256": "4d9ec300cb8fb547df8c299485324cc2e1aa65910e213c6229e7e05e1a7d350e"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/wago.tga",
+      "sha256": "2ccca569b570fc882f3535bbb03c8d7c393a0a247bf0b0eb96a9d190401b8d0d"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/wagoupdate_logo.tga",
+      "sha256": "f56b092e1cfa16ddb272a7699307de855849700bfa795caaf3aacda55896b8eb"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/wagoupdate_refresh.tga",
+      "sha256": "a669ce38d9240c5092ad571aa92c130642f95e102ca5a01478b006d8ecd64d52"
+    },
+    {
+      "path": "WeakAuras/Media/Textures/waheart.tga",
+      "sha256": "0501e9f26fe280387e9af40f7ca240dfbad53f5f759932abc16336e1d79d39ce"
+    },
+    {
+      "path": "WeakAuras/Modernize.lua",
+      "sha256": "99645422c26ba9ca05d2c86189d3dbf1de046e509d36d315cd71af469494bcf3"
+    },
+    {
+      "path": "WeakAuras/PatreonList.lua",
+      "sha256": "4c04ec7b666ae894a21bcb189c0299c9b4ccb307c8882dcd56b3d953d7292be7"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura1.tga",
+      "sha256": "d1b2b4865397d30416257ac42e7efab2ef4f4137e5bea66770b1152ba66a7d97"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura10.tga",
+      "sha256": "b837a09716ef4125f0b31562ff93e6083128a7a663f0c086d5a6b1de7a2df03e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura100.tga",
+      "sha256": "ad1c1572bedb86e29aeec2530d421a77c70eb4f2d30dbc08709428f8c484ab49"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura101.tga",
+      "sha256": "6e8cc33f792abd19d71c6080b786ba97bb8f6e074539b616764dcda4cd01f96e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura102.tga",
+      "sha256": "c6e376de6246e3fd537cfe40e8011bc87095ca9f731e20adc9c94a5e8674fe3e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura103.tga",
+      "sha256": "650c49b60225a609ae09f9708232bf3fdbc74f2a35dcb727cfc45d8eaa9a4714"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura104.tga",
+      "sha256": "0155fa40d26ba1489802eebf8b944b86e4625b2bb84c071fc63496e1eeca342b"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura105.tga",
+      "sha256": "2f6ff9c1d004c7f04f5c2cc2fafa9fd122b133e049862fd6c4aea48656364a47"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura106.tga",
+      "sha256": "af7e2446887902fa0460e76442eb8aa180bea2e0d00cae02520b31c07d907fee"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura107.tga",
+      "sha256": "7227bffcedfe371352aac19e3c72181f89a1dd98ce2808af4de83ed15dddf1a9"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura108.tga",
+      "sha256": "de206c8d7d94cec5c8a703e383ebb84c838f5d728cc85d653014382ed3319f83"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura109.tga",
+      "sha256": "0f5651f4838e9393cf0dceb22bb274fd5260520b059ee2a1a6dcf7b07686cbd3"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura11.tga",
+      "sha256": "48ce60942d74ce94ffad84b958afcfea47159a2f0c150b6e692dae47ce807aa4"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura110.tga",
+      "sha256": "c3f8980bc866e3a63e96b63f368abbdd653ffce286e5eaa00edf3c86b754d9d3"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura111.tga",
+      "sha256": "455865e30e44248d282bf4b59ea6c40e56decb2a3427b870e84f89fc3b786491"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura112.tga",
+      "sha256": "f9d15395741c24c9581aea07d9b0dd680feb0f6f2779f19fbdfbd4bbef605986"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura113.tga",
+      "sha256": "ce615fcda1002f3f0aef9e819058a560557be6a77afba061934446a37d094926"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura114.tga",
+      "sha256": "573533e49de7fa50e54c87437dfde607499b83e6e65f73dbbc2dcffcb1d2ebe8"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura115.tga",
+      "sha256": "6190f682ac3faa3a9e5135a811e9bd5fc3a52c1eac4a8686db2c12c90a42a8fb"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura116.tga",
+      "sha256": "86d065f3f69451981741798c56965ea84ccd049a6cfd9d5105048c6130435581"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura117.tga",
+      "sha256": "673c0378fb83f7d8522908447bf6d1b89c6cc99feec3fe1e4a15a1169e484f27"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura118.tga",
+      "sha256": "147e98a75b0f5a562d01c13fbba50ba8ac0a91baeb0180b8c202448198ce6876"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura119.tga",
+      "sha256": "9860da20add13605b0aaa32bd16fa1b765706c6414b72849b056142ca09e1d89"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura12.tga",
+      "sha256": "8b4b86a55bd7c8315d53905f27266524556cb5930aadf158e417321a52547416"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura120.tga",
+      "sha256": "0235e40387fbe41ec9be377ab902ff7683fb5965bd5c6eb3de81373e975a85d6"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura121.tga",
+      "sha256": "9209695e9267d288488daccc2a0c927d1970b864f9196d069fde50c6ede931c8"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura122.tga",
+      "sha256": "5996fa844d701996054b77f8ec078d9ae8872cb05caa1056782ae7c1ec418507"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura123.tga",
+      "sha256": "7f9e9a63696b093ce56908c92be9615633f1c6becdb6984adc8aaeb8ef531166"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura124.tga",
+      "sha256": "7cce87887aee9b7bca397793ca4a79a2cecc671a8ef9459f39c2b5460ddc031e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura125.tga",
+      "sha256": "6218fc8b24f5094b5a0fd38e9f0ff47197ca948f9ab899e647fbeb045a39c7cd"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura126.tga",
+      "sha256": "361e01cf4e34dfb090af955089672131199300e7a69f4d5dcc4d14a36ef7226b"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura127.tga",
+      "sha256": "a69612fa1873a59dee99b98654ff4adbff6eb15dfd3c04292083dd9861c88476"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura128.tga",
+      "sha256": "840c1a6a6abd494a89a38afe6b5ce15ae362bdd9c828a6f75662ffb808d0d32d"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura129.tga",
+      "sha256": "1a4b3f4c755bd82c8be5eda5041fbaa10de9fb05cf9eee225c4f253fa7fa6100"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura13.tga",
+      "sha256": "63ab2c3d29c9967648b28bf936004869815017b13f93a88ef1bd3a758df89e00"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura130.tga",
+      "sha256": "021709fc8e9672d02a729701eb12f3ce42798f373f30c839203109f8ce8f7616"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura131.tga",
+      "sha256": "c287c29a67ac2c4e27f1cdfd43897a8e6762b9c1cf0b5921df1d667996c7a4c7"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura132.tga",
+      "sha256": "3a5aa7994ea8365303a02cf7ebd46116f120a04c12c6226fffd38c68e36ed8cf"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura133.tga",
+      "sha256": "ec1e7e6e098ae03a8d6dbf1e5e5056e590541a681abda051de1b77520b1ed4ed"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura134.tga",
+      "sha256": "e5dbc1d6e002db6dd19450fb0d836b1e2dd822e73992c9d8ef8f6beb0a50d43c"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura135.tga",
+      "sha256": "95963f4aa6b9a7dd2122f537899f3ce1a20a719bbee6b50c35a459e64e743b43"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura136.tga",
+      "sha256": "449e75f6b4b1b255bd4d5ec49be542d3d5b81fc521e3f2ef2f754df36bcda8ea"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura137.tga",
+      "sha256": "e9375b77bed6bba7f69bab3332f0790d85737ebebf0ddc4b58f49f9af9f4dd10"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura138.tga",
+      "sha256": "3510fb19013982cd6c49671f63ae6193b3675f35185afdbd1fbb5676697b1d8f"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura139.tga",
+      "sha256": "e57ccc6d966722e924ffa461f8a2a9b5d027346d1d17536dd4c20a82aea0ab5b"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura14.tga",
+      "sha256": "1945661913fe185a029d38b42b21db254e5d1fb0fe30d7b8a8efd322e074a557"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura140.tga",
+      "sha256": "f0e62bce3446ef1de36bdf74526f2f1d214977c57beb9e1fc15e9784e43e80d6"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura141.tga",
+      "sha256": "84f85f023bba5b8bc0b0a6331616e6652234a57c0f73dc9c25659c086418f0de"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura142.tga",
+      "sha256": "87930b935bbb345aa15e13179d750ab039fc7889f47a33ced9db64fe91827962"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura143.tga",
+      "sha256": "3cc2853f2756347f45d215cf02ee1f0d4c3e523ad65c3652856c8eb3cf1177b3"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura144.tga",
+      "sha256": "115bbe60b44547caaf23d449062aa569914f52a7128bac0718af7d7c7101f0f3"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura145.tga",
+      "sha256": "be400f4855cc469348a8d653f9fe5d45065200714e49acbdf2ad0c40ce2d2fa0"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura15.tga",
+      "sha256": "db635c53b20d45944d90db8ec68d94fd445b5af772d1af1b69241afbcdd21a5d"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura16.tga",
+      "sha256": "11d5c1b9265bc92fa3e4177d6474dd6185f5e8f128167b60ec95d6447d9274b7"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura17.tga",
+      "sha256": "cb6b2b45cda487b61b69de35b62eedec92ba8d22621191376abf2e01670ce90a"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura18.tga",
+      "sha256": "60a1d032cc0e82af250c4895d0e029679f8f568eb38da4823340a10824f804a9"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura19.tga",
+      "sha256": "62047238e556289b360da0ad59433578e20f488caa01bce5369b72fad50581a7"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura2.tga",
+      "sha256": "e673857d7bd8462ee2933117f066c9462a9a46ee05c3f9bcb915952ff200a6f4"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura20.tga",
+      "sha256": "a88fb7e349d6dcdda2eeb078089f79c1ad9d226ec45662663a65b5405343e3b8"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura21.tga",
+      "sha256": "cb51b756ac3bcf4e373ec288868ed967dff7a5089a6863e350b7aa61ad3c974e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura22.tga",
+      "sha256": "6788311135108b52bcb88dddfc5cdfa90a33bd20632f3fe781afc6a0b62be8fd"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura23.tga",
+      "sha256": "869cea9992918919e10f3b8abc22e4661bec35a04f3e1cc5a5af507085dd34f4"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura24.tga",
+      "sha256": "22c18a5895be58e60916d71ca10f52da859bd58c253386fe31aeeb996da30759"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura25.tga",
+      "sha256": "c322092c3ca1663723149a88c3ed3d55446b735113c08ba5e44e9a060f176d05"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura26.tga",
+      "sha256": "1554dfedbc8b49dbd124a559fdc21314544c62ad9eeef56716c2c6a1b2ed3ea7"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura27.tga",
+      "sha256": "9016aaffa93c2e63d5c2a5c2f512aa00810b5636220559c43013da2500f6a726"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura28.tga",
+      "sha256": "256a4df3d49236e0b7f7659282e7716f1b49ae5c206d2ebc16b699f7cdb5f71f"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura29.tga",
+      "sha256": "40256b29f9c2ca61bbb117fe9154398c122b565453f12ecc1cca32ea7cef95a2"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura3.tga",
+      "sha256": "46ad822f40b1bea8b06cf51c96d662f143443c3e8be389e3596fc7fa7fcd1e83"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura30.tga",
+      "sha256": "fc0d6a9a1369fa040e53f93cc41678f167e481c80a3d73c94766c53536ee91c9"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura31.tga",
+      "sha256": "d51804e21dd16ac9c048187da4c5fbe5eaf65414fbb1f35f2418fb12a313ada0"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura32.tga",
+      "sha256": "23a94eda4c25adbebe36c77fc84607bbdbdf790b9091c5268dc412754593beb2"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura33.tga",
+      "sha256": "3c5fe504728abd363c9b1593d1cf406c9c8749740d7837ff9ef2c6ee3b2c4d81"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura34.tga",
+      "sha256": "e9e25c74861793f93f8f668168a717bbb595d523d327fe186a23ebc813f66a27"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura35.tga",
+      "sha256": "d7b235dedb8614e7338444bc66623de19e63ccbd0395d5816fd4350b720a8a82"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura36.tga",
+      "sha256": "11fee32995c68eff2056542107f396f3936bd8701774981567a2af1cfa568426"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura37.tga",
+      "sha256": "6cc5f5e5ae9303ff4c7591e427c281e3e5b26855d9beb878be029b6825853337"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura38.tga",
+      "sha256": "5b68b49b899c3784f4da688d0a377379619d124e40df292a17613e84fa6b3d1e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura39.tga",
+      "sha256": "8329722deaa5671df153dd862b427010fcca3052fac0eb8171d51977a5358495"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura4.tga",
+      "sha256": "6e12332a0ff65d15771425b9853cd8ba2e9babc784bd7544b6cf21a706d59dfb"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura40.tga",
+      "sha256": "3857186eab09518a5dede80772e03cb9c602a2823c5c5191d45cd586d09547ca"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura41.tga",
+      "sha256": "6fcda70e254a0bb95712f28cde404fa98692df9e65b471bc957244ed598bef34"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura42.tga",
+      "sha256": "32ae35a5c82931d853dd7eecd3733e966cb3adeb97ee14141f316dfd77503414"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura43.tga",
+      "sha256": "81ea0771b3563368861417d856c96d48be7dd8bf74c52a839496a9832ead6240"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura44.tga",
+      "sha256": "7dfe5b28a220fab66e183b6571ab6b1196f8547287500eb2c7b1484eba4cf87d"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura45.tga",
+      "sha256": "541a828425bf4fee8b7c415629e0284498e9970df961d8f94e62ef59304d89ee"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura46.tga",
+      "sha256": "54e2753f4b3d407cd899780c7b96b533bbb61be0f9fc4e1079a7acfd7b5aa44a"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura47.tga",
+      "sha256": "296297896ae172a257c6e8be14ff335c979557d61ee453eb9ae1a59977b48fae"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura48.tga",
+      "sha256": "247a2eb14962ae548567ea5f8084dc8268305e351f1765a1de642b1aeaa43abe"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura49.tga",
+      "sha256": "5427fcf7d4252957175a4b08c88d0109d9e895993613f8b8eb5501b16dff6bd3"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura5.tga",
+      "sha256": "d3faa93f05400b0f7d3933b7130f56a964dae4c73eb25727acfa47eed094d98e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura50.tga",
+      "sha256": "30a9c26a58fce3a4a32415eccafcc2581cd0081ceadcb2ebac79faf678cbff1a"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura51.tga",
+      "sha256": "9cc4ed5484c9e714cc1cf6ef138390a5286e15eb9f2bb1d86d1571e695d09996"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura52.tga",
+      "sha256": "7694859eed51db1f90abe6d85e98190313651ef9fd6ec001d89635db7b500c01"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura53.tga",
+      "sha256": "0f36b8b63575ef73d87967209445f17c028f41a7782078ba966c69d44e1fc61e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura54.tga",
+      "sha256": "2652ef968e61dc6afbf44f7eedb4d744b44e4e95ed532129ce024484184c5641"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura55.tga",
+      "sha256": "cb61897b21993468b8519d40c6083dedd96fe5614146376c0c616a8bda3eb2e7"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura56.tga",
+      "sha256": "1b22a92f38347b2a4fde346997b8953ba1c7d7377606c96d29fe22f5ef5ea290"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura57.tga",
+      "sha256": "57ea9315dee7145e947532bba2b5eaa1621060c7bf066f61859fef165d54bc51"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura58.tga",
+      "sha256": "7b82c14b7daebc1a6400827c1d2f7c25ac7f2e2137468a20b638136e03959252"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura59.tga",
+      "sha256": "001f14786f5b37ddb3aaf9d536ebeebc616a0a89c17ce3b0bf8b35b4955ce5c1"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura6.tga",
+      "sha256": "48a463205450f435615c5ade73750fa6b2e0d90e9d622b56273acc37d6d0bd9b"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura60.tga",
+      "sha256": "f0c2b2f6e5b18de4983ddff80e4d97979eaed9bda4141f1d197872dedbb7a43f"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura61.tga",
+      "sha256": "600f0e99508a22f9b658670061ff25283d1811d1227809924eb94423b6b0208f"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura62.tga",
+      "sha256": "d4d4a28a483accc0977b9409b073af9f3fd24ad72e3c53c81fb2c99df8dccf66"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura63.tga",
+      "sha256": "aa197057c540211308420424f0658b603f725df6f7b80ea88c0dea1ac1da1e32"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura64.tga",
+      "sha256": "c624c94638606ddda47618e4592dcaae156c0003d1fe4f1bcb7a5e74452e2300"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura65.tga",
+      "sha256": "3f1218ae6aef63bb6248497b157a8dc6ecbb7272def229421b6ffeed94cc40dc"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura66.tga",
+      "sha256": "f135cbed37712b70612530ee507ce8cdd32a2075b858a182eab9d639234aa323"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura67.tga",
+      "sha256": "5692f4be503ac41f48495f6ae338bbccb5dfa2ce53e9c400e4e4df4087059ee6"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura68.tga",
+      "sha256": "13efa0ebe8bd1f920acbfd20b58303db56374e65a612d4ff17e629cf72e0f28e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura69.tga",
+      "sha256": "8dea8fe8c8b1f8b8d4ee3578bb920294aec4af5673450f6bbf1cc9e58234e1df"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura7.tga",
+      "sha256": "fd597d8f943ac0bde75b201a08af45509fdb6208757401d457f235a60dda8a52"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura70.tga",
+      "sha256": "b1cfac86a3f259b76470aadb313f944f537399a167debfd02c009c16ca3a97da"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura71.tga",
+      "sha256": "bf93486180e75776d84f472812ed05cda61000dc0497c1df8c0c2ce94856ccb6"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura72.tga",
+      "sha256": "6bf4cc4aab2ebfe43c52f35778903137eadda8560a83dae2666d532d860269f6"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura73.tga",
+      "sha256": "dc44f52f0f133a1f02c65ca2a2a629c3aee9622ab286215f7e6dfc4733d46714"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura74.tga",
+      "sha256": "cf3934b20f5058fe69387a9a87ecfabc93afab9e3171fc858915c727bb498de4"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura75.tga",
+      "sha256": "226665aa43a0d6554019cc2e6556de9f75bd4e4b385e97980f5e733ede7b39b8"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura76.tga",
+      "sha256": "9b18c1fcaab0a6f379a234e5419e2f99bde275e7f29b69bc644731c05efce341"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura77.tga",
+      "sha256": "708f64fb2748b697a2a9d2657eef1723df0c0a00bb55fc7255bb09c01c2cfb8a"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura78.tga",
+      "sha256": "7b581ee4e0a71a6c88611d4b38f2444035db08458397069f450ea2f5bae3b8ad"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura79.tga",
+      "sha256": "e16a32793f32f3350c7cfbeefa1ef81366db479890bd2752dc7e03607c70fa1f"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura8.tga",
+      "sha256": "18596518787c511c5dadbfcf822cb9e8299c3e4394fff278e03ceaaaef6805e5"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura80.tga",
+      "sha256": "3c8d7430b054059c0189055644a12b3dfb24594167e99ee7aa2b59b5ead081b4"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura81.tga",
+      "sha256": "7037d697d08e4809bc7e85a350e615250559f99a427cb275b7a7e0028b3519f2"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura82.tga",
+      "sha256": "755dbebeab65898aad23be2b82d25b5650058df8a7704bacf4074f8a087c242f"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura83.tga",
+      "sha256": "80729f91b5797aa1b67a9a6e2708ce7ddb1594a0c795bc0cdddf422c07702275"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura84.tga",
+      "sha256": "d74f9b4dcf1639fe2ce0d855906fdc441c67d32374a0395d5b9a3d6481b2d759"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura85.tga",
+      "sha256": "66f332caf342924c99f50abfe1d5085d3229fd216f777051bb04eea21ada2632"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura86.tga",
+      "sha256": "c7eb1c7685243c8debb18f72e5170cdfc0cab1f78923c9c7e8e68400f0d4beea"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura87.tga",
+      "sha256": "c98f6e4dfd6b84229bc1ffee39a43bb2908cb50e08973a2f34b9c13f3ba1511d"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura88.tga",
+      "sha256": "5cb3bd5f9e043115709812d55d8901ab2a3f5e7c755834bc985809939083de23"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura89.tga",
+      "sha256": "4fdb4e175631873fb8ced7202b89e2d53a50bee1015337e6e8052d9f4428aef0"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura9.tga",
+      "sha256": "27fbb5134b5de5f9605240d1ab5eb69e44788a7f6642357338cff937bbbc1a56"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura90.tga",
+      "sha256": "891ebea7824ec917d52834800932b80c499597db96f5876a33c8aab8a6857800"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura91.tga",
+      "sha256": "e46dc94854fcbacd10bebd90f004a0da9f9d1826a4fe2dbb73b385fe6c84cedd"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura92.tga",
+      "sha256": "1f32e190670faff3bee827348bef20758efeccb1d1c5a0a872dc2b2f83defd94"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura93.tga",
+      "sha256": "b24abaef9df52c1c2c7f5378f6ff02815c9623ca59d4f6f25ce9946b64768cf3"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura94.tga",
+      "sha256": "bff91f42f775ff0426caa9aa98a5ae5808031778e1b7a6d837b12d3f06a02503"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura95.tga",
+      "sha256": "de24ff463072311a293f85ab9c534309312442c56d6a4b57eb6012f41610d0cd"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura96.tga",
+      "sha256": "a4096804db377200887b2c60d966ce741f8c0fee322cdf95340f0b064a5d15bd"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura97.tga",
+      "sha256": "f53c687b889376bdf805c2ca54073acc81c4022b7706ea291d2b3209a449bd9e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura98.tga",
+      "sha256": "6b11d20604b4914bb028da8405c6bbf0769d87d1a1edec7b4f4948cf471c6e12"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Auras/Aura99.tga",
+      "sha256": "6c57f1059b012bbf04c2d04b631f7fc9691d8691c5eecdbc720423c9cc32475c"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/Arrow_Swoosh.ogg",
+      "sha256": "e43f8c00eeda892ff8fe114a90ac4966e41bc9be0244eab2948e5c1a6e66636e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/BITE.ogg",
+      "sha256": "58b0d4eeed553d6ea64cc8d9a6cfad1bdf2aea0147baae93e5f094fd42c5af82"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/ESPARK1.ogg",
+      "sha256": "6f94b8b45295b51bca8555ebc5cb2f4710d18801c67642391cbdbe2a7bd20fc7"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/Fireball.ogg",
+      "sha256": "c1df3a9a24856cb8b1b07e4a6c98d36ee261be57b9a52c09e4085eeaf06addba"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/Gasp.ogg",
+      "sha256": "7dbef6bdb57ba49325acf0ebedf1c0a421fa1158eb04b774bddf4ea6c0b4cb92"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/PUNCH.ogg",
+      "sha256": "bcfa29186deda57b5bd34e09d47b9b5c18102582578c9638bd99f002410f336f"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/Squeakypig.ogg",
+      "sha256": "565bcfcf3a1cf3847598aa0b36018ccc5cd0f560f13ead0a9849dea829a3d5de"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/aggro.ogg",
+      "sha256": "ad4f41f9bc1acc951f00dd1b25289facf10dcfdb4fea73c557d372e57a88f921"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/bam.ogg",
+      "sha256": "2f7185707cb7cff8bfbf7ee30feeaeb24cdef1beb55f5fd8563013c59c2589c1"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/bear_polar.ogg",
+      "sha256": "ec6f8070d27ea650846122f369bd40fca4af712b8d40739dc68eb75f3d8bb91b"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/bigkiss.ogg",
+      "sha256": "0e243ec802ad8dc04f048e3c136b36e5ef30bd3389ab70eea001d721c9799e48"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/burp4.ogg",
+      "sha256": "f2a532fb6e6eb70feb75f596627dab43011e173b298129789322d550dd929d56"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/cat2.ogg",
+      "sha256": "3137f20313c4e753716c96f9c73e8ea0776e1fe080df25287eb5d5766a111581"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/chant2.ogg",
+      "sha256": "b4f1d5226bf9343e63948fd54913455b22e6188aa40cbd8015800d100af4f5bf"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/chant4.ogg",
+      "sha256": "063c6d6b10529efc11864d8d323d8b9bc1fa670e11700195c4824c09c15b604b"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/chimes.ogg",
+      "sha256": "af86fce1fbbca4ddfee5e2cb74afef778da80ee0c585a77f13776899ef359fdd"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/cookie.ogg",
+      "sha256": "98a5f358f1f1e46f6cf10a78efc59c433d40958a3030422382b8bd82279155b5"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/heartbeat.ogg",
+      "sha256": "d34e9595cbb73990335e33e89052faa19022cb2440d819e50b3089d12e8c77c3"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/hic3.ogg",
+      "sha256": "018482a07a06c6c511899bffd1481fee1a2fd486c419c6e77f6b0be844c22e7b"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/huh_1.ogg",
+      "sha256": "d3485fd3c58726cbd819e212f3eac10986f3f3fda5bb21a2571b1051a903bdbd"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/hurricane.ogg",
+      "sha256": "71550469cbe1e091c149b7772a5b901db8b6007ce155e65c76ad48caae699e02"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/hyena.ogg",
+      "sha256": "29d19cb22284e2fc79e90792ec9633a517f79e0f2e8d8768964207f2221fd030"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/kaching.ogg",
+      "sha256": "6f0deee5c2d0925059a78d45eea08a79e2ffc3c864fccfb3660c798cda1569f7"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/moan.ogg",
+      "sha256": "f0fad61c4db2cdd432cbe5a9812409a607b06b979ca674472482ceb143a05311"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/panther1.ogg",
+      "sha256": "34415046809e642bd39f40ee9791658ac73e5945da58fc585fc527dfdb3a2550"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/phone.ogg",
+      "sha256": "90a9a303ca98648fb1832f888ed0f2c5bb5b50b3d88bc8dd58987ccff46418a4"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/rainroof.ogg",
+      "sha256": "4708948c9a9485861883b4f77fb234ea1ac1b2f7e1f6d310c405a429cb750453"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/rocket.ogg",
+      "sha256": "d6ae42c28917dd89993b0902d54794f51aff95ec71eb6c674bc251fc5d664b84"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/shipswhistle.ogg",
+      "sha256": "032e6de40eadfcd575e58eee03df9c1a64bac550885045d64536ca9972620725"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/shot.ogg",
+      "sha256": "6f8417e4d6908d34ed4a0893decf912ae0a89bb5cdbd373bcd8b732dcf2d9fa2"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/snakeatt.ogg",
+      "sha256": "1193dbaac65cb2cce5f82be1abc43249fd152edba1c0a19876a9e4aa0695ceee"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/sneeze.ogg",
+      "sha256": "32640c9ccc1b0978d37b7a5affbcc29ea42cdb09b53bfd437d142e5d98f0153e"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/sonar.ogg",
+      "sha256": "8b630564f7f77791f9b0e4f6f59ee0bebc8c163f4824032ead60e506747f49e1"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/splash.ogg",
+      "sha256": "1348a8335f676ebf7c08b0c0ae882699ee00b94aa9b10e407eca83df576b018f"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/swordecho.ogg",
+      "sha256": "f21e375fd42e2f4f997db0876e8b2da1be47435bae7bbb49de6d7583fd3f80a5"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/throwknife.ogg",
+      "sha256": "26d606c4fff54d559a8636af62a20284f29c38aa7239b7a350aad362aff96318"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/thunder.ogg",
+      "sha256": "7ab4ccca0b5786b01ef159c995d0324b94d8dc17ef9c3c93018f5e321d5395a1"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/wickedmalelaugh1.ogg",
+      "sha256": "3a2ea608249efa546695431d6d93aa3e592fa6fb9db9d227f7e3064c6875da06"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/wilhelm.ogg",
+      "sha256": "ac8ba942436d980b5911151ce9ffc20fdb90082d81d72990a12abb86e629e416"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/wlaugh.ogg",
+      "sha256": "2e8eab5dfdec1748589bf9b14989c55d39788544ca62e9b00ef18411127b1602"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/wolf5.ogg",
+      "sha256": "317c58ddb9aef8f03df5f62fb8e8fab866467fdea9783458c49c8a72fae27283"
+    },
+    {
+      "path": "WeakAuras/PowerAurasMedia/Sounds/yeehaw.ogg",
+      "sha256": "4868923855958f9de2fa9d6e71980c6679ae32655c70553d683aa3203188c56d"
+    },
+    {
+      "path": "WeakAuras/Profiling.lua",
+      "sha256": "4a7e1d96b5bac2cfaf262880f67ebb0023028de469d5688efae37906816f96db"
+    },
+    {
+      "path": "WeakAuras/Profiling.xml",
+      "sha256": "dd8edcaaa1ebf063867dc4191f80ef6fdc04e5c9d1f3cc89f5850661fa97be30"
+    },
+    {
+      "path": "WeakAuras/Prototypes.lua",
+      "sha256": "690770edae562a1d9139d66275cf11127f2a0ccdfa739eb9b42d6633f9ce458c"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/AuraBar.lua",
+      "sha256": "0f1d0c209f27cbf7257552f6b20fac7904a97462fd257cfa5fc9c30425938430"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/DynamicGroup.lua",
+      "sha256": "3d579dfae1e3254dde95a84c6e4ac1adf721d01f09d472356d7056014852d0f8"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/Empty.lua",
+      "sha256": "198ab669bc44953e72ad905d91661e3b4a5fb178f96cf4e6ce50ecd6090c2708"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/Group.lua",
+      "sha256": "d9aabf5a69f90be10df1967934165192a03f409e2b9cfb93a334a7a413a3cf06"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/Icon.lua",
+      "sha256": "1868f8bf0dad0cd304f1062957312a53acaea009dcc638cf6347d87a334e4a0d"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/Model.lua",
+      "sha256": "e18217c58e3cd313a1451c498beae7e1c428e2be52485dbf582aa5602db1b3e0"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/ProgressTexture.lua",
+      "sha256": "9b37d1aebe51bba0f8ed1d24a0638985f4688128757555537891f516e7d145dd"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/RegionPrototype.lua",
+      "sha256": "683fdfdb32ea9d62db8db1d1a5e0e3d19064788d74116baf85b09c1bf4dfc0b8"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/SmoothStatusBarMixin.lua",
+      "sha256": "c26c03890e60a291e0a900c8b26ca8a53be1e84a2a84595d1afec74b9cc5cb2c"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/StopMotion.lua",
+      "sha256": "237c8066e51deefee5453ab5b7e813d3cf53a5b2a9c34876f0a15a9161729867"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/Text.lua",
+      "sha256": "a713dc0ca6012d521211437071ff8e01de24bd6b6c214b89dcf52889deac569d"
+    },
+    {
+      "path": "WeakAuras/RegionTypes/Texture.lua",
+      "sha256": "e3123c9747b7403f193b5570db13a8d710b13b5f4646a604e1df1d91d561a7ce"
+    },
+    {
+      "path": "WeakAuras/SubRegionTypes/Background.lua",
+      "sha256": "345d649cbbffc00ea0b54e2ec5e10e95aac6606fa818651b527a1d8d87556127"
+    },
+    {
+      "path": "WeakAuras/SubRegionTypes/Border.lua",
+      "sha256": "6cbe0189e4286d4772d1688890cc284116d48f6887192915b2a74ca26476a045"
+    },
+    {
+      "path": "WeakAuras/SubRegionTypes/CircularProgressTexture.lua",
+      "sha256": "342017ed1238d6439d0b9e5f2738f6dfbbdec596691b28de4ad8b310ea7cc88d"
+    },
+    {
+      "path": "WeakAuras/SubRegionTypes/Glow.lua",
+      "sha256": "6861247f3fa02d28b00c0b940c0050ec0b31d886062811a1cd701154ed3170f1"
+    },
+    {
+      "path": "WeakAuras/SubRegionTypes/LinearProgressTexture.lua",
+      "sha256": "5fd4eca6df0a8430a186da7ce6aaa4357ccc5870ab84eccf05570805ec9d645b"
+    },
+    {
+      "path": "WeakAuras/SubRegionTypes/Model.lua",
+      "sha256": "0e6d245a66335d00e24930c94dbca07fd2e4698c1bb4880394d1cd6e04bd6c5b"
+    },
+    {
+      "path": "WeakAuras/SubRegionTypes/StopMotion.lua",
+      "sha256": "a3dc4497463f5f63c5e4962dd55f523bea1606bfaf73f8bd34166a10edad2c7f"
+    },
+    {
+      "path": "WeakAuras/SubRegionTypes/SubText.lua",
+      "sha256": "3c9712cacd40ceb5f8dcfbcfc5e0d451c6f181d6413b93f6c8f6b755168006df"
+    },
+    {
+      "path": "WeakAuras/SubRegionTypes/Texture.lua",
+      "sha256": "5f5cc79aa4876f66e63d008a606f54f20da68c71afc45a534311c0a61e02bf04"
+    },
+    {
+      "path": "WeakAuras/SubRegionTypes/Tick.lua",
+      "sha256": "900feb2d2b0b5aab5fc3b0dd0f1d35a9024e6010212cfd57de1d2989aa9a317d"
+    },
+    {
+      "path": "WeakAuras/SubscribableObject.lua",
+      "sha256": "d138a17c9cf61cbbe6d2096a115aace8ae563f61c192a3637a9bd75d3fdb1fed"
+    },
+    {
+      "path": "WeakAuras/TSUHelpers.lua",
+      "sha256": "536ce4ed4d296697c46346a7d5d71a49928e1bebc3b8d97210f276be7f8af484"
+    },
+    {
+      "path": "WeakAuras/TimeMachine.lua",
+      "sha256": "cca0c069b99cddcaf75a98915689d22e78c84ceb30b042b2c52ae563906262f0"
+    },
+    {
+      "path": "WeakAuras/Transmission.lua",
+      "sha256": "e23126d2d92da4989a473adc0ce7658923a1856271b26b832f51feea982547f8"
+    },
+    {
+      "path": "WeakAuras/Types.lua",
+      "sha256": "fe142d639b8f20c9375fc66bc35640e6cb80ce83002eef0455d8e9ec510225a5"
+    },
+    {
+      "path": "WeakAuras/Types_Cata.lua",
+      "sha256": "2d404f2cd8ec410a601c45a666e3a29043bb6f699319b85df88007da69cb2d52"
+    },
+    {
+      "path": "WeakAuras/Types_Mists.lua",
+      "sha256": "23224a9b44932c05860999811c3fff7587af0ba17673310a59ddb623db72f0a0"
+    },
+    {
+      "path": "WeakAuras/Types_Retail.lua",
+      "sha256": "a915503f6e879d17ccd7011b3635002af981079d46eb2f23eb1fc5a4d53a82fd"
+    },
+    {
+      "path": "WeakAuras/Types_TBC.lua",
+      "sha256": "2260a73a47b8ae60a7c735b1df494e7088699feaa65179cb509ef3af31dd65f5"
+    },
+    {
+      "path": "WeakAuras/Types_Vanilla.lua",
+      "sha256": "3b0686995d068c29f9090c95dc579d040d867cbc4de108e9712df1220883ff55"
+    },
+    {
+      "path": "WeakAuras/Types_Wrath.lua",
+      "sha256": "a6882780e80171142f70fac583159d2e5fab211fd11488140ec934c7a050f17f"
+    },
+    {
+      "path": "WeakAuras/WeakAuras.lua",
+      "sha256": "ec1ec5bbbf27c422c08801a667c3d9839fc456a74d41f3820daeab90aec5400e"
+    },
+    {
+      "path": "WeakAuras/WeakAuras_Cata.toc",
+      "sha256": "ef711b222f9c48c6883aeadd781afb106fc44fe9930119ee86f2e5016ec7d6e1"
+    },
+    {
+      "path": "WeakAuras/WeakAuras_Mists.toc",
+      "sha256": "adb2b6f13cd31171158ff9b01b18fdea0fb38432be082f29dfd9e7be0eb55360"
+    },
+    {
+      "path": "WeakAuras/WeakAuras_TBC.toc",
+      "sha256": "e6c426355114bc4623c28d216871c04f6c3b82d5e15059b4aecaa5c30d778ae2"
+    },
+    {
+      "path": "WeakAuras/WeakAuras_Vanilla.toc",
+      "sha256": "2e8d971724b08692f86982c072d0d800107772d877b483ba1eef04b0cd939896"
+    },
+    {
+      "path": "WeakAuras/WeakAuras_Wrath.toc",
+      "sha256": "ec16c50497329c139457928a7d8bf285eeb6c8743900a77fdb728d6a973ea6a1"
+    },
+    {
+      "path": "WeakAuras/cspell.json",
+      "sha256": "4e5bd00a9747a242e6291de3e0cb6c426d11a3aa2cda3d6f0249a626e94774dc"
+    },
+    {
+      "path": "WeakAuras/embeds.xml",
+      "sha256": "a56a87768a12d2298fc52f2e80e0b1d0677303aa504ef1eb16d1b3a27484e539"
+    },
+    {
+      "path": "WeakAuras/locales.xml",
+      "sha256": "fc2b2dd0100d05d8d65a93a8d1204a07833fd9efa98dee2ff02bcb92e277ef2a"
+    },
+    {
+      "path": "WeakAuras/stylua.toml",
+      "sha256": "704f1bc7a17829770e6395fd50e6846db26c419ec96ad915a529b96693314c4d"
+    },
+    {
+      "path": "WeakAurasArchive/WeakAurasArchive_Cata.toc",
+      "sha256": "0879fb319891c3a7e8f71fbac62bfa62ee23410ef94ea940e5219585b9503e4e"
+    },
+    {
+      "path": "WeakAurasArchive/WeakAurasArchive_Mists.toc",
+      "sha256": "078de5554bef1877f5b9c5222b9b7a40f03b98fc9abe7bd41b956d540ea1e36b"
+    },
+    {
+      "path": "WeakAurasArchive/WeakAurasArchive_TBC.toc",
+      "sha256": "39ee45146f33d4505525ef715638a0f84c698710123043695f18cd128b114bb7"
+    },
+    {
+      "path": "WeakAurasArchive/WeakAurasArchive_Vanilla.toc",
+      "sha256": "edf86535e8125e2253a7122d07d7b5be684f45b057ea8d5c1581095007955867"
+    },
+    {
+      "path": "WeakAurasArchive/WeakAurasArchive_Wrath.toc",
+      "sha256": "d36aac1b5ef861670d90f5441295582ab4727a083cdb185274a84fc96a1bbe8c"
+    },
+    {
+      "path": "WeakAurasModelPaths/ModelPaths.lua",
+      "sha256": "a43317ec22819ad1eff153e91386d63158920a839ba63da884e1342ff81dad10"
+    },
+    {
+      "path": "WeakAurasModelPaths/ModelPathsCata.lua",
+      "sha256": "bad47eb009896042c6aa09ac1c6de6f056e1074f8cbea845c0f9a98af648d1e4"
+    },
+    {
+      "path": "WeakAurasModelPaths/ModelPathsClassic.lua",
+      "sha256": "88e46091c5c55deee7dd682796cf1198bf3f73e5a97dbcd03d151b0e0298eea8"
+    },
+    {
+      "path": "WeakAurasModelPaths/ModelPathsClassicEra.lua",
+      "sha256": "4bd32a51771c26f2515def4a277dedf19db4daed4ad0a847251ef2bdff7c051d"
+    },
+    {
+      "path": "WeakAurasModelPaths/ModelPathsMists.lua",
+      "sha256": "adf95c7db2f97c03307e175f198f1a56527955fad0536959c5bb2c582d7d7f04"
+    },
+    {
+      "path": "WeakAurasModelPaths/ModelPathsTBC.lua",
+      "sha256": "09b688ac126e8105b9df4625718820a96be8574a4a641e7f7232f9b0f0d0bb44"
+    },
+    {
+      "path": "WeakAurasModelPaths/ModelPathsWrath.lua",
+      "sha256": "efd009880be13f561357493ef270462b50905714449f42c42a8884dbebf0c66b"
+    },
+    {
+      "path": "WeakAurasModelPaths/WeakAurasModelPaths_Cata.toc",
+      "sha256": "0894a42884b8a54065135e99f00b49eb1c48b4a89124cdeaf6af0e8185fd9db5"
+    },
+    {
+      "path": "WeakAurasModelPaths/WeakAurasModelPaths_Mists.toc",
+      "sha256": "3849372582c278290642fe4cfb6c0784c06263e697f9516255a535246f70d454"
+    },
+    {
+      "path": "WeakAurasModelPaths/WeakAurasModelPaths_TBC.toc",
+      "sha256": "50e80f1ee3f8aca3230f92713dd95d617bfa47460e8cbf1aa50cc6c37a84eb7d"
+    },
+    {
+      "path": "WeakAurasModelPaths/WeakAurasModelPaths_Vanilla.toc",
+      "sha256": "aa13a54bfb257f9d6749178861aa54baf1dd2123759b217f4dc3ae9531ce40e7"
+    },
+    {
+      "path": "WeakAurasModelPaths/WeakAurasModelPaths_Wrath.toc",
+      "sha256": "82bd597196a80f497663c9b7c595f749ade1017b2b510f557c384b55457a4b9b"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIContainer-WeakAurasInlineGroup.lua",
+      "sha256": "8021f25885b5c2d09f158c3e022163033daf11bd8ab603488e726895ff7f7203"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIContainer-WeakAurasTreeGroup.lua",
+      "sha256": "7923f886d339833f5af3c2d157f0c2c131b04f38849081d8ac8c08ee070a006d"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasAnchorButtons.lua",
+      "sha256": "e631d8927d9d11786efb076a30eec8124a626c2acf7ff1cdc040bc936decedff"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasDisplayButton.lua",
+      "sha256": "7a234d3c22573bb4235471c9607740084f0e55dec867b43806d7704169bca02e"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasDropDownItemCurrency.lua",
+      "sha256": "75fbfdc6f1ef416ee296b268a5f6f1a0e05e8223ece84c1a2a84751385a60dce"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasExpand.lua",
+      "sha256": "cefe38a22c7c6395c647a7ada1c653504a28ec410410815170f24155c3e88abe"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasExpandAnchor.lua",
+      "sha256": "558ad038459a6bcb03243827f5558601313511a84bae9e2e808cc06d71be7a57"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasExpandSmall.lua",
+      "sha256": "2ce634cabeb4647b9f5b44626fd16f2a69ce6901e5f6b47f6a83265f7c2eca27"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasIcon.lua",
+      "sha256": "f0069047814b3dded34ea0642386c6c3715beccdd9119a09783809ce9da5fcfe"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasIconButton.lua",
+      "sha256": "18139c9b1ff6b2e34e0a48bef5b34f8a2062aa033bc0b384c675203fdacb0bd3"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasImportButton.lua",
+      "sha256": "bce834f323d63d4f7c5483ce00efc20dadd6ebe6620a613db395c69dd3f5dd46"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasInput.lua",
+      "sha256": "38cf13a77576e83bccf8c8c3dcbee009060d88eb3622bd1212df6215a4e2bbe2"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasInputFocus.lua",
+      "sha256": "59ac0d0d4b0bfe43cd6515fb0ecfc85c174d10134a7e69983b2cec393baee1dc"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasInputWithIndentation.lua",
+      "sha256": "a3dd80084321521051dd5a85284f56ba25188e7e862df58f1a5823626dabf992"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasLoadedHeaderButton.lua",
+      "sha256": "33a98b4986d2e35dd89ed1bf25af697bbe5155c71a08e9eb16a7a90e60e1ae12"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasMiniTalent_Cata.lua",
+      "sha256": "4931acc89f2f06efc9243895d9ac7633aaa49b1189687a70ab793d1d6e734e43"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasMiniTalent_Mists.lua",
+      "sha256": "4445ce62d36bde777125d29315db62a235bfb6c324f00d6dd2457ab519620f90"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasMiniTalent_TWW.lua",
+      "sha256": "8ad901258ddba109a8f8f0540916e40b9b0d5b6258798f39f90719f2f09c8d02"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasMiniTalent_Wrath.lua",
+      "sha256": "49c4d41c252a80d2543ca9fdcab485944848a0aca3d66e0a05a5245dff29f987"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasMultiLineEditBox.lua",
+      "sha256": "1a09140f69df413a9e9d383c1cf878031eb471ed489842a3208bae2ddc11e2aa"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasMultiLineEditBoxWithEnter.lua",
+      "sha256": "84d1cfe7b9d3343f14eb06e4dc0eb4328e0f60dac976cc4ab3e0a5490f9d3254"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasNewButton.lua",
+      "sha256": "9eb31fd1cc3cbbbc2dccf339f45b49e866ac7b2946375af61f6d7a9e72e69af2"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasNewHeaderButton.lua",
+      "sha256": "3c48b98e9c73ec340f1fdfd6ed59982b2a33cc09008e46e883c441cdbbcb3f65"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasPendingInstallButton.lua",
+      "sha256": "c7e93503d40f13dfc564ce4975bb28014c79b14f8414f41f6b229c58c15f89fa"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasPendingUpdateButton.lua",
+      "sha256": "359bb61ff529f23c43db147937477bb8d29ed5dfdaa59ce2585fd4994117635b"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasScrollArea.lua",
+      "sha256": "64b9fe867c23e4c7afd24a1e1f880617d092996990c13c5b8bca1c0fd12e876a"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasSnippetButton.lua",
+      "sha256": "2a451197896f57eb5d169d87fba10f9d3d6a866eea174550639c9d72e07c436c"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasSpacer.lua",
+      "sha256": "86a445d2948c27225116a18e70a91b54b4523277c36b2afc6c7d82ccad6337e8"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasSpinBox.lua",
+      "sha256": "ea3b2fd5640d363b321ad6625696d89fb3cab1080def2b7e77fa6e7d63154b00"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasTextureButton.lua",
+      "sha256": "ad0b76195b37fdd28ca368f448abde0f9f750b15e5d8f557339a62e1411b13f7"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasToolbarButton.lua",
+      "sha256": "421547e35aad213abecf2bcd35eda1b6516ef8f5f61f7c544be7fefc9ec70786"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGUIWidget-WeakAurasTwoColumnDropDown.lua",
+      "sha256": "9722ca101d39d27c83b44a81fb1c7b27762a22c3322149ed7c6034da38867d75"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGuiWidget-WeakAurasMediaSound.lua",
+      "sha256": "0b56c5bd318f8400fa25814aaa19058387cb06165021b88d185cbd974dc983a4"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/AceGuiWidget-WeakAurasProgressBar.lua",
+      "sha256": "09c8bbd27d4e240c8eae340633c6143edebe66c8f83489146f0cc6fd4ea3fec9"
+    },
+    {
+      "path": "WeakAurasOptions/AceGUI-Widgets/WeakAurasStatusbarAtlasWidget.lua",
+      "sha256": "61c407976528f77515f593580f42c7f07a87d7c4c8d576faaa1543dfe3dd6f86"
+    },
+    {
+      "path": "WeakAurasOptions/ActionOptions.lua",
+      "sha256": "5d36941c36ef5c4f81207545a413b93bba4ce3b0e4cc0404b24ec180c0c76dcf"
+    },
+    {
+      "path": "WeakAurasOptions/AnimationOptions.lua",
+      "sha256": "0c202d2c461c5ce30f51420e5a5d01402fd9177dcc66fd360f0ec802ddc5879d"
+    },
+    {
+      "path": "WeakAurasOptions/AuthorOptions.lua",
+      "sha256": "6ed6d7f1488f8b15e37b16a9768709233c5bb9a174bb04c5687d5394c6dd4a79"
+    },
+    {
+      "path": "WeakAurasOptions/BuffTrigger2.lua",
+      "sha256": "d20867f166bbec05a307dffd83cbee6568be7fd59c41f9d2446a73161d4ddaa1"
+    },
+    {
+      "path": "WeakAurasOptions/Cache.lua",
+      "sha256": "e30d9b802a1f2fc73c2cc4eb7e7188c921c7bae51c1e21d4f93aab130bd3d402"
+    },
+    {
+      "path": "WeakAurasOptions/Changelog.lua",
+      "sha256": "b8ff4605e27e6147c33ddc316356876131d0e4552b06580471906b5971f79c14"
+    },
+    {
+      "path": "WeakAurasOptions/CommonOptions.lua",
+      "sha256": "ce2a53b381a7a6dc18ce32e1be528011cc1b54b1eaa9a762c703fa5a828b0971"
+    },
+    {
+      "path": "WeakAurasOptions/ConditionOptions.lua",
+      "sha256": "8285ada8c968377f1d9b7d94eda9f518c2eb56174305d415351d67b0747d1641"
+    },
+    {
+      "path": "WeakAurasOptions/DisplayOptions.lua",
+      "sha256": "a104e90854d26d47cbfc2c668d8f2aa136ef3bdf3cd8d295c76cd520bb39de32"
+    },
+    {
+      "path": "WeakAurasOptions/ForAllIndentsAndPurposes.lua",
+      "sha256": "7596646c6ded6ed69b5005b688f78432fccdea687191f3f55c187f53750d37e0"
+    },
+    {
+      "path": "WeakAurasOptions/GenericTrigger.lua",
+      "sha256": "2b29f01bae9d1acb697c4d388847020409c3c1439c579bce98602e463c54bf8e"
+    },
+    {
+      "path": "WeakAurasOptions/GroupOptions.lua",
+      "sha256": "8c9a14056d06f0ee9d2e184610d506855b4088c179e4dfbaff5baddf3e1757fc"
+    },
+    {
+      "path": "WeakAurasOptions/InformationOptions.lua",
+      "sha256": "b6c9cb2774983df926f47d8a4f6fecf03cce84a0f9b6b2c92905bddddd0d0e12"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceConfig-3.0/AceConfig-3.0.lua",
+      "sha256": "93e2bc223f107a2a00a1653f15e65cc34bf7dd4e37c2c420945ec4d0472ca7b5"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceConfig-3.0/AceConfig-3.0.xml",
+      "sha256": "edbd83772e15d26a318137bc9bcd3e027a109897a3aca60182fd192ae2e7312d"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceConfig-3.0/AceConfigCmd-3.0/AceConfigCmd-3.0.lua",
+      "sha256": "29cc1c733032bd7a723949ea63a408f33dc87ce27ad51fe90c64a5863c31a1a7"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceConfig-3.0/AceConfigCmd-3.0/AceConfigCmd-3.0.xml",
+      "sha256": "356cb017a78284e76ff62b6f677a2f380b9cad4d5fb2034a7eeaac8316d20a13"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceConfig-3.0/AceConfigDialog-3.0/AceConfigDialog-3.0.lua",
+      "sha256": "045a7d0b7a289ba103124ea3343d70cb2cd530aa0a856c8e39f5f0c32b05c48e"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceConfig-3.0/AceConfigDialog-3.0/AceConfigDialog-3.0.xml",
+      "sha256": "c2af74760e12602c51534d43f8bc741f5be981c7da66cdffb5282aef2e2f0812"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceConfig-3.0/AceConfigRegistry-3.0/AceConfigRegistry-3.0.lua",
+      "sha256": "dfa92a305863cd8ac74a426ccff7f7b40fedee9abd5d8515947fb1e9f52b6ceb"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceConfig-3.0/AceConfigRegistry-3.0/AceConfigRegistry-3.0.xml",
+      "sha256": "3a49acf5f0158fd769a2f461f6176a5cd126da6fed33e38f0a10a2ad12d9cd2d"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0-SharedMediaWidgets/BackgroundWidget.lua",
+      "sha256": "a52a0bae674916ce8fb2cba9d32f3d19b9639af44876726f21331a1e2a513c3a"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0-SharedMediaWidgets/BorderWidget.lua",
+      "sha256": "576f7815875e8217bbc4cf2b81bbd1872695a6747fb6698208e11dcb87c75586"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0-SharedMediaWidgets/FontWidget.lua",
+      "sha256": "c882ceae03cc585a8391294ca256fcab0486a1cd713120f49a5d778c8dd43071"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0-SharedMediaWidgets/SoundWidget.lua",
+      "sha256": "51a3b3c8b1b8520cfc7bda25fba29412da21101449b2458e0c68cbc8cd65c513"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0-SharedMediaWidgets/StatusbarWidget.lua",
+      "sha256": "0d867850ee571ccfcf4d13fa569b93865ed482c53ad3e36a675fe1207de737b1"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0-SharedMediaWidgets/prototypes.lua",
+      "sha256": "41bbee3d65510e0ecebddd4516671495292a4bf3ab06ec653584411dac05455a"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0-SharedMediaWidgets/widget.xml",
+      "sha256": "257659c4462e5427bb7d86cd2395c0cc35cc883a0488e98beda9d57a5c326629"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/AceGUI-3.0.lua",
+      "sha256": "db24d1193ec97955bc7c1c47f22009042fdc4c680eecc2a28852bd95a6bb741a"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/AceGUI-3.0.xml",
+      "sha256": "96d56ab2c6bc60c718246b80fddcfcc59820728d85dca3654413279214932e9f"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIContainer-BlizOptionsGroup.lua",
+      "sha256": "187a6a67c8afa0355559eed1c8da875a1cb2572dabb95fa73cca1162f1a0e9a2"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIContainer-DropDownGroup.lua",
+      "sha256": "85c6c45d25de859344542642bedd37d1084151e38cfa722976e76cbbcc1405c1"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIContainer-Frame.lua",
+      "sha256": "faf59b0a44fe489e9d789a5e5fa810dd7a47ea32fc9e3bf1453408a9fc133181"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIContainer-InlineGroup.lua",
+      "sha256": "8d00ef9089f0585c042797d655f7d89c670340989fefad8b7f670bc4e565d1f1"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIContainer-ScrollFrame.lua",
+      "sha256": "299ce375f5f575720cd71505e4370352f8310398d2233a9434277737c49cbfbd"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIContainer-SimpleGroup.lua",
+      "sha256": "4694e8b2047da47ee34f395d6d7ca0c2124c9835576df6a07f8fd93166388c14"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIContainer-TabGroup.lua",
+      "sha256": "8b52c7d1f4392f858b057b339c2d459bdc12ed179fcba04a58c0fa7da61058cd"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIContainer-TreeGroup.lua",
+      "sha256": "311b097199d201b93bc56e7d26788a1205a87cd500cc4b80a369e466a1a4d0ec"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIContainer-Window.lua",
+      "sha256": "be92732904321e7cd1fddd43162a8c1bc788460d65b363c166917f0f6b957cde"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-Button.lua",
+      "sha256": "cc3e92aad496ab6d7ebd33b9b9c9993635401e68ebd1b7e8f7ef7d23723aefee"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-CheckBox.lua",
+      "sha256": "32f032a6daf6d5b1edf6e09e47082ecebd9078b6ea429deaa8b970cde0049d0c"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-ColorPicker.lua",
+      "sha256": "1b115cb24ecab43725cd75ff7a31e367cf29b981a875a7538522a8e1be11a7af"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-DropDown-Items.lua",
+      "sha256": "7d9d5aa835a6cc46d44ae62ac361b4e6ec8ebdf442491e660de8ca7347e5a222"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-DropDown.lua",
+      "sha256": "1b0f1a6f5d2e94c71ec8047dcb36ee4eb62a91005cc5a841fb61b77aa2a1e490"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-EditBox.lua",
+      "sha256": "cdd8c2a6470b60b16e3b99dcf21eb3ca312c08e39d311bdce3113f48ea9b77bb"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-Heading.lua",
+      "sha256": "66f6beea82f52498a1e509a0c85b77ee20fe9c4da988ac505a095e1307bd91b4"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-Icon.lua",
+      "sha256": "1fa891e9ec59fb019801ca638ea0971e07346111dfb5c99e04a1533257950f95"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-InteractiveLabel.lua",
+      "sha256": "00432ab79b4b9e38a605e0c6a8e5eb9b2b590b7b9294a38b81c63e6265f1bf31"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-Keybinding.lua",
+      "sha256": "0b3af083de786e93eb554a867d1ecdbb3ce84e79516174df69f158ad35f12de8"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-Label.lua",
+      "sha256": "ff4dac6f5eb23c952fe97fe6ad1e7a68820ffcec315d612eb778f107eb5db6d5"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-MultiLineEditBox.lua",
+      "sha256": "abf4dac5765418f45bbe940a01802c55f934e83663dd611a77f64b813ce5ea89"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/AceGUI-3.0/widgets/AceGUIWidget-Slider.lua",
+      "sha256": "ffd9a3c912fc0ab7d31cc64499c6dcb842484c31e426996e90bd0dffbde59787"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/LibAPIAutoComplete-1.0/LICENSE",
+      "sha256": "ce7f2f7bc1c5b68f592a04b763abaa9c180c5e44e30563153bee280763b54ae7"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/LibAPIAutoComplete-1.0/LibAPIAutoComplete-1.0.lua",
+      "sha256": "52e6e9421bbcfbabf6e4f6adf0bcaa7c729e3230f3dba47453f877a245a00185"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/LibAPIAutoComplete-1.0/LibAPIAutoComplete-1.0.xml",
+      "sha256": "7708e328d8d935e391352bae38dfea7a0bfb03791f948e3ea40cd98352894002"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/LibAPIAutoComplete-1.0/README.md",
+      "sha256": "a6f3b3540ba033d7d45c4ee4358d468281bcb8a58efd9d1d657e7ec8409aefbf"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/LibAPIAutoComplete-1.0/cspell.json",
+      "sha256": "79faed5c8dfe7e1510a26d414745815956238c94509616bd726af42b81157035"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/LibAPIAutoComplete-1.0/stylua.toml",
+      "sha256": "b410aea1651957d0cb75ba7788a2b83505b48fa53e8d032df57c7aff3066153b"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/LibUIDropDownMenu/LibEasyMenu.lua",
+      "sha256": "72d028ffc574263e37923d38ff9312e7f5e423d26e004d9d0b3834ed43fd83e1"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/LibUIDropDownMenu/LibUIDropDownMenu.lua",
+      "sha256": "d526a98f21f82a1e4d97ab7b0749f96db43bcefb61ea907c973cd52c8bc4b99e"
+    },
+    {
+      "path": "WeakAurasOptions/Libs/LibUIDropDownMenu/LibUIDropDownMenu.xml",
+      "sha256": "f2afa6a174c9868245a1d086a4965eb047339b6f76f210d62c392f5faa76b311"
+    },
+    {
+      "path": "WeakAurasOptions/LoadOptions.lua",
+      "sha256": "3802eaf1c71faee1ae9282ed66a3fd211339dedcdb3bb9de4c773676efb20839"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/deDE.lua",
+      "sha256": "ab20060d09d75da86be8528d6074b79014bc046d4b7c74bff45ae6d161c59b75"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/enUS.lua",
+      "sha256": "14d0f597597ee4d2c844f105ceb9ff46a7fc6171cd67ea6562b8a1b46cb812fc"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/esES.lua",
+      "sha256": "23c5a3a5ad12fc2ebba8b1590616aebc359fc6ed5a5b84c75dfa3b12e2eb85b4"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/esMX.lua",
+      "sha256": "6e39163a560b50cb83af79da7cac552d8dd8bb25aa8016cd88240655ac9d4adb"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/frFR.lua",
+      "sha256": "a47e59e19ec1a158feabe76b0f04ce16a78dabd6bacc83ec4f429b6ab033977f"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/itIT.lua",
+      "sha256": "39687ef9a45260c000907f2a873236bb4c33219f5f6bb93bccaca1b35c12b7a8"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/koKR.lua",
+      "sha256": "1bc3fbbc588de659fd309b72735ad2c849ef6e8754f5d4e2ac848009163ad444"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/ptBR.lua",
+      "sha256": "b511e6cd46a312a7f20d3669f53e39a0f13dd11975002fdabd22be007be0c59a"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/ruRU.lua",
+      "sha256": "95dd4c945c37c1de5357629c60d940731561616a523e26ecba47c36b977ac9b7"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/zhCN.lua",
+      "sha256": "ebc166654e4ff35020069cac6d045ea7e1198c109f457a041047984259e1663a"
+    },
+    {
+      "path": "WeakAurasOptions/Locales/zhTW.lua",
+      "sha256": "bdf0d8cc332a224407afbd8464f4f99a90ff466527ea7f192aa0499435111379"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/CodeReview.lua",
+      "sha256": "42f2efc25304f88fc131148a82fe645e744e7fcc49ef6135270dab3f6c9c77f0"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/DebugLogFrame.lua",
+      "sha256": "c8461609b08a39b2ba7fdbf74d820a6b27867ac66eb35b2e1d64d849de904e29"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/FrameChooser.lua",
+      "sha256": "de6572d44750e76002f99acf8a70e28fb28016acca265976bf3bfe4c94241576"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/IconPicker.lua",
+      "sha256": "693ccc486edbea70e1ab7964d46e61f9db604a40f751f0d2696ac54c4fcec9d5"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/ImportExport.lua",
+      "sha256": "180e9a37d332be5630b3a2731daf05ce157ea54f363516c447139ec27521c7c1"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/ModelPicker.lua",
+      "sha256": "9b9d25a9baa94e4f4848958693b5f1ab6a61c8b54a6528cd897d15bb879bb4b2"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/MoverSizer.lua",
+      "sha256": "a117a0cfb355c6ff1292580d7a54769ca9b02a9b7c5bf988fed723f65ff9ccde"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/OptionsFrame.lua",
+      "sha256": "65f2d8db93168f8bb4a86ffa2a52cdbca7e502eb6354a59d1b8aca0b7a70624c"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/TextEditor.lua",
+      "sha256": "c1acfca36c91df4a5fe2f907a4278ff0dc8df956337bc2fd200b33a49d86395c"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/TexturePicker.lua",
+      "sha256": "a40ef5cc363308fc0bddad5cb4ff34710dcbb7a1a36d35c90cbc59d2a6e96853"
+    },
+    {
+      "path": "WeakAurasOptions/OptionsFrames/Update.lua",
+      "sha256": "801dc3a3577cc89bd234f3e5da59a167b757dac2aec99043de6924c79319dbe7"
+    },
+    {
+      "path": "WeakAurasOptions/RegionOptions/AuraBar.lua",
+      "sha256": "88ab511aa1a0aa9c514ffbb3268a2a5bd274d2eedf59de98e674ab4240c078cd"
+    },
+    {
+      "path": "WeakAurasOptions/RegionOptions/DynamicGroup.lua",
+      "sha256": "33ed6096c915898fb70a1a510eeb26a08693cd84d915131aeb7b2cbacceda15f"
+    },
+    {
+      "path": "WeakAurasOptions/RegionOptions/Empty.lua",
+      "sha256": "f1a877cf2ea6154f0fcebb91f77b2b2c5eb8a608bebb52f7750959507add5c01"
+    },
+    {
+      "path": "WeakAurasOptions/RegionOptions/Group.lua",
+      "sha256": "dbcbb142c433f0c71997ef878622bdcc0fd53fc48704d1dd153f3a883683b460"
+    },
+    {
+      "path": "WeakAurasOptions/RegionOptions/Icon.lua",
+      "sha256": "8ba5e4b259ddbddddf9d2a59b3e75937a1b6cb6f2d68b82c78351e56e657ac77"
+    },
+    {
+      "path": "WeakAurasOptions/RegionOptions/Model.lua",
+      "sha256": "5d47d1d936a5aaac9f436d52da0aed17f829354fa4981e2b24b426f6ac6ebca8"
+    },
+    {
+      "path": "WeakAurasOptions/RegionOptions/ProgressTexture.lua",
+      "sha256": "b39efedd55849e3442320f54d0a90ab4c2bd707e68f2a21f019f8b6bce5a94d9"
+    },
+    {
+      "path": "WeakAurasOptions/RegionOptions/StopMotion.lua",
+      "sha256": "142ad21c51805319fbc0a4f91ea415cd34a0e9023764cdd7c7035b8761827624"
+    },
+    {
+      "path": "WeakAurasOptions/RegionOptions/Text.lua",
+      "sha256": "80e31456db7bb4e39d6649a10db06c7965043c8d21395a744f60dbbd04f2ca26"
+    },
+    {
+      "path": "WeakAurasOptions/RegionOptions/Texture.lua",
+      "sha256": "e9fea430e521e29d8ebe9a2f545d31c011ed63c6b227f74df9b3084159d4a68a"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/Background.lua",
+      "sha256": "d56eb6c644354e0ee247d6a08120847f455805db5e9cdbea8ff48651e18413a8"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/Border.lua",
+      "sha256": "1256f706e7b45b624c7eaadb8d2e5cdd6ce19d263604e1c643e5817137114f3d"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/CircularProgressTexture.lua",
+      "sha256": "6ec23839d76af8e7c81f29116f38a43e4e38281e74df20b1dd37b513d3746fe5"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/Glow.lua",
+      "sha256": "3b6e74dc83babff2198b001c23332404ae28fbc5faefebeb8202bb23c3f7e9eb"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/LinearProgressTexture.lua",
+      "sha256": "a449b69e202e8fadab448e0dc5e798cf227665e1291d67d539df732aba8eadfd"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/Model.lua",
+      "sha256": "c3910105ec1827431c91f2b31ab67b4c0f9fa1f245a51e8a08b585324e622be9"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/StopMotion.lua",
+      "sha256": "9409c65fd6f1dde2356eca748437c5067aac277c1c65abeb05450c0d1c6541d9"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/SubRegionCommon.lua",
+      "sha256": "0f02725a8c02e238b74faf3b67a1c72c1d3258ca264ed15eb051f1c2591c272e"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/SubText.lua",
+      "sha256": "e2dde3be94d5a8fc9bda0e3ae10751f9371b7e41c0759aa6060d69f624f6bc68"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/Texture.lua",
+      "sha256": "f48dd42c2d2d9bc03cfccbe1c0fa5cf8a4206d61a6747fa05e5143f76a42207d"
+    },
+    {
+      "path": "WeakAurasOptions/SubRegionOptions/Tick.lua",
+      "sha256": "83bce11850024f9db62f3163ad8204e3ede22fb793edff526dbdb01c4dda3d73"
+    },
+    {
+      "path": "WeakAurasOptions/TriggerOptions.lua",
+      "sha256": "a33ec53a67ae783ec391c41d95b5045e193ed0718d0f026949209a22b724d17c"
+    },
+    {
+      "path": "WeakAurasOptions/VersionCheck.lua",
+      "sha256": "bb14d4141b8b4092df0a904e712287db9cdfd1680f1d2832528eef2efa17952c"
+    },
+    {
+      "path": "WeakAurasOptions/WeakAurasOptions.lua",
+      "sha256": "36a4e917b4ae718ea247271ea729826824a0c49a9256f29d462216d0a56ba654"
+    },
+    {
+      "path": "WeakAurasOptions/WeakAurasOptions_Cata.toc",
+      "sha256": "2bbeb7563cc40dba11669a6c76cec37a6daead8f4cd395164334e579f783e3c3"
+    },
+    {
+      "path": "WeakAurasOptions/WeakAurasOptions_Mists.toc",
+      "sha256": "0996ed6efdb53c68ca5dc094dd6f4f1dc0141c9ba9701ecc4fa5fa2fc82ebb60"
+    },
+    {
+      "path": "WeakAurasOptions/WeakAurasOptions_TBC.toc",
+      "sha256": "1dcf921a091d840b92f0d881cb4d55d0d51257e8ce82c0fecd919511b0f96317"
+    },
+    {
+      "path": "WeakAurasOptions/WeakAurasOptions_Vanilla.toc",
+      "sha256": "475c513e18e4fe39f98c8482cc79a072fcd905a387e42de5243718675e236a99"
+    },
+    {
+      "path": "WeakAurasOptions/WeakAurasOptions_Wrath.toc",
+      "sha256": "fa25a9d1bd60ff5bc91eaeb629a803fe0299be6058cd1e404ee789caecab49ca"
+    },
+    {
+      "path": "WeakAurasOptions/embeds.xml",
+      "sha256": "a6e424afcd57029535c8acfe6821edfa69ac3db6303cca50abd81c17fa6f5738"
+    },
+    {
+      "path": "WeakAurasOptions/locales.xml",
+      "sha256": "fc2b2dd0100d05d8d65a93a8d1204a07833fd9efa98dee2ff02bcb92e277ef2a"
+    },
+    {
+      "path": "WeakAurasTemplates/AceGUI-Widgets/AceGUIContainer-WeakAurasTemplateGroup.lua",
+      "sha256": "b422df38d2c63e1463491ebae26e29a833a40235e056c329f34feda699b8034e"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/deDE.lua",
+      "sha256": "d7e467d86e0838fa2fba87a869604ea9c2054fb1f52beb5ee68ee41b507d7dd5"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/enUS.lua",
+      "sha256": "5c00c324fef3ca9a2c96fe7b6f99bafba15bc3c517a196b3aa41e772d6814844"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/esES.lua",
+      "sha256": "b1d75ffde5e58c8e8690129b22fad40c2c4768095f27196c004d8bbc2f3f193e"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/esMX.lua",
+      "sha256": "e9782ba4d804a72a97bffb254625dbcb36ebbcfa117dfa40294a5b85b4b377d1"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/frFR.lua",
+      "sha256": "fcd72aceae5ca1faf7060796b5b60181bd071a8abaa4b2eeb4310fb7f7991838"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/itIT.lua",
+      "sha256": "ff8c8718003bd11152d21af7835093963376df1debc9db65779c6000adb2b6ba"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/koKR.lua",
+      "sha256": "1385e178e02a4235e318270d9990b15d7bb6777aeb24a72d9aee1e3717dfb412"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/ptBR.lua",
+      "sha256": "3c634f927eda5bd960f230b8de700c7fbcb01fc62f5d43195f4a20c6b217df9c"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/ruRU.lua",
+      "sha256": "27af674150cf9f82f53d9f8301aff79e54a915247df6ff9d64ed1193dc6eea20"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/zhCN.lua",
+      "sha256": "ba4923d6ff534eca7016b1a14dbd2cd9f2c03b1034e411f07ce724a4aaefcb24"
+    },
+    {
+      "path": "WeakAurasTemplates/Locales/zhTW.lua",
+      "sha256": "398d2e739bc080ef52322103dd03858565e962e47ad9012134dbf8e80013b8da"
+    },
+    {
+      "path": "WeakAurasTemplates/TriggerTemplates.lua",
+      "sha256": "f0a8e9c0324fdf57ff60a1fcb87eb0f535233e0adc273b1f019b81222b9e23b2"
+    },
+    {
+      "path": "WeakAurasTemplates/TriggerTemplatesData.lua",
+      "sha256": "ff5b3d3b3460c5bdd83281542050e4b26bc7b5f865fd1c07404682b3fd287c52"
+    },
+    {
+      "path": "WeakAurasTemplates/TriggerTemplatesDataCataclysm.lua",
+      "sha256": "e5b819cefbd8f20f1beb1c9a1068386beb156a9c41bdc2de929114cc8796db79"
+    },
+    {
+      "path": "WeakAurasTemplates/TriggerTemplatesDataClassicEra.lua",
+      "sha256": "171491fc8c05482aee78d723286d7dc377dd33611f00debeb35c9c3b15ea8ddb"
+    },
+    {
+      "path": "WeakAurasTemplates/TriggerTemplatesDataMists.lua",
+      "sha256": "02ea723be7dff1b9c063f667a90e16f4e1f2b6ce81950e8198e7179d9ea3c9a0"
+    },
+    {
+      "path": "WeakAurasTemplates/TriggerTemplatesDataTBC.lua",
+      "sha256": "702e2fd93a14636adbdc5aa162288d3a5394a28fd127fac4282b79248ebfa1e1"
+    },
+    {
+      "path": "WeakAurasTemplates/TriggerTemplatesDataWrath.lua",
+      "sha256": "6083826fa9030c5d740b3fb53d62bb11cb6b72ee754759879ef20e17867d3f89"
+    },
+    {
+      "path": "WeakAurasTemplates/WeakAurasTemplates_Cata.toc",
+      "sha256": "73fc992bb88ded3845877ef88000d9ea52c2e7e20c9567ad21087062b1836e52"
+    },
+    {
+      "path": "WeakAurasTemplates/WeakAurasTemplates_Mists.toc",
+      "sha256": "3aca29922cdc4d01666e208c002661448ccb29a56ae7753cb16eee11f86835e7"
+    },
+    {
+      "path": "WeakAurasTemplates/WeakAurasTemplates_TBC.toc",
+      "sha256": "2100ef62e349ae8cdb91344155c98072be79f67915f658cd427c0fc2d9872dc7"
+    },
+    {
+      "path": "WeakAurasTemplates/WeakAurasTemplates_Vanilla.toc",
+      "sha256": "807189237610fbcb7e3d2e935d66f3b94ae5f21484941b43ccdc84569da7f7f6"
+    },
+    {
+      "path": "WeakAurasTemplates/WeakAurasTemplates_Wrath.toc",
+      "sha256": "d2adaa4aa74f67703c5900affebdd6d9dbfcf7721fe04d0940641bc65531675e"
+    },
+    {
+      "path": "WeakAurasTemplates/locales.xml",
+      "sha256": "fc2b2dd0100d05d8d65a93a8d1204a07833fd9efa98dee2ff02bcb92e277ef2a"
+    }
+  ]
+}

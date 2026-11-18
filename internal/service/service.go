@@ -13,6 +13,7 @@ import (
 
 	"somegit.dev/vikingowl/wowtui/internal/addon"
 	"somegit.dev/vikingowl/wowtui/internal/config"
+	"somegit.dev/vikingowl/wowtui/internal/fingerprint"
 	"somegit.dev/vikingowl/wowtui/internal/index"
 	"somegit.dev/vikingowl/wowtui/internal/installer"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
@@ -22,12 +23,13 @@ import (
 )
 
 type Service struct {
-	Security     config.Security
-	Providers    map[string]provider.Provider
-	RegistryPath string
-	BackupRoot   string
-	MaxDownload  int64
-	OnEvent      EmitFunc
+	LoadFingerprintIndex func() (*index.Index, error)
+	Security             config.Security
+	Providers            map[string]provider.Provider
+	RegistryPath         string
+	BackupRoot           string
+	MaxDownload          int64
+	OnEvent              EmitFunc
 	// Index is the verified addon index, nil when none is loaded.
 	Index *index.Index
 }
@@ -40,14 +42,17 @@ type UpdateStatus struct {
 }
 
 type MappingCandidate struct {
-	InstallPath  string
-	Flavor       string
-	Folder       string
-	Version      string
-	Provider     string
-	Reference    string
-	Reason       string
-	Availability Availability
+	PackageFolders []string
+	ReleaseVersion string
+	FileChanges    []fingerprint.Change
+	InstallPath    string
+	Flavor         string
+	Folder         string
+	Version        string
+	Provider       string
+	Reference      string
+	Reason         string
+	Availability   Availability
 }
 
 type Availability string
@@ -117,6 +122,7 @@ func (s *Service) Scan(ctx context.Context, configPaths []string) ([]registry.In
 		s.emit(Event{Stage: StageInfo, Message: fmt.Sprintf("%s  %s  %d addons", label, inst.Path, len(folders))})
 	}
 
+	s.scanWowUpOwnership(reg.Installations)
 	if err := reg.Save(s.RegistryPath); err != nil {
 		return nil, err
 	}
@@ -195,11 +201,16 @@ func (s *Service) MapUnmanaged(inactive func(provider string) Availability) ([]M
 	}
 	var candidates []MappingCandidate
 	for _, installation := range reg.Installations {
+		matches, err := s.matchReleases(context.Background(), installation, "", "")
+		if err != nil {
+			s.emit(Event{Stage: StageWarning, Message: err.Error()})
+		}
 		for _, folder := range installation.Folders {
 			if folderOwner(reg, installation.Path, "", folder.Name) != nil {
 				continue
 			}
-			for _, candidate := range mapFolderHints(installation, folder, s.Index) {
+			local := mapFolderHints(installation, folder, s.Index)
+			for _, candidate := range addReleaseCandidates(local, installation, folder, matches) {
 				candidate.Availability = s.mappingAvailability(candidate.Provider, inactive)
 				candidates = append(candidates, candidate)
 			}
@@ -262,6 +273,24 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 	if !found {
 		return fmt.Errorf("unmanaged folder %q not found in %s", folderName, installPath)
 	}
+	if reg.FindAddon(ref.ID, installPath) != nil {
+		return fmt.Errorf("%s is already managed in %s", ref.ID, installPath)
+	}
+	// Explicit adoption of one root of a recognized release uses the same
+	// package scope and original-file baseline as interactive import.
+	source := provider.FormatReference(ref)
+	matches, err := s.matchReleases(ctx, installation, source, folder.Name)
+	if err != nil {
+		return err
+	}
+	if len(matches) == 1 {
+		selected := addReleaseCandidates(nil, installation, folder, matches)
+		results, err := s.Import(ctx, selected)
+		if err != nil {
+			return err
+		}
+		return results[0].Err
+	}
 	folders := []string{folder.Name}
 	if entry != nil {
 		if !containsFold(entry.Folders, folder.Name) {
@@ -277,37 +306,65 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 			}
 		}
 	}
-	var conflicts []string
-	for _, name := range folders {
-		if owner := folderOwner(reg, installPath, ref.ID, name); owner != nil {
-			conflicts = append(conflicts, fmt.Sprintf("folder %s is managed by %s", name, owner.Ref))
+	checkOwners := func(current *registry.Registry) error {
+		var conflicts []string
+		for _, name := range folders {
+			if owner := folderOwner(current, installPath, ref.ID, name); owner != nil {
+				conflicts = append(conflicts, fmt.Sprintf("folder %s is managed by %s", name, owner.Ref))
+			}
 		}
+		if len(conflicts) != 0 {
+			return fmt.Errorf("refusing to adopt %s in %s: %s", ref.ID, installPath, strings.Join(conflicts, "; "))
+		}
+		return nil
 	}
-	if len(conflicts) > 0 {
-		return fmt.Errorf("refusing to adopt %s in %s: %s", ref.ID, installPath, strings.Join(conflicts, "; "))
+	if err := checkOwners(reg); err != nil {
+		return err
 	}
 	p, ok := s.Providers[ref.Provider]
 	if !ok {
 		return providerUnavailable(ref.Provider)
 	}
+	baseline, err := alternateBaseline(ctx, s.Index, installation, folders)
+	if err != nil {
+		return err
+	}
 	remote, err := p.Resolve(ctx, ref)
+	if err != nil {
+		return err
+	}
+	// An import may have registered the release while Resolve was running.
+	importSaveMu.Lock()
+	defer importSaveMu.Unlock()
+	reg, err = registry.Load(s.RegistryPath)
 	if err != nil {
 		return err
 	}
 	if reg.FindAddon(ref.ID, installPath) != nil {
 		return fmt.Errorf("%s is already managed in %s", ref.ID, installPath)
 	}
+	if err := checkOwners(reg); err != nil {
+		return err
+	}
+	current, err := alternateBaseline(ctx, s.Index, installation, folders)
+	if err != nil {
+		return err
+	}
+	if len(baseline) != 0 && !slices.Equal(current, baseline) {
+		return fmt.Errorf("release files changed during adoption; rescan the installation")
+	}
 	reg.UpsertAddon(registry.Addon{
-		Provider:    ref.Provider,
-		Ref:         ref.ID,
-		Name:        remote.Name,
-		Author:      remote.Author,
-		Flavor:      installation.Flavor,
-		InstallPath: installPath,
-		Folders:     folders,
-		Version:     folder.Version,
-		Source:      "auto",
-		InstalledAt: time.Now(),
+		ReleaseFiles: current,
+		Provider:     ref.Provider,
+		Ref:          ref.ID,
+		Name:         remote.Name,
+		Author:       remote.Author,
+		Flavor:       installation.Flavor,
+		InstallPath:  installPath,
+		Folders:      folders,
+		Version:      folder.Version,
+		Source:       "auto",
+		InstalledAt:  time.Now(),
 	})
 	return reg.Save(s.RegistryPath)
 }
@@ -378,6 +435,17 @@ func mapFolderHints(installation registry.Installation, folder registry.Folder, 
 	}
 	if id := folder.Hints["x-curse-project-id"]; id != "" {
 		add("curseforge", "curseforge:"+id, "x-curse-project-id")
+	}
+	if source := folder.Hints["packager:changelog"]; source != "" {
+		if ref, err := provider.ParseReference(source); err == nil && ref.Provider == "github" {
+			add(ref.Provider, provider.FormatReference(ref), "packager:changelog")
+		}
+	}
+	for _, source := range folder.WowUpRefs {
+		ref, err := provider.ParseReference(source)
+		if err == nil && (ref.Provider == "curseforge" || ref.Provider == "github" || ref.Provider == "wowuphub") {
+			add(ref.Provider, provider.FormatReference(ref), "wowup:installed-folder")
+		}
 	}
 	return candidates
 }
@@ -475,7 +543,7 @@ func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.Ga
 		if !entry.Reviewed {
 			msg += " (unreviewed)"
 		}
-		s.emit(Event{Ref: resolved.ID, Stage: StageResolve, Message: msg})
+		s.emit(Event{Ref: resolved.ID, InstallPath: install.Path, Stage: StageResolve, Message: msg})
 		ref = resolved
 	}
 	p, ok := s.Providers[ref.Provider]
@@ -491,20 +559,20 @@ func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.Ga
 		return fmt.Errorf("%s is already installed in %s", ref.ID, install.Path)
 	}
 
-	s.emit(Event{Ref: ref.ID, Stage: StageResolve, Message: "resolving " + ref.ID})
+	s.emit(Event{Ref: ref.ID, InstallPath: install.Path, Stage: StageResolve, Message: "resolving " + ref.ID})
 	remote, err := p.Resolve(ctx, ref)
 	if err != nil {
 		return err
 	}
 
-	s.emit(Event{Ref: ref.ID, Stage: StageResolve, Message: fmt.Sprintf("fetching latest version for flavor %s", flavor)})
+	s.emit(Event{Ref: ref.ID, InstallPath: install.Path, Stage: StageResolve, Message: fmt.Sprintf("fetching latest version for flavor %s", flavor)})
 	release, err := p.Latest(ctx, remote, flavor, source)
 	if err != nil {
 		return err
 	}
-	s.emit(Event{Ref: ref.ID, Stage: StageInfo, Message: fmt.Sprintf("release %s (%s, %s)", versionLabel(release), release.AssetName, humanSize(release.Size))})
+	s.emit(Event{Ref: ref.ID, InstallPath: install.Path, Stage: StageInfo, Message: fmt.Sprintf("release %s (%s, %s)", versionLabel(release), release.AssetName, humanSize(release.Size))})
 
-	folders, sha, err := s.downloadAndInstall(ctx, p, release, reg, install.Path, ref.Provider+"-"+ref.ID, ref.ID, nil, 0, 0)
+	installed, err := s.downloadAndInstall(ctx, p, release, reg, install.Path, ref.Provider+"-"+ref.ID, ref.ID, updateGuard{}, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -514,24 +582,25 @@ func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.Ga
 		pin = "auto"
 	}
 	reg.UpsertAddon(registry.Addon{
-		Provider:    ref.Provider,
-		Ref:         ref.ID,
-		Name:        remote.Name,
-		Author:      remote.Author,
-		Flavor:      string(flavor),
-		InstallPath: install.Path,
-		Folders:     folders,
-		Version:     versionFor(release),
-		Source:      pin,
-		ReleaseID:   releaseIDFor(release),
-		AssetName:   release.AssetName,
-		SHA256:      sha,
-		InstalledAt: time.Now(),
+		Provider:     ref.Provider,
+		Ref:          ref.ID,
+		Name:         remote.Name,
+		Author:       remote.Author,
+		Flavor:       string(flavor),
+		InstallPath:  install.Path,
+		Folders:      installed.folders,
+		Version:      versionFor(release),
+		Source:       pin,
+		ReleaseID:    releaseIDFor(release),
+		AssetName:    release.AssetName,
+		SHA256:       installed.sha256,
+		ReleaseFiles: installed.files,
+		InstalledAt:  time.Now(),
 	})
 	if err := reg.Save(s.RegistryPath); err != nil {
 		return err
 	}
-	s.emit(Event{Ref: ref.ID, Stage: StageDone, Message: fmt.Sprintf("installed %s (%s)", ref.ID, strings.Join(folders, ", "))})
+	s.emit(Event{Ref: ref.ID, InstallPath: install.Path, Stage: StageDone, Message: fmt.Sprintf("installed %s (%s)", ref.ID, strings.Join(installed.folders, ", "))})
 	return nil
 }
 
@@ -545,8 +614,17 @@ func (s *Service) Check(ctx context.Context) ([]UpdateStatus, error) {
 	total := len(reg.Addons)
 	for i, addon := range reg.Addons {
 		status := UpdateStatus{Addon: addon}
-		s.emit(Event{Ref: addon.Ref, Stage: StageResolve, Message: "checking " + addon.Ref, Index: i + 1, Total: total})
+		s.emit(Event{Ref: addon.Ref, InstallPath: addon.InstallPath, Stage: StageResolve, Message: "checking " + addon.Ref, Index: i + 1, Total: total})
 
+		guard, err := s.updateGuard(ctx, reg, &addon, nil)
+		if err == nil {
+			_, err = guard.check(ctx)
+		}
+		if err != nil {
+			status.Error = err
+			statuses = append(statuses, status)
+			continue
+		}
 		p, ok := s.Providers[addon.Provider]
 		if !ok {
 			status.Error = providerUnavailable(addon.Provider)
@@ -578,7 +656,35 @@ func (s *Service) Update(ctx context.Context, refOrName string, dryRun bool) err
 	if err != nil {
 		return err
 	}
-	return s.updateAddon(ctx, reg, addon, dryRun, 0, 0)
+	return s.updateAddon(ctx, reg, addon, nil, dryRun, 0, 0)
+}
+
+// UpdateInstalled updates the exact registry record selected in the TUI.
+func (s *Service) UpdateInstalled(ctx context.Context, installPath, ref string, dryRun bool) error {
+	return s.updateInstalled(ctx, installPath, ref, nil, dryRun)
+}
+
+// UpdateReviewed replaces only the local edits identified by this review in
+// the selected installation. An edit after review requires fresh confirmation.
+func (s *Service) UpdateReviewed(ctx context.Context, review *LocalChangesError, dryRun bool) error {
+	if review == nil || len(review.Changes) == 0 {
+		return fmt.Errorf("a review of the local changes is required")
+	}
+	approval := *review
+	approval.Changes = slices.Clone(review.Changes)
+	return s.updateInstalled(ctx, approval.InstallPath, approval.Ref, &approval, dryRun)
+}
+
+func (s *Service) updateInstalled(ctx context.Context, installPath, ref string, approval *LocalChangesError, dryRun bool) error {
+	reg, err := registry.Load(s.RegistryPath)
+	if err != nil {
+		return err
+	}
+	addon := reg.FindAddon(ref, installPath)
+	if addon == nil {
+		return fmt.Errorf("%s is not managed in %s", ref, installPath)
+	}
+	return s.updateAddon(ctx, reg, addon, approval, dryRun, 0, 0)
 }
 
 func (s *Service) UpdateAll(ctx context.Context, dryRun bool) error {
@@ -590,8 +696,8 @@ func (s *Service) UpdateAll(ctx context.Context, dryRun bool) error {
 	var failures updateFailures
 	for i := range reg.Addons {
 		addon := &reg.Addons[i]
-		if err := s.updateAddon(ctx, reg, addon, dryRun, i+1, total); err != nil {
-			s.emit(Event{Ref: addon.Ref, Stage: StageError, Message: fmt.Sprintf("failed to update %s: %v", addon.Ref, err), Index: i + 1, Total: total, Err: err})
+		if err := s.updateAddon(ctx, reg, addon, nil, dryRun, i+1, total); err != nil {
+			s.emit(Event{Ref: addon.Ref, InstallPath: addon.InstallPath, Stage: StageError, Message: fmt.Sprintf("failed to update %s: %v", addon.Ref, err), Index: i + 1, Total: total, Err: err})
 			failures = append(failures, fmt.Errorf("%s: %w", addon.Ref, err))
 		}
 	}
@@ -613,11 +719,19 @@ func (f updateFailures) Error() string {
 
 func (f updateFailures) Unwrap() []error { return f }
 
-func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon *registry.Addon, dryRun bool, index, total int) error {
+func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon *registry.Addon, approval *LocalChangesError, dryRun bool, index, total int) error {
 	ev := func(stage Stage, msg string) {
-		s.emit(Event{Ref: addon.Ref, Stage: stage, Message: msg, Index: index, Total: total})
+		s.emit(Event{Ref: addon.Ref, InstallPath: addon.InstallPath, Stage: stage, Message: msg, Index: index, Total: total})
 	}
 
+	guard, err := s.updateGuard(ctx, reg, addon, approval)
+	if err != nil {
+		return err
+	}
+	repair, err := guard.check(ctx)
+	if err != nil {
+		return err
+	}
 	p, ok := s.Providers[addon.Provider]
 	if !ok {
 		return providerUnavailable(addon.Provider)
@@ -630,7 +744,7 @@ func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon
 		return err
 	}
 
-	if sameVersion(*addon, release) {
+	if !repair && sameVersion(*addon, release) {
 		ev(StageCurrent, fmt.Sprintf("%s is up to date (%s)", addon.Ref, addon.Version))
 		return nil
 	}
@@ -640,16 +754,17 @@ func (s *Service) updateAddon(ctx context.Context, reg *registry.Registry, addon
 	}
 
 	ev(StageInstall, fmt.Sprintf("updating %s: %s -> %s", addon.Ref, addon.Version, versionLabel(release)))
-	folders, sha, err := s.downloadAndInstall(ctx, p, release, reg, addon.InstallPath, addon.Provider+"-"+addon.Ref, addon.Ref, addon.Folders, index, total)
+	installed, err := s.downloadAndInstall(ctx, p, release, reg, addon.InstallPath, addon.Provider+"-"+addon.Ref, addon.Ref, guard, index, total)
 	if err != nil {
 		return err
 	}
 
-	addon.Folders = folders
+	addon.Folders = installed.folders
 	addon.Version = versionFor(release)
 	addon.ReleaseID = releaseIDFor(release)
 	addon.AssetName = release.AssetName
-	addon.SHA256 = sha
+	addon.SHA256 = installed.sha256
+	addon.ReleaseFiles = installed.files
 	addon.InstalledAt = time.Now()
 	return reg.Save(s.RegistryPath)
 }
@@ -702,15 +817,15 @@ func shortHash(s string) string {
 	return s
 }
 
-func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, release provider.Release, reg *registry.Registry, installPath, label, ref string, previous []string, index, total int) ([]string, string, error) {
+func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, release provider.Release, reg *registry.Registry, installPath, label, ref string, guard updateGuard, index, total int) (*installedRelease, error) {
 	ev := func(stage Stage, msg string) {
-		s.emit(Event{Ref: ref, Stage: stage, Message: msg, Index: index, Total: total})
+		s.emit(Event{Ref: ref, InstallPath: installPath, Stage: stage, Message: msg, Index: index, Total: total})
 	}
 
 	ev(StageDownload, "downloading "+release.AssetName)
 	body, err := p.Download(ctx, release)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	defer body.Close()
 
@@ -721,25 +836,25 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 
 	addonsDir := filepath.Join(installPath, "Interface", "AddOns")
 	if err := os.MkdirAll(filepath.Dir(addonsDir), 0o755); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	workDir, err := os.MkdirTemp(filepath.Dir(addonsDir), ".wowtui-work-")
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	defer os.RemoveAll(workDir)
 
 	zipPath := filepath.Join(workDir, "archive.zip")
 	sha, size, err := installer.WriteArchive(body, zipPath, maxDownload)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	ev(StageDownload, fmt.Sprintf("downloaded %s (sha256 %s)", humanSize(size), sha[:12]))
 
 	ev(StageExtract, "extracting")
 	staging := filepath.Join(workDir, "staging")
 	if err := os.MkdirAll(staging, 0o755); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	reportBackend := func(backend, warning string) {
 		ev(StageInfo, "extract backend: "+backend)
@@ -748,15 +863,19 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		}
 	}
 	if err := sandbox.Extract(ctx, s.Security, zipPath, staging, extractLimits, reportBackend); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	if err := ctx.Err(); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	roots, err := installer.FindAddonRoots(staging)
 	if err != nil {
-		return nil, "", err
+		return nil, err
+	}
+	var previous []string
+	if guard.addon != nil {
+		previous = guard.addon.Folders
 	}
 	var conflicts []string
 	for _, root := range roots {
@@ -768,7 +887,7 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		}
 	}
 	if len(conflicts) > 0 {
-		return nil, "", fmt.Errorf("refusing to install %s in %s: %s", ref, installPath, strings.Join(conflicts, "; "))
+		return nil, fmt.Errorf("refusing to install %s in %s: %s", ref, installPath, strings.Join(conflicts, "; "))
 	}
 	if release.Kind == provider.KindTag || release.Kind == provider.KindBranch {
 		for _, msg := range packagerWarnings(staging, roots) {
@@ -790,12 +909,38 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		}
 	}
 
+	files, err := fingerprint.Snapshot(ctx, roots)
+	if err != nil {
+		return nil, fmt.Errorf("recording installed files: %w", err)
+	}
 	ev(StageInstall, "installing")
 	if err := ctx.Err(); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if err := os.MkdirAll(addonsDir, 0o755); err != nil {
-		return nil, "", err
+		return nil, err
+	}
+	if len(guard.release.Files) != 0 {
+		// A new package root can collide with an unrelated local addon.
+		// Only roots covered by the reviewed baseline may be replaced.
+		tracked := guard.release.Folders()
+		affected := slices.Clone(dropped)
+		for _, root := range roots {
+			affected = append(affected, root.Name)
+		}
+		for _, name := range affected {
+			if slices.Contains(tracked, name) {
+				continue
+			}
+			if _, err := os.Lstat(filepath.Join(addonsDir, name)); err == nil {
+				return nil, fmt.Errorf("update would replace existing folder %q outside the tracked release", name)
+			} else if !os.IsNotExist(err) {
+				return nil, err
+			}
+		}
+	}
+	if _, err := guard.check(ctx); err != nil {
+		return nil, err
 	}
 	result, err := installer.Install(installer.InstallPlan{
 		AddonsDir:  addonsDir,
@@ -806,7 +951,7 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 		Remove:     dropped,
 	})
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if result.BackupPath != "" {
 		ev(StageBackup, "backup: "+result.BackupPath)
@@ -823,7 +968,7 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 	if len(result.Removed) > 0 {
 		ev(StageInfo, fmt.Sprintf("%s removed folders no longer shipped: %s (backup: %s)", ref, strings.Join(result.Removed, ", "), result.BackupPath))
 	}
-	return result.Folders, sha, nil
+	return &installedRelease{folders: result.Folders, sha256: sha, files: files}, nil
 }
 
 func folderOwner(reg *registry.Registry, installPath, ref, folder string) *registry.Addon {
@@ -849,19 +994,18 @@ func containsFold(names []string, name string) bool {
 }
 
 func findAddon(reg *registry.Registry, refOrName string) (*registry.Addon, error) {
-	var matches []*registry.Addon
+	var exact, byName []*registry.Addon
 	for i := range reg.Addons {
 		addon := &reg.Addons[i]
 		if addon.Ref == refOrName {
-			return addon, nil
+			exact = append(exact, addon)
+		} else if strings.EqualFold(filepath.Base(addon.Ref), refOrName) {
+			byName = append(byName, addon)
 		}
-		short := addon.Ref
-		if idx := strings.LastIndex(addon.Ref, "/"); idx >= 0 {
-			short = addon.Ref[idx+1:]
-		}
-		if strings.EqualFold(short, refOrName) {
-			matches = append(matches, addon)
-		}
+	}
+	matches := byName
+	if len(exact) != 0 {
+		matches = exact
 	}
 	if len(matches) == 1 {
 		return matches[0], nil
@@ -869,9 +1013,9 @@ func findAddon(reg *registry.Registry, refOrName string) (*registry.Addon, error
 	if len(matches) > 1 {
 		names := make([]string, 0, len(matches))
 		for _, m := range matches {
-			names = append(names, m.Ref)
+			names = append(names, fmt.Sprintf("%s in %s", m.Ref, m.InstallPath))
 		}
-		return nil, fmt.Errorf("ambiguous addon %q, matches: %s", refOrName, strings.Join(names, ", "))
+		return nil, fmt.Errorf("ambiguous addon %q, matches: %s; specify the full reference and --install <path>", refOrName, strings.Join(names, ", "))
 	}
 	return nil, fmt.Errorf("addon %q not found in registry", refOrName)
 }

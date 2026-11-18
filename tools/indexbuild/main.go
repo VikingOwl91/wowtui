@@ -4,6 +4,7 @@
 //	go run ./tools/indexbuild keygen   --out DIR
 //	go run ./tools/indexbuild discover --registry registry.json --out candidates.json --cache DIR
 //	go run ./tools/indexbuild build    --candidates candidates.json --key signing.key --out index.json
+//	go run ./tools/indexbuild fingerprint --zip addon.zip --version TAG --out manifest.json
 //
 // keygen writes a new ed25519 signing key pair. discover seeds from the
 // folders and TOC hints of a wowtui registry and finds each addon's GitHub
@@ -38,6 +39,7 @@ commands:
   keygen    --out DIR
   discover  --registry FILE --out FILE --cache DIR [--review FILE] [--mirror-owners LIST]
   build     --candidates FILE --key FILE --out FILE
+  fingerprint --zip FILE --version TAG --out FILE
 `
 
 func main() {
@@ -52,6 +54,8 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, d deps) i
 		return 2
 	}
 	switch args[0] {
+	case "fingerprint":
+		return cmdFingerprint(args[1:], stdout, stderr)
 	case "keygen":
 		return cmdKeygen(args[1:], stdout, stderr)
 	case "discover":

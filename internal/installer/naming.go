@@ -31,6 +31,12 @@ func safeFolderName(name string) bool {
 	return name != "" && !strings.HasPrefix(name, ".") && !strings.ContainsAny(name, "/\\\x00")
 }
 
+// SafeFolderName reports whether name is a plain addon folder name the
+// installer accepts: not empty, no leading dot, no path separator or NUL.
+func SafeFolderName(name string) bool {
+	return safeFolderName(name)
+}
+
 func folderNameForTocs(current string, tocBases []string) string {
 	if len(tocBases) == 0 {
 		return current

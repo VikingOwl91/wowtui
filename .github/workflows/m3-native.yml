@@ -1,0 +1,66 @@
+name: Native archive sandbox
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    name: M3 native ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            machine: x86_64
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            machine: aarch64
+            arch: arm64
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Prepare native Bubblewrap runner
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends bubblewrap
+          # Some Noble images lack a user-namespace grant for the packaged bwrap.
+          # Keep any additional grant scoped to /usr/bin/bwrap on this ephemeral VM.
+          if ! bwrap --unshare-all --ro-bind /usr /usr --symlink usr/lib /lib --symlink usr/lib64 /lib64 /usr/bin/true &&
+             [[ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null)" == 1 ]]; then
+            sudo apparmor_parser -r <<'PROFILE'
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile bwrap /usr/bin/bwrap flags=(unconfined) {
+            userns,
+          }
+          PROFILE
+          fi
+          test "$(uname -m)" = "${{ matrix.machine }}"
+          test "$(go env GOARCH)" = "${{ matrix.arch }}"
+          uname -m
+          go version
+          bwrap --version
+      - name: Verify isolation, filter, and production install/update
+        env:
+          M3_NATIVE: '1'
+          WOWTUI_TEST_NATIVE_SANDBOX: '1'
+        shell: bash
+        run: |
+          set -o pipefail
+          go test -tags=m3native -count=1 -json ./internal/sandbox/... ./acceptance | tee "$RUNNER_TEMP/m3.json"
+          jq -se '
+            [ .[] | select(.Action == "pass") | .Test ] as $passed |
+            ["TestNativeProfile","TestNativeIsolation","TestNativeInstallUpdate"] - $passed == []
+          ' "$RUNNER_TEMP/m3.json"

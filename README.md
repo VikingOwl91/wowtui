@@ -448,9 +448,34 @@ archives get a warning when `.pkgmeta` or `pkgmeta.yaml` lists `externals`, or
 when a `.toc` still contains `@project-version@`. Both mean the archive was not
 built by the BigWigs packager; the warning suggests `--source release`.
 
-Bubblewrap sandboxing is planned as an optional isolation layer around the
-archive worker on Linux. The internal extractor remains the mandatory baseline
-so the application also works without Bubblewrap.
+### Archive sandbox
+
+`add` and `update` start a private extraction worker from the installed
+`wowtui` binary. The parent checks the finished staging tree before reading
+addon metadata or replacing installed files. On Linux, Bubblewrap isolates the
+worker from the host network, home directory, registry, and live addon files.
+It mounts the archive read-only and gives the worker a writable staging area.
+Linux amd64 and arm64 have seccomp profiles for the worker.
+
+Both settings default to `auto`. To require the strongest backend, set:
+
+```toml
+[security]
+sandbox = "required"
+seccomp = "required"
+```
+
+| Setting | Behavior |
+| --- | --- |
+| Both `auto` | On Linux, use Bubblewrap with seccomp where available. Warn and use Bubblewrap alone if filtering is unavailable, or run the worker directly if Bubblewrap is unavailable. Other platforms run the worker directly. |
+| `sandbox = "required"` | Fail extraction if Bubblewrap is unavailable. With seccomp on `auto`, Bubblewrap alone is sufficient. |
+| `seccomp = "required"` | Require both Bubblewrap and the seccomp filter. |
+
+The CLI and TUI report the selected backend. The filter terminates a worker
+that attempts an unexpected syscall. An extraction error stops the
+install or update. Fallback takes place only during capability selection,
+before the worker processes the archive. The direct worker uses the same ZIP
+validation but has the user's filesystem permissions.
 
 ## Maintainers: Building the Index
 
@@ -508,6 +533,19 @@ go vet ./...
 go test ./...
 govulncheck ./...
 ```
+
+The M3 native acceptance job runs the following command independently on Linux
+amd64 and arm64, on hosts with working Bubblewrap, user namespaces, and seccomp:
+
+```bash
+M3_NATIVE=1 WOWTUI_TEST_NATIVE_SANDBOX=1 go test -tags=m3native -count=1 -v ./internal/sandbox/... ./acceptance
+```
+
+The acceptance test builds the production binary, installs and updates a
+fixture from a local HTTP server with both protections required, and compares
+the registry and installed tree after a rejected update. The native job also
+checks filesystem and network isolation and exercises a filtered syscall.
+A passing run on each native architecture qualifies that architecture.
 
 The code is organized so the service and provider layers can be tested without
 a terminal. Provider HTTP tests use local test servers rather than live APIs.

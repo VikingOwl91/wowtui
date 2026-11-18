@@ -4,3 +4,4 @@
 .env
 *.local.toml
 .claude/
+/.codex/

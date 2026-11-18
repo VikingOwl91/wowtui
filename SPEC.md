@@ -146,7 +146,9 @@ internal/
 ├── registry/
 │   └── registry.go
 ├── sandbox/
-│   └── sandbox.go      (noch leer, siehe M3)
+│   ├── worker/         (Extraktion und Prüfung des Staging-Baums)
+│   ├── seccomp/        (Linux-Filter für amd64 und arm64)
+│   └── sandbox.go      (Auswahl und Start des Workers)
 ├── service/
 │   ├── service.go
 │   ├── event.go
@@ -205,10 +207,6 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 // Service.Index ist der geladene, verifizierte Index (nil ohne Index);
 // Add und Adopt lösen damit index:<id> auf, MapUnmanaged liefert Kandidaten
 
-// geplant (M3), internal/sandbox ist noch leer
-type Sandbox interface {
-    Run(ctx context.Context, operation Operation) (Result, error)
-}
 ```
 
 ### Provider und API-Keys
@@ -788,69 +786,36 @@ und plattformunabhängig, der Rest ist Verteidigung in der Tiefe.
 4. **Bubblewrap um den Worker**, nur Linux, optional.
 5. **Optional Seccomp-Policy** für den Worker.
 
-Umgesetzt sind Stufe 1 und 2. Stufe 3 bis 5 sind geplant (M3),
-`internal/sandbox` ist noch leer.
-
 ### Worker und Bubblewrap
 
-Der Hauptprozess lädt herunter und startet den Worker. Der Worker sieht
-nur das Archiv (read-only) und ein Staging-Verzeichnis (schreibbar):
+Der Hauptprozess lädt das Archiv herunter. Zum Entpacken startet er dieselbe
+Programmdatei in einem privaten Worker-Modus. Dieser Modus verarbeitet einen
+größenbegrenzten JSON-Auftrag über stdin/stdout und wird vor dem Laden von
+`.env` ausgewählt. Nach dem Prozessende prüft der Hauptprozess Dateitypen,
+Verknüpfungen, Größen und Dateizahl im Staging und ermittelt die Addon-Ordner
+selbst. Besitzprüfung, Backup, Installation und Registry bleiben beim
+Hauptprozess.
 
-```bash
-bwrap \
-  --unshare-all \
-  --die-with-parent \
-  --new-session \
-  --ro-bind /usr /usr \
-  --ro-bind /lib /lib \
-  --ro-bind /lib64 /lib64 \
-  --ro-bind "$ARCHIVE" /input/addon.zip \
-  --bind "$STAGING_DIR" /output \
-  --proc /proc \
-  --dev /dev \
-  --tmpfs /tmp \
-  --chdir /output \
-  wowtui-worker extract /input/addon.zip /output
-```
+Unter Linux prüft wowtui vor der Extraktion, ob Bubblewrap auf diesem Host
+funktioniert. Der isolierte Worker hat eine eigene Mount- und Netzwerkumgebung.
+Er erhält das Archiv lesbar und das Staging-Verzeichnis schreibbar. Die
+WoW-Installation, die Registry und das Home-Verzeichnis werden nicht eingebunden.
+Für Linux amd64 und arm64 gibt es je ein Seccomp-Profil, das die Architektur
+prüft und die für Worker und Laufzeit erlaubten Systemaufrufe festlegt.
 
-Kein Zugriff auf `$HOME`, `~/.ssh`, WoW-Verzeichnisse, kein Netzwerk.
-Nach erfolgreicher Validierung übernimmt der Hauptprozess die Dateien
-aus dem Staging und installiert sie.
+### Auswahl des Backends
 
-Kommunikation über stdin/stdout mit JSON, keine Shell, keine beliebigen
-Befehle:
+In `[security]` akzeptieren `sandbox` und `seccomp` jeweils `auto` (Default)
+oder `required`. Im Automatikmodus wählt wowtui auf Linux zuerst Bubblewrap
+mit Seccomp. Ist nur Seccomp nicht verfügbar, meldet wowtui eine Warnung und
+nutzt Bubblewrap allein. Fehlt Bubblewrap oder kann es keine Namespaces
+anlegen, läuft der Worker nach einer Warnung direkt. Außerhalb von Linux nutzt
+der Automatikmodus den direkten Worker.
 
-```go
-type ExtractRequest struct {
-    ArchivePath      string `json:"archive_path"`
-    DestinationPath  string `json:"destination_path"`
-    MaximumFiles     int    `json:"maximum_files"`
-    MaximumTotalSize int64  `json:"maximum_total_size"`
-    MaximumFileSize  int64  `json:"maximum_file_size"`
-}
-
-type ExtractResult struct {
-    Files      []ExtractedFile `json:"files"`
-    AddonRoots []string        `json:"addon_roots"`
-    TotalSize  int64           `json:"total_size"`
-}
-```
-
-### Sandbox-Verhalten je Plattform
-
-- Linux + bwrap vorhanden: Sandbox verwenden
-- Linux ohne bwrap: Warnung, interner sicherer Extractor
-- Windows/macOS: interner Extractor
-- Strict Mode über `[security] sandbox = "required"`: Installation
-  schlägt fehl, wenn keine Sandbox verfügbar ist
-
-### Grenzen von Bubblewrap
-
-Nur Linux, muss installiert sein, braucht funktionierende
-User-Namespaces, Distributionen schränken deren Nutzung unterschiedlich
-ein, eine falsche Konfiguration kann Sicherheit nur vortäuschen.
-Deshalb bleibt die Sandbox ein optionales Backend hinter dem
-`Sandbox`-Interface und nie das Fundament der Anwendung.
+`sandbox = "required"` verlangt Bubblewrap. `seccomp = "required"` verlangt
+Bubblewrap und den Filter. Eine fehlende Pflichtschicht bricht den Vorgang
+vor der Extraktion ab. Ein Fehler beim Entpacken oder Validieren beendet den
+Versuch. `check` und `update --dry-run` starten keinen Extraktionsworker.
 
 ## 8. TUI
 
@@ -997,7 +962,8 @@ installieren, Rollback testen. Alles als Bibliothek plus Tests.
 Konfigurationsdatei, sauberer Fehleroutput.
 
 **M3, Sandbox.** Worker-Prozess, Bubblewrap-Backend, Fallback-Logik,
-Strict Mode. Testfälle mit feindlichen Archiven.
+Strict Mode und Seccomp. Native Abnahme auf Linux amd64 und arm64 mit einem
+Installations- und Updatevorgang im gefilterten Worker.
 
 **M4, TUI.** Bubble Tea auf dem fertigen Kern. Erst jetzt, damit nicht
 Provider, Dateisystem, Nebenläufigkeit und UI-Zustand gleichzeitig
@@ -1017,7 +983,7 @@ gebunden, ein Key wird nie mitgeliefert.
 | GitHub-Rate-Limit (60 Anfragen pro Stunde ohne Token) | `check` und `update --all` scheitern bei vielen Addons | HTTP-Cache mit bedingten Requests (mit Token zählt ein `304` nicht), Fehlermeldung mit Reset-Zeit und Token-Hinweis |
 | Unsaubere Versionsformate | Falsche Update-Entscheidungen | Auflösungsreihenfolge aus Abschnitt 4, Hashvergleich als letzte Stufe |
 | Flavor-Mismatch | Falsches Release für Classic/PTR | Provider wählen nach dem GameType des Flavors, Test-Clients teilen den Spieltyp ihres Basis-Clients |
-| bwrap nicht verfügbar oder User-Namespaces deaktiviert | Sandbox fehlt | Fallback auf internen Extractor, Warnung, Strict Mode |
+| bwrap nicht verfügbar oder User-Namespaces deaktiviert | Sandbox fehlt | Direkter Worker mit Warnung, Abbruch im Strict Mode |
 | CurseForge-ToS | Provider rechtlich/technisch instabil | Nur mit eigenem API-Key des Users, kein mitgelieferter Key, ToS-Einhaltung bleibt Sache von User und Projekt |
 | Manipulierter oder veralteter Index | Falsche Zuordnung, fremde Quelle | Signatur vor dem Parsen, strenge Validierung, nur Quellverweise ohne Download-URL, Releases immer von der Quelle; ältere gültig signierte Datei wird noch akzeptiert (kein Rollback-Schutz) |
 | Mehrere Ordner pro Paket | Falsche Zuordnung bei Updates | Paket-Modell statt Ordner-Modell, Registry-Metadaten |

@@ -29,6 +29,15 @@ func (m *Model) initExploreTable() {
 }
 
 func (m *Model) handleExploreKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.exploreInput.Focused() {
+		switch msg.String() {
+		case "ctrl+c", "tab", "shift+tab", "esc", "enter":
+		default:
+			var cmd tea.Cmd
+			m.exploreInput, cmd = m.exploreInput.Update(msg)
+			return m, cmd
+		}
+	}
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
@@ -79,11 +88,6 @@ func (m *Model) handleExploreKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		m.exploreInput.Focus()
 		return m, textinput.Blink
-	}
-	if m.exploreInput.Focused() {
-		var cmd tea.Cmd
-		m.exploreInput, cmd = m.exploreInput.Update(msg)
-		return m, cmd
 	}
 	var cmd tea.Cmd
 	m.exploreTable, cmd = m.exploreTable.Update(msg)

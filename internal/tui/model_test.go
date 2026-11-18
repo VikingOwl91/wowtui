@@ -465,3 +465,258 @@ func TestViewFitsWindowHeightWithNotices(t *testing.T) {
 		}
 	}
 }
+
+const typedText = "Weak Auras quad 1/3"
+
+func typeText(m *Model, text string) {
+	for _, r := range text {
+		if r == ' ' {
+			m.Update(tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{r}})
+			continue
+		}
+		m.Update(keyMsg(string(r)))
+	}
+}
+
+func isQuitCmd(cmd tea.Cmd) bool {
+	if cmd == nil {
+		return false
+	}
+	_, ok := cmd().(tea.QuitMsg)
+	return ok
+}
+
+func drainOp(m *Model) {
+	for range m.eventChan {
+	}
+	m.Update(opClosedMsg{})
+}
+
+func openExploreWithResult(m *Model) {
+	m.exploreResults = []provider.RemoteAddon{{Name: "WeakAuras", Provider: "github", ID: "WeakAuras/WeakAuras2"}}
+	m.Update(tea.KeyMsg{Type: tea.KeyTab})
+}
+
+func openAddonsSearch(m *Model) { m.Update(keyMsg("f")) }
+
+func openAddDialog(m *Model) { m.Update(keyMsg("a")) }
+
+func openSettingsRename(m *Model) {
+	m.Update(keyMsg("3"))
+	m.Update(keyMsg("r"))
+}
+
+func TestFocusedInputsTakeCommandLetters(t *testing.T) {
+	cases := []struct {
+		name    string
+		setup   func(m *Model)
+		screen  screen
+		value   func(m *Model) string
+		focused func(m *Model) bool
+	}{
+		{"explore search", openExploreWithResult, screenExplore,
+			func(m *Model) string { return m.exploreInput.Value() },
+			func(m *Model) bool { return m.exploreInput.Focused() }},
+		{"addons search", openAddonsSearch, screenAddons,
+			func(m *Model) string { return m.searchInput.Value() },
+			func(m *Model) bool { return m.searching && m.searchInput.Focused() }},
+		{"add reference", openAddDialog, screenAdd,
+			func(m *Model) string { return m.input.Value() },
+			func(m *Model) bool { return m.addField == 0 && m.input.Focused() }},
+		{"settings rename", openSettingsRename, screenSettings,
+			func(m *Model) string { return m.renameInput.Value() },
+			func(m *Model) bool { return m.renaming && m.renameInput.Focused() }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mm := loadedModel(t, 120, 30)
+			tc.setup(mm)
+			if !tc.focused(mm) {
+				t.Fatal("input not focused after setup")
+			}
+
+			typeText(mm, typedText)
+
+			if got := tc.value(mm); got != typedText {
+				t.Errorf("input = %q, want %q", got, typedText)
+			}
+			if mm.screen != tc.screen {
+				t.Errorf("screen = %v, want %v", mm.screen, tc.screen)
+			}
+			if !tc.focused(mm) {
+				t.Error("input lost focus while typing")
+			}
+			if mm.busy || mm.opKind != opNone {
+				t.Errorf("typing started an operation: opKind = %v", mm.opKind)
+			}
+			if mm.detailRemote != nil || mm.errMsg != "" {
+				t.Errorf("typing triggered a command: detailRemote = %v, errMsg = %q", mm.detailRemote, mm.errMsg)
+			}
+		})
+	}
+}
+
+func TestFocusedInputLeaveAndSubmitKeys(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(m *Model)
+		key   tea.KeyMsg
+		check func(t *testing.T, m *Model, cmd tea.Cmd)
+	}{
+		{"explore enter searches", openExploreWithResult, tea.KeyMsg{Type: tea.KeyEnter}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.exploreQuery != typedText || m.exploreInput.Focused() {
+				t.Errorf("exploreQuery = %q, focused = %v", m.exploreQuery, m.exploreInput.Focused())
+			}
+			if cmd == nil || m.opKind != opSearch {
+				t.Errorf("enter did not start a search: opKind = %v", m.opKind)
+			}
+			drainOp(m)
+		}},
+		{"explore esc clears", openExploreWithResult, tea.KeyMsg{Type: tea.KeyEsc}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.exploreInput.Value() != "" || m.exploreInput.Focused() || m.screen != screenExplore {
+				t.Errorf("value = %q, focused = %v, screen = %v", m.exploreInput.Value(), m.exploreInput.Focused(), m.screen)
+			}
+		}},
+		{"explore tab", openExploreWithResult, tea.KeyMsg{Type: tea.KeyTab}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.screen != screenSettings || m.exploreInput.Focused() {
+				t.Errorf("screen = %v, focused = %v", m.screen, m.exploreInput.Focused())
+			}
+		}},
+		{"explore shift+tab", openExploreWithResult, tea.KeyMsg{Type: tea.KeyShiftTab}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.screen != screenAddons || m.exploreInput.Focused() {
+				t.Errorf("screen = %v, focused = %v", m.screen, m.exploreInput.Focused())
+			}
+		}},
+		{"explore ctrl+c", openExploreWithResult, tea.KeyMsg{Type: tea.KeyCtrlC}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if !isQuitCmd(cmd) {
+				t.Error("ctrl+c did not quit")
+			}
+		}},
+		{"addons search enter", openAddonsSearch, tea.KeyMsg{Type: tea.KeyEnter}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.filterQuery != typedText || m.searching || m.searchInput.Focused() {
+				t.Errorf("filterQuery = %q, searching = %v", m.filterQuery, m.searching)
+			}
+		}},
+		{"addons search esc", openAddonsSearch, tea.KeyMsg{Type: tea.KeyEsc}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.filterQuery != "" || m.searching || m.searchInput.Focused() {
+				t.Errorf("filterQuery = %q, searching = %v", m.filterQuery, m.searching)
+			}
+		}},
+		{"add enter", openAddDialog, tea.KeyMsg{Type: tea.KeyEnter}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.addField != 1 || m.input.Focused() || m.input.Value() != typedText {
+				t.Errorf("addField = %d, focused = %v, value = %q", m.addField, m.input.Focused(), m.input.Value())
+			}
+		}},
+		{"add tab", openAddDialog, tea.KeyMsg{Type: tea.KeyTab}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.addField != 1 || m.input.Focused() {
+				t.Errorf("addField = %d, focused = %v", m.addField, m.input.Focused())
+			}
+		}},
+		{"add down", openAddDialog, tea.KeyMsg{Type: tea.KeyDown}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.addField != 1 || m.input.Focused() {
+				t.Errorf("addField = %d, focused = %v", m.addField, m.input.Focused())
+			}
+		}},
+		{"add shift+tab", openAddDialog, tea.KeyMsg{Type: tea.KeyShiftTab}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.addField != 2 || m.input.Focused() {
+				t.Errorf("addField = %d, focused = %v", m.addField, m.input.Focused())
+			}
+		}},
+		{"add up", openAddDialog, tea.KeyMsg{Type: tea.KeyUp}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.addField != 2 || m.input.Focused() {
+				t.Errorf("addField = %d, focused = %v", m.addField, m.input.Focused())
+			}
+		}},
+		{"add esc", openAddDialog, tea.KeyMsg{Type: tea.KeyEsc}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.screen != screenAddons || m.input.Focused() {
+				t.Errorf("screen = %v, focused = %v", m.screen, m.input.Focused())
+			}
+		}},
+		{"add ctrl+c", openAddDialog, tea.KeyMsg{Type: tea.KeyCtrlC}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if !isQuitCmd(cmd) {
+				t.Error("ctrl+c did not quit")
+			}
+		}},
+		{"settings rename enter", openSettingsRename, tea.KeyMsg{Type: tea.KeyEnter}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.renaming || m.renameInput.Focused() || m.opKind != opRename {
+				t.Errorf("renaming = %v, opKind = %v", m.renaming, m.opKind)
+			}
+			drainOp(m)
+		}},
+		{"settings rename esc", openSettingsRename, tea.KeyMsg{Type: tea.KeyEsc}, func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.renaming || m.renameInput.Focused() || m.screen != screenSettings || m.opKind != opNone {
+				t.Errorf("renaming = %v, screen = %v, opKind = %v", m.renaming, m.screen, m.opKind)
+			}
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mm := loadedModel(t, 120, 30)
+			mm.deps.RegistryPath = filepath.Join(t.TempDir(), "registry.json")
+			tc.setup(mm)
+			typeText(mm, typedText)
+
+			_, cmd := mm.Update(tc.key)
+			tc.check(t, mm, cmd)
+		})
+	}
+}
+
+func TestCommandKeysWorkWithoutFocusedInput(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(m *Model)
+		key   string
+		check func(t *testing.T, m *Model, cmd tea.Cmd)
+	}{
+		{"explore q quits", openExploreWithResult, "q", func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if !isQuitCmd(cmd) {
+				t.Error("q did not quit")
+			}
+		}},
+		{"explore 1 opens addons", openExploreWithResult, "1", func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.screen != screenAddons {
+				t.Errorf("screen = %v, want addons", m.screen)
+			}
+		}},
+		{"explore 3 opens settings", openExploreWithResult, "3", func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.screen != screenSettings {
+				t.Errorf("screen = %v, want settings", m.screen)
+			}
+		}},
+		{"explore d opens details", openExploreWithResult, "d", func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if m.screen != screenDetails || m.detailRemote == nil {
+				t.Errorf("screen = %v, detailRemote = %v", m.screen, m.detailRemote)
+			}
+		}},
+		{"explore / focuses search", openExploreWithResult, "/", func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if !m.exploreInput.Focused() || m.exploreInput.Value() != "" {
+				t.Errorf("focused = %v, value = %q", m.exploreInput.Focused(), m.exploreInput.Value())
+			}
+		}},
+		{"explore a installs", openExploreWithResult, "a", func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if cmd == nil || m.opKind != opAdd {
+				t.Errorf("opKind = %v, want add", m.opKind)
+			}
+			drainOp(m)
+		}},
+		{"add q quits off the reference field", func(m *Model) {
+			openAddDialog(m)
+			m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		}, "q", func(t *testing.T, m *Model, cmd tea.Cmd) {
+			if !isQuitCmd(cmd) {
+				t.Error("q did not quit")
+			}
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mm := loadedModel(t, 120, 30)
+			tc.setup(mm)
+			mm.exploreInput.Blur()
+
+			_, cmd := mm.Update(keyMsg(tc.key))
+			tc.check(t, mm, cmd)
+		})
+	}
+}

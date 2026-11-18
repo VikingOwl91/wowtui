@@ -9,7 +9,11 @@ import (
 
 func (m *Model) handleAddKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "q", "ctrl+c":
+	case "q":
+		if m.addField != 0 {
+			return m, tea.Quit
+		}
+	case "ctrl+c":
 		return m, tea.Quit
 	case "esc":
 		m.screen = screenAddons

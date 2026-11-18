@@ -224,7 +224,18 @@ func (s *Service) mappingAvailability(name string, inactive func(string) Availab
 	return inactive(name)
 }
 
+// Adopt registers an installed folder as managed by ref. An index reference
+// adopts every folder of the index entry that the installation has, and
+// folderName must be one of them.
 func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref provider.Reference) error {
+	var entry *index.Entry
+	if ref.Provider == "index" {
+		resolved, source, err := s.resolveIndexReference(ref)
+		if err != nil {
+			return err
+		}
+		entry, ref = &resolved, source
+	}
 	reg, err := registry.Load(s.RegistryPath)
 	if err != nil {
 		return err
@@ -248,8 +259,29 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 	if !found {
 		return fmt.Errorf("unmanaged folder %q not found in %s", folderName, installPath)
 	}
-	if owner := folderOwner(reg, installPath, ref.ID, folder.Name); owner != nil {
-		return fmt.Errorf("refusing to adopt %s in %s: folder %s is managed by %s", ref.ID, installPath, folder.Name, owner.Ref)
+	folders := []string{folder.Name}
+	if entry != nil {
+		if !containsFold(entry.Folders, folder.Name) {
+			return fmt.Errorf("folder %s is not one of index entry %s's folders (%s)", folder.Name, entry.ID, strings.Join(entry.Folders, ", "))
+		}
+		folders = nil
+		for _, name := range entry.Folders {
+			for _, candidate := range installation.Folders {
+				if strings.EqualFold(candidate.Name, name) {
+					folders = append(folders, candidate.Name)
+					break
+				}
+			}
+		}
+	}
+	var conflicts []string
+	for _, name := range folders {
+		if owner := folderOwner(reg, installPath, ref.ID, name); owner != nil {
+			conflicts = append(conflicts, fmt.Sprintf("folder %s is managed by %s", name, owner.Ref))
+		}
+	}
+	if len(conflicts) > 0 {
+		return fmt.Errorf("refusing to adopt %s in %s: %s", ref.ID, installPath, strings.Join(conflicts, "; "))
 	}
 	p, ok := s.Providers[ref.Provider]
 	if !ok {
@@ -269,12 +301,32 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 		Author:      remote.Author,
 		Flavor:      installation.Flavor,
 		InstallPath: installPath,
-		Folders:     []string{folder.Name},
+		Folders:     folders,
 		Version:     folder.Version,
 		Source:      "auto",
 		InstalledAt: time.Now(),
 	})
 	return reg.Save(s.RegistryPath)
+}
+
+// resolveIndexReference returns the loaded index entry an index reference
+// names and the entry's source reference.
+func (s *Service) resolveIndexReference(ref provider.Reference) (index.Entry, provider.Reference, error) {
+	label := provider.FormatReference(ref)
+	if s.Index == nil {
+		return index.Entry{}, provider.Reference{}, fmt.Errorf("cannot resolve %s: no addon index is loaded", label)
+	}
+	for _, entry := range s.Index.Entries() {
+		if entry.ID != ref.ID {
+			continue
+		}
+		source, err := provider.ParseReference(entry.Source)
+		if err != nil {
+			return index.Entry{}, provider.Reference{}, fmt.Errorf("index entry %s: %w", entry.ID, err)
+		}
+		return entry, source, nil
+	}
+	return index.Entry{}, provider.Reference{}, fmt.Errorf("cannot resolve %s: index has no entry %q", label, ref.ID)
 }
 
 // indexRank sorts index candidates first. Index reasons are added before any
@@ -411,6 +463,18 @@ func gitRepositoryReference(rawURL string) (provider.Reference, bool) {
 }
 
 func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.GameFlavor, install wow.Installation, source string) error {
+	if ref.Provider == "index" {
+		entry, resolved, err := s.resolveIndexReference(ref)
+		if err != nil {
+			return err
+		}
+		msg := fmt.Sprintf("%s is %s", provider.FormatReference(ref), provider.FormatReference(resolved))
+		if !entry.Reviewed {
+			msg += " (unreviewed)"
+		}
+		s.emit(Event{Ref: resolved.ID, Stage: StageResolve, Message: msg})
+		ref = resolved
+	}
 	p, ok := s.Providers[ref.Provider]
 	if !ok {
 		return providerUnavailable(ref.Provider)

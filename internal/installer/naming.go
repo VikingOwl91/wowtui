@@ -27,6 +27,13 @@ func tocFolderNames(tocBase string) []string {
 	return names
 }
 
+// TocFolderNames returns the addon folder names a TOC file base name (the file
+// name without ".toc") can stand for: the name itself and, when it ends in a
+// client suffix such as _Mainline or -Forever, the name without it.
+func TocFolderNames(tocBase string) []string {
+	return tocFolderNames(tocBase)
+}
+
 func safeFolderName(name string) bool {
 	return name != "" && !strings.HasPrefix(name, ".") && !strings.ContainsAny(name, "/\\\x00")
 }

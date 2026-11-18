@@ -3,6 +3,7 @@ package installer
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -166,6 +167,25 @@ func TestNamingKeepsWrapperForUnsafeTocNames(t *testing.T) {
 				t.Errorf("root name = %q, want Wrapper", got)
 			}
 		})
+	}
+}
+
+func TestTocFolderNames(t *testing.T) {
+	cases := []struct {
+		base string
+		want []string
+	}{
+		{"Questie", []string{"Questie"}},
+		{"Questie_Forever", []string{"Questie_Forever", "Questie"}},
+		{"MyAddon_Camelot", []string{"MyAddon_Camelot", "MyAddon"}},
+		{"MyAddon-Mainline", []string{"MyAddon-Mainline", "MyAddon"}},
+		{"Mainline", []string{"Mainline"}},
+	}
+	for _, tc := range cases {
+		got := TocFolderNames(tc.base)
+		if !slices.Equal(got, tc.want) {
+			t.Errorf("TocFolderNames(%q) = %v, want %v", tc.base, got, tc.want)
+		}
 	}
 }
 

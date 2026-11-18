@@ -1,0 +1,34 @@
+{
+  "total_count": 203,
+  "incomplete_results": false,
+  "items": [
+    {
+      "name": "WeakAuras_TBC.toc",
+      "path": "WeakAuras/WeakAuras_TBC.toc",
+      "sha": "2161efdc7571e50462cd9d35bf37ec3ec6729fb9",
+      "repository": {
+        "id": 25056248,
+        "full_name": "WeakAuras/WeakAuras2",
+        "private": false,
+        "owner": {"login": "WeakAuras", "type": "Organization"},
+        "description": "World of Warcraft addon that provides a powerful framework to display customizable graphics on your screen.",
+        "fork": false
+      },
+      "score": 1.0
+    },
+    {
+      "name": "WeakAuras_Cata.toc",
+      "path": "WeakAuras/WeakAuras_Cata.toc",
+      "sha": "0000000000000000000000000000000000000001",
+      "repository": {
+        "id": 25056248,
+        "full_name": "WeakAuras/WeakAuras2",
+        "private": false,
+        "owner": {"login": "WeakAuras", "type": "Organization"},
+        "description": "World of Warcraft addon that provides a powerful framework to display customizable graphics on your screen.",
+        "fork": false
+      },
+      "score": 1.0
+    }
+  ]
+}

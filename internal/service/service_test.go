@@ -14,8 +14,16 @@ import (
 
 	"somegit.dev/vikingowl/wowtui/internal/provider"
 	"somegit.dev/vikingowl/wowtui/internal/registry"
+	"somegit.dev/vikingowl/wowtui/internal/sandbox/worker"
 	"somegit.dev/vikingowl/wowtui/internal/wow"
 )
+
+func TestMain(m *testing.M) {
+	if handled, code := worker.Dispatch(os.Args[1:], os.Stdin, os.Stdout, os.Stderr); handled {
+		os.Exit(code)
+	}
+	os.Exit(m.Run())
+}
 
 type fakeProvider struct {
 	release    provider.Release
@@ -384,7 +392,7 @@ func TestUpdateInstallsNewVersion(t *testing.T) {
 	if string(content) != "## Version: 2.0.0" {
 		t.Errorf("updated toc = %q", content)
 	}
-	if w := eventsWithStage(out, StageWarning); len(w) != 0 {
+	if w := addonWarnings(out); len(w) != 0 {
 		t.Errorf("replacing the addon's own folder must not warn: %+v", w)
 	}
 
@@ -834,6 +842,18 @@ func eventsWithStage(c *captured, stage Stage) []Event {
 	return out
 }
 
+// The extraction backend depends on the test host. Folder and packager
+// warnings have their own assertions, independent of isolation availability.
+func addonWarnings(c *captured) []Event {
+	var out []Event
+	for _, e := range eventsWithStage(c, StageWarning) {
+		if !strings.HasPrefix(e.Message, "warning: extraction isolation: ") {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 func twoFolderZip(t *testing.T, second, version string) []byte {
 	return buildZip(t, map[string]string{
 		"MyAddon/MyAddon.toc":          "## Version: " + version,
@@ -947,7 +967,7 @@ func TestAddWarnsWhenReplacingUnmanagedFolder(t *testing.T) {
 	backupPath := filepath.Join(svc.BackupRoot, backups[0].Name())
 	assertToc(t, backupPath, "WeakAuras", "## Version: manual")
 
-	warnings := eventsWithStage(out, StageWarning)
+	warnings := addonWarnings(out)
 	if len(warnings) != 1 {
 		t.Fatalf("got %d warnings, want 1: %+v", len(warnings), out.events)
 	}
@@ -1141,4 +1161,90 @@ func TestScanPreservesManagedAddons(t *testing.T) {
 	if len(reg2.Installations[0].Folders) != 1 || reg2.Installations[0].Folders[0].Name != "MyAddon" {
 		t.Errorf("folders = %+v", reg2.Installations[0].Folders)
 	}
+}
+
+func TestExtractionFailurePreservesInstallation(t *testing.T) {
+	for _, operation := range []string{"add", "update"} {
+		for _, cancelAt := range []Stage{"", StageExtract, StageInstall} {
+			name := operation + "/archive-error"
+			if cancelAt != "" {
+				name = operation + "/cancel-" + string(cancelAt)
+			}
+			t.Run(name, func(t *testing.T) {
+				fp := &fakeProvider{
+					release:    provider.Release{Kind: provider.KindRelease, ID: 2, Tag: "v2", AssetName: "new.zip"},
+					zipContent: partialArchive(t),
+				}
+				if cancelAt == StageInstall {
+					fp.zipContent = buildZip(t, map[string]string{"OtherAddon/OtherAddon.toc": "valid"})
+				}
+				svc, inst, out := newTestService(t, fp)
+				seedAddon(t, svc, inst, 1, "v1")
+				before, err := os.ReadFile(svc.RegistryPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				interfaceDir := filepath.Join(inst.Path, "Interface")
+				addons := filepath.Join(interfaceDir, "AddOns")
+				writeAddonFolder(t, addons, "MyAddon", "original")
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				svc.OnEvent = func(e Event) {
+					out.emit(e)
+					if e.Stage == cancelAt {
+						cancel()
+					}
+				}
+
+				if operation == "add" {
+					err = svc.Add(ctx, provider.Reference{Provider: "github", ID: "Owner/NewAddon"}, inst.Flavor, inst, "")
+				} else {
+					err = svc.Update(ctx, "Owner/MyAddon", false)
+				}
+				if err == nil {
+					t.Fatal("expected extraction to fail")
+				}
+				if cancelAt != "" && !errors.Is(err, context.Canceled) {
+					t.Fatalf("expected cancellation, got %v", err)
+				}
+				if cancelAt == "" && !strings.Contains(err.Error(), "duplicate.lua") {
+					t.Fatalf("expected duplicate file error, got %v", err)
+				}
+				after, err := os.ReadFile(svc.RegistryPath)
+				if err != nil || !bytes.Equal(before, after) {
+					t.Fatalf("registry changed or unreadable: %v", err)
+				}
+				assertToc(t, addons, "MyAddon", "original")
+				entries, err := os.ReadDir(addons)
+				if err != nil || len(entries) != 1 {
+					t.Fatalf("addon directories after failure = %v, %v", entries, err)
+				}
+				if _, err := os.Stat(svc.BackupRoot); !errors.Is(err, os.ErrNotExist) {
+					t.Errorf("expected untouched backup directory, got %v", err)
+				}
+				if left := hiddenTempDirs(t, interfaceDir); len(left) != 0 {
+					t.Errorf("work directories after failure = %v", left)
+				}
+			})
+		}
+	}
+}
+
+func partialArchive(t *testing.T) []byte {
+	t.Helper()
+	buf := new(bytes.Buffer)
+	w := zip.NewWriter(buf)
+	for _, name := range []string{"MyAddon/MyAddon.toc", "MyAddon/duplicate.lua", "MyAddon/duplicate.lua"} {
+		f, err := w.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := io.WriteString(f, "new"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }

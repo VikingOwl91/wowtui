@@ -14,6 +14,7 @@ import (
 
 	"somegit.dev/vikingowl/wowtui/internal/config"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
+	"somegit.dev/vikingowl/wowtui/internal/sandbox/worker"
 )
 
 const testCacheHomeEnv = "WOWTUI_TEST_CACHE_HOME"
@@ -22,6 +23,9 @@ const testCacheHomeEnv = "WOWTUI_TEST_CACHE_HOME"
 // package reads or writes the real HTTP cache. A helper process re-executed
 // by a test reuses the parent's directory, because it exits before cleanup.
 func TestMain(m *testing.M) {
+	if handled, code := worker.Dispatch(os.Args[1:], os.Stdin, os.Stdout, os.Stderr); handled {
+		os.Exit(code)
+	}
 	dir := os.Getenv(testCacheHomeEnv)
 	owned := dir == ""
 	if owned {
@@ -116,5 +120,13 @@ func TestBuildProvidersCachesGitHubAPIResponses(t *testing.T) {
 	}
 	if strings.Contains(string(data), "dummy-token") {
 		t.Errorf("cache entry contains the token: %s", data)
+	}
+}
+
+func TestServiceUsesConfiguredSecurity(t *testing.T) {
+	cfg := &config.Config{Security: config.Security{Sandbox: "required", Seccomp: "auto"}}
+	svc := newService(NewRootCmd(), cfg)
+	if svc.Security != cfg.Security {
+		t.Fatalf("service security = %+v, want %+v", svc.Security, cfg.Security)
 	}
 }

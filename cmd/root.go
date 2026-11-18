@@ -93,6 +93,7 @@ func newService(cmd *cobra.Command, cfg *config.Config) *service.Service {
 	out := cmd.OutOrStdout()
 	return &service.Service{
 		Providers:    buildProviders(cfg),
+		Security:     cfg.Security,
 		RegistryPath: regPath,
 		BackupRoot:   filepath.Join(filepath.Dir(regPath), "backups"),
 		OnEvent: func(e service.Event) {

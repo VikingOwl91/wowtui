@@ -12,14 +12,17 @@ import (
 	"time"
 
 	"somegit.dev/vikingowl/wowtui/internal/addon"
+	"somegit.dev/vikingowl/wowtui/internal/config"
 	"somegit.dev/vikingowl/wowtui/internal/index"
 	"somegit.dev/vikingowl/wowtui/internal/installer"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
 	"somegit.dev/vikingowl/wowtui/internal/registry"
+	"somegit.dev/vikingowl/wowtui/internal/sandbox"
 	"somegit.dev/vikingowl/wowtui/internal/wow"
 )
 
 type Service struct {
+	Security     config.Security
 	Providers    map[string]provider.Provider
 	RegistryPath string
 	BackupRoot   string
@@ -717,7 +720,7 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 	}
 
 	addonsDir := filepath.Join(installPath, "Interface", "AddOns")
-	if err := os.MkdirAll(addonsDir, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(addonsDir), 0o755); err != nil {
 		return nil, "", err
 	}
 	workDir, err := os.MkdirTemp(filepath.Dir(addonsDir), ".wowtui-work-")
@@ -738,10 +741,19 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 	if err := os.MkdirAll(staging, 0o755); err != nil {
 		return nil, "", err
 	}
-	if err := installer.ExtractZip(zipPath, staging, extractLimits); err != nil {
+	reportBackend := func(backend, warning string) {
+		ev(StageInfo, "extract backend: "+backend)
+		if warning != "" {
+			ev(StageWarning, "warning: extraction isolation: "+warning)
+		}
+	}
+	if err := sandbox.Extract(ctx, s.Security, zipPath, staging, extractLimits, reportBackend); err != nil {
 		return nil, "", err
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, "", err
+	}
 	roots, err := installer.FindAddonRoots(staging)
 	if err != nil {
 		return nil, "", err
@@ -779,6 +791,12 @@ func (s *Service) downloadAndInstall(ctx context.Context, p provider.Provider, r
 	}
 
 	ev(StageInstall, "installing")
+	if err := ctx.Err(); err != nil {
+		return nil, "", err
+	}
+	if err := os.MkdirAll(addonsDir, 0o755); err != nil {
+		return nil, "", err
+	}
 	result, err := installer.Install(installer.InstallPlan{
 		AddonsDir:  addonsDir,
 		StagingDir: staging,

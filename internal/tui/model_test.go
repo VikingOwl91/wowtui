@@ -720,3 +720,22 @@ func TestCommandKeysWorkWithoutFocusedInput(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractionPolicyAndFallbackNotice(t *testing.T) {
+	m := loadedModel(t, 120, 30)
+	m.deps.Config.Security = config.Security{Sandbox: "required", Seccomp: "auto"}
+	svc := m.buildService(nil)
+	if svc.Security != m.deps.Config.Security {
+		t.Fatalf("service security = %+v, want %+v", svc.Security, m.deps.Config.Security)
+	}
+
+	const fallback = "warning: extraction isolation: seccomp unavailable"
+	runTestOp(t, m, nil,
+		service.Event{Stage: service.StageInfo, Message: "extract backend: bubblewrap"},
+		service.Event{Stage: service.StageWarning, Message: fallback},
+		service.Event{Stage: service.StageDone, Message: "installed"},
+	)
+	if !strings.Contains(m.View(), "! "+fallback) {
+		t.Fatalf("missing extraction fallback notice: %s", m.View())
+	}
+}

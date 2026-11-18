@@ -10,16 +10,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) == 2 {
-		switch os.Args[1] {
-		case worker.ProbeArgument:
-			return
-		case worker.Argument:
-			if err := worker.Serve(os.Stdin, os.Stdout); err != nil {
-				os.Exit(1)
-			}
-			return
-		}
+	if handled, code := worker.Dispatch(os.Args[1:], os.Stdin, os.Stdout, os.Stderr); handled {
+		os.Exit(code)
 	}
 
 	if err := config.LoadDotEnv(".env"); err != nil {

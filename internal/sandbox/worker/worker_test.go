@@ -21,13 +21,11 @@ var smallLimits = installer.Limits{MaxFiles: 2, MaxFileSize: 20, MaxTotalSize: 3
 // The test binary can stand in for the private subcommand without building
 // another executable or relying on environment flags inherited by the child.
 func TestMain(m *testing.M) {
+	if handled, code := Dispatch(os.Args[1:], os.Stdin, os.Stdout, os.Stderr); handled {
+		os.Exit(code)
+	}
 	if len(os.Args) == 2 {
 		switch os.Args[1] {
-		case Argument:
-			if err := Serve(os.Stdin, os.Stdout); err != nil {
-				os.Exit(1)
-			}
-			os.Exit(0)
 		case "wait":
 			time.Sleep(time.Minute)
 			os.Exit(0)

@@ -21,6 +21,25 @@ const (
 	messageLimit  = 64 << 10
 )
 
+// Dispatch handles the private invocations before any dotenv, CLI or test
+// initialization. args excludes the executable name.
+func Dispatch(args []string, in io.Reader, out, diagnostics io.Writer) (handled bool, code int) {
+	if len(args) != 1 {
+		return false, 0
+	}
+	switch args[0] {
+	case ProbeArgument:
+		return true, 0
+	case Argument:
+		if err := Serve(in, out); err != nil {
+			fmt.Fprintln(diagnostics, "extraction worker protocol:", err)
+			return true, 1
+		}
+		return true, 0
+	}
+	return false, 0
+}
+
 type request struct {
 	Archive string           `json:"archive"`
 	Staging string           `json:"staging"`

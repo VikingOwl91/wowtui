@@ -15,7 +15,7 @@ import (
 func newAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add <reference>",
-		Short: "Install an addon from a provider (github:Owner/Repo, GitHub URL, or direct:https URL)",
+		Short: "Install an addon from a provider (github:Owner/Repo, GitHub URL, direct:https URL, or index:<id>)",
 		Args:  cobra.ExactArgs(1),
 		RunE:  runAdd,
 	}
@@ -49,12 +49,16 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	svc := newService(cmd, cfg)
+	if err := attachIndex(cmd, cfg, svc, ref.Provider == "index"); err != nil {
+		return err
+	}
+
 	install, err := pickInstall(cmd, cfg, flavor)
 	if err != nil {
 		return err
 	}
 
-	svc := newService(cmd, cfg)
 	return svc.Add(cmd.Context(), ref, flavor, install, source)
 }
 

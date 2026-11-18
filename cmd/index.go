@@ -17,6 +17,7 @@ import (
 	"somegit.dev/vikingowl/wowtui/internal/config"
 	"somegit.dev/vikingowl/wowtui/internal/index"
 	"somegit.dev/vikingowl/wowtui/internal/provider"
+	"somegit.dev/vikingowl/wowtui/internal/service"
 )
 
 var errNoIndex = errors.New("no index configured; set one with: wowtui index use --path <file> --public-key <key>")
@@ -205,6 +206,28 @@ func loadIndex(settings config.Index) (*index.Index, error) {
 func keyFingerprint(pub ed25519.PublicKey) string {
 	sum := sha256.Sum256(pub)
 	return "sha256:" + hex.EncodeToString(sum[:])[:16]
+}
+
+// attachIndex gives svc the configured index. When required is false, an
+// index that fails to load is one warning line on stderr and svc continues
+// without it; when required is true, a missing or failing index is the error.
+func attachIndex(cmd *cobra.Command, cfg *config.Config, svc *service.Service, required bool) error {
+	if !cfg.Index.Configured() {
+		if required {
+			return errNoIndex
+		}
+		return nil
+	}
+	idx, err := loadIndex(cfg.Index)
+	if err != nil {
+		if required {
+			return fmt.Errorf("index not loaded: %w", err)
+		}
+		fmt.Fprintf(cmd.ErrOrStderr(), "warning: index not loaded, continuing without it: %s\n", strings.ReplaceAll(err.Error(), "\n", "; "))
+		return nil
+	}
+	svc.Index = idx
+	return nil
 }
 
 func orDash(s string) string {

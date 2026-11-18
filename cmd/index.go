@@ -71,7 +71,10 @@ func newIndexStatusCmd() *cobra.Command {
 			if err := w.Flush(); err != nil {
 				return err
 			}
-			return loadErr
+			if loadErr != nil {
+				return fmt.Errorf("index not loaded: %w", loadErr)
+			}
+			return nil
 		},
 	}
 }
@@ -91,7 +94,7 @@ func newIndexSearchCmd() *cobra.Command {
 			}
 			idx, err := loadIndex(cfg.Index)
 			if err != nil {
-				return err
+				return fmt.Errorf("index not loaded: %w", err)
 			}
 			entries := idx.Search(args[0])
 			if len(entries) == 0 {

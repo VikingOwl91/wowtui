@@ -208,8 +208,8 @@ func TestIndexStatusReportsLoadErrors(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected an error\noutput:\n%s", out)
 			}
-			if !strings.Contains(err.Error(), tc.want) {
-				t.Errorf("error = %q, want it to contain %q", err, tc.want)
+			if !strings.HasPrefix(err.Error(), "index not loaded: ") || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("error = %q, want index not loaded with %q", err, tc.want)
 			}
 			if !strings.Contains(errOut, err.Error()) {
 				t.Errorf("stderr does not show the load error:\n%s", errOut)
@@ -285,7 +285,7 @@ func TestIndexSearchFailsWithoutLoadedIndex(t *testing.T) {
 	}
 	cases := []struct{ name, cfg, want string }{
 		{"not configured", "", "no index configured"},
-		{"bad signature", indexConfig(path, index.EncodePublicKey(otherPub)), index.ErrInvalidSignature.Error()},
+		{"bad signature", indexConfig(path, index.EncodePublicKey(otherPub)), "index not loaded: " + index.ErrInvalidSignature.Error()},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

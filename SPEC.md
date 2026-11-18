@@ -99,6 +99,7 @@ cmd/
 ├── root.go             (Flags, Provider-Aufbau, Service)
 ├── add.go
 ├── check.go
+├── index.go            (index status, search, use; Index laden)
 ├── installs.go
 ├── list.go
 ├── map.go              (map und adopt)
@@ -116,6 +117,10 @@ internal/
 ├── config/
 │   ├── config.go
 │   └── dotenv.go
+├── index/
+│   ├── index.go        (Format 1, Laden, Validierung, Abfragen)
+│   ├── sign.go         (ed25519, Schlüsselformate)
+│   └── funding.go
 ├── installer/
 │   ├── archive.go
 │   ├── backup.go
@@ -160,6 +165,18 @@ internal/
     ├── wow.go
     ├── flavor.go
     └── discovery.go
+
+tools/
+└── indexbuild/         (Wartungswerkzeug, nicht Teil des wowtui-Binaries)
+    ├── main.go         (keygen, discover, build)
+    ├── gh.go           (gh api, nur GET)
+    ├── client.go       (Cache, Drosselung, Rate-Limit-Wartezeit)
+    ├── api.go
+    ├── seeds.go
+    ├── discover.go
+    ├── parse.go
+    ├── candidates.go
+    └── build.go
 ```
 
 ### Kern-Interfaces
@@ -183,8 +200,10 @@ func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.Ga
 func (s *Service) Check(ctx context.Context) ([]UpdateStatus, error)
 func (s *Service) Update(ctx context.Context, refOrName string, dryRun bool) error
 func (s *Service) UpdateAll(ctx context.Context, dryRun bool) error
-func (s *Service) MapUnmanaged() ([]MappingCandidate, error)
+func (s *Service) MapUnmanaged(inactive func(provider string) Availability) ([]MappingCandidate, error)
 func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref provider.Reference) error
+// Service.Index ist der geladene, verifizierte Index (nil ohne Index);
+// Add und Adopt lösen damit index:<id> auf, MapUnmanaged liefert Kandidaten
 
 // geplant (M3), internal/sandbox ist noch leer
 type Sandbox interface {
@@ -296,12 +315,45 @@ installiert, das Repo bekommt später ein Release, der Check meldet
 das als Update.
 
 Unmanaged installierte Addons können über einen Mapping-Workflow einem
-Provider zugeordnet werden. Der Workflow nutzt TOC-Hints zuerst und
-verlangt eine explizite Bestätigung über `adopt`, bevor ein Addon als
-verwaltet gespeichert wird. Die vorhandenen Dateien werden dabei nicht
-ersetzt; das passiert erst beim folgenden Update. `adopt` verweigert
+Provider zugeordnet werden. Der Workflow nutzt TOC-Hints und, wenn
+konfiguriert, den signierten Index (siehe unten) und verlangt eine
+explizite Bestätigung über `adopt`, bevor ein Addon als verwaltet
+gespeichert wird. Die vorhandenen Dateien werden dabei nicht ersetzt;
+das passiert erst beim folgenden Update. `adopt` verweigert
 einen Ordner, den in derselben Installation schon ein anderes
 verwaltetes Addon besitzt.
+
+`wowtui map` (`cmd/map.go`, `internal/service/service.go`) gibt je
+Kandidat eine Zeile mit `FOLDER`, `FLAVOR`, `PROVIDER`, `AVAILABILITY`,
+`REFERENCE`, `REASON` und `INSTALL` aus, sortiert nach
+Installationspfad, Ordner, Provider und Referenz (Index-Kandidaten
+zuerst innerhalb eines Ordners), damit die Ausgabe deterministisch ist:
+
+- `X-Website` liefert nur eine GitHub-, GitLab- oder WowUp-Referenz
+  oder eine CurseForge-Referenz mit numerischer Projekt-ID.
+  `X-Source-Repo` liefert zusätzlich eine `git:`-Referenz, wenn der Wert
+  eine https-, ssh- oder git-URL ist, deren Pfad ein Repository unter
+  einem Owner nennt. Eine gewöhnliche Webseite wird nie zum `direct`-
+  oder `git`-Kandidaten; ein Adopt würde sonst eine HTML-Seite als
+  Archiv laden
+- `X-Curse-Project-ID` liefert `curseforge:<id>`; `X-Wago-ID` und
+  `X-WoWI-ID` liefern `wago:<id>` und `wowinterface:<id>` nur als
+  Hinweis (kein aktiver Provider)
+- Kandidaten mit gleichem Provider und gleicher Referenz werden je
+  Ordner zu einer Zeile, die Hint-Schlüssel stehen kommagetrennt in
+  `REASON`
+- `REFERENCE` ist die einlesbare Präfixform (`FormatReference`):
+  `github:`, `gitlab:`, `wowup:`, `curseforge:`, `git:`. Die alte
+  URL `wow.curseforge.com/projects/<slug>` liest `ParseReference` als
+  CurseForge-Referenz mit dem Slug als ID, nie als `direct`. Weil
+  CurseForge nur numerische IDs auflöst, schlägt `map` aus so einer
+  URL nichts vor
+- `AVAILABILITY` ist `active` (der Service hat den Provider),
+  `paused` (WowUpHub, Wago), `needs-api-key` (CurseForge ohne Key),
+  `disabled` (per `providers disable` abgeschaltet) oder `unsupported`
+  (kein Provider, etwa `wowinterface:`). Sie leitet sich aus dem
+  Provider-Zustand der Konfiguration ab
+- `map --adoptable` zeigt nur Kandidaten mit `active`
 
 `add --source release|tag|branch` pinnt die Quelle. Updates folgen
 dann dem Pin statt der Kette.
@@ -341,6 +393,185 @@ Laut GitHub-Doku zählt ein `304` nur dann nicht gegen das primäre
 Rate-Limit, wenn der Request korrekt mit `Authorization`-Header
 autorisiert ist. Ohne Token spart der Cache also Bandbreite, aber kein
 Kontingent.
+
+### Signierter Addon-Index
+
+Ein optionaler, statischer und signierter Index (`internal/index`)
+ordnet installierte Ordner und Provider-IDs bekannten Addon-Paketen zu
+und gibt ihnen kurze Namen (`index:<id>`). Er enthält nur Metadaten und
+Quellverweise, nie eine Download-URL. Releases löst wowtui immer über
+den Provider der Quelle auf, mit derselben Release-Auswahl,
+Archivprüfung, Backup und Rollback wie bei jeder anderen Referenz.
+Erlaubt sind nur Quellen, die zu `github` oder `gitlab` auflösen. Die
+Signatur belegt nur, dass die Datei vom Besitzer des konfigurierten
+Schlüssels stammt, nicht dass der Addon-Code harmlos ist.
+
+Konfiguration (optional, `wowtui index use` schreibt sie):
+
+```toml
+[index]
+path = "/pfad/zur/index.json"     # Signatur liegt in <path>.sig
+public_key = "<base64, 32 Byte>"  # ed25519
+```
+
+#### Index-Format
+
+Format 1, JSON-Datei plus abgetrennte Signatur:
+
+```json
+{
+  "format": 1,
+  "generated_at": "2026-11-18T10:00:00Z",
+  "entries": [
+    {
+      "id": "demo",
+      "name": "Demo",
+      "source": "github:Owner/Demo",
+      "folders": ["Demo", "Demo_Options"],
+      "game_types": ["mainline"],
+      "ids": {"curseforge": "12345", "wago": "abc123", "wowinterface": "1234"},
+      "release_json": true,
+      "funding": [{"platform": "github", "handle": "Owner"}],
+      "reviewed": false
+    }
+  ]
+}
+```
+
+Strenges Laden (`index.Load`): Die Signatur wird geprüft, bevor
+irgendetwas geparst wird. Danach lehnt der Loader den ganzen Index ab bei
+unbekanntem oder fehlendem `format`, bei unbekannten, doppelten oder
+anders geschriebenen Schlüsseln auf jeder Ebene (erlaubt sind nur exakt
+die Schlüssel des Formats, klein und ASCII), bei Daten nach dem
+JSON-Dokument, bei fehlendem `generated_at` (RFC 3339) oder `entries`
+(eine leere Liste ist gültig) und bei jedem ungültigen Eintrag. Format 1
+hat keine optionalen Erweiterungsfelder; ein neues Feld braucht eine neue
+Formatnummer.
+
+Regeln je Eintrag:
+
+- `id`: eindeutig im Index, Kleinbuchstaben-Slug `[a-z0-9][a-z0-9._-]*`
+- `name`: nicht leer, ohne Steuerzeichen
+- `source`: eine Referenz, die `ParseReference` zu `github` oder
+  `gitlab` auflöst
+- `folders`: nicht leer, jeder Name besteht `installer.SafeFolderName`,
+  ohne Duplikate bei Groß-/Kleinschreibung
+- `game_types`: nicht leer, ohne Duplikate, aus `mainline`, `vanilla`,
+  `tbc`, `wrath`, `titan`, `cata`, `mists`, `forever`
+- `ids`: optional, Schlüssel `curseforge`, `wago`, `wowinterface`; ein
+  Wert ohne Leerraum und Steuerzeichen, je Art im ganzen Index nur
+  einmal vergeben
+- `release_json`: die Quelle veröffentlicht ein Packager-`release.json`
+- `funding`: Liste aus `platform` und `handle` (aus `FUNDING.yml`).
+  Plattformen: `github`, `patreon`, `open_collective`, `ko_fi`,
+  `tidelift`, `community_bridge`, `liberapay`, `issuehunt`, `polar`,
+  `buy_me_a_coffee`, `thanks_dev` und `custom`. `custom` ist eine
+  https-URL ohne Userinfo, die anderen Handles sind einfache
+  Pfadsegmente (`tidelift`: `<npm|pypi|rubygems|maven|packagist|nuget>/<Paket>`,
+  `thanks_dev`: `u/gh/<Nutzer>`). Daraus wird der Link gebildet; eine
+  unbekannte Plattform oder ein ungültiger Handle macht den Index
+  ungültig. Duplikate sind ungültig
+- `reviewed`: ein Mensch hat den Eintrag geprüft
+
+Signatur und Schlüssel (`internal/index/sign.go`): ed25519 über die
+exakten Bytes der Indexdatei. Die Signaturdatei `<index>.sig` enthält
+die 64 Byte als Standard-Base64 mit Padding und genau einen Zeilenumbruch
+am Ende. Der öffentliche Schlüssel ist Standard-Base64 der 32 Byte, so
+steht er in `public_key` und in `signing.pub`. Der private Schlüssel
+(`signing.key`) ist Standard-Base64 des 32-Byte-Seeds nach RFC 8032, nie
+der expandierte 64-Byte-Schlüssel. Zeilenumbrüche innerhalb des
+Base64-Textes werden abgelehnt, ein abschließender ist erlaubt.
+
+#### Verwendung
+
+- `wowtui index use --path <Datei> --public-key <Schlüssel>` lädt und
+  verifiziert die Datei und speichert erst dann `[index]` in der
+  Konfiguration
+- `wowtui index status` zeigt Pfad, Signaturpfad, Fingerabdruck des
+  Schlüssels (`sha256:` plus die ersten 16 Hex-Zeichen des SHA-256 der
+  Schlüssel-Bytes), ob der Index lädt, Eintragszahl und Erzeugungszeit;
+  lädt er nicht, endet der Befehl mit Fehler
+- `wowtui index search <Text>` sucht in ID und Name (ohne Beachtung der
+  Schreibweise) und zeigt ID, Name, Quelle, Ordner, Spieltypen,
+  Prüfstatus und Funding-Links
+- `add index:<id>` und `adopt <Pfad> <Ordner> index:<id>` lösen den
+  Eintrag zur Quelle auf. `add` meldet `index:<id> is github:Owner/Repo`,
+  bei ungeprüftem Eintrag mit `(unreviewed)`. `adopt` registriert alle
+  Ordner des Eintrags, die die Installation hat, unter der Quelle; der
+  genannte Ordner muss zum Eintrag gehören, und ein Ordner eines anderen
+  verwalteten Addons bricht ab
+- `map` ergänzt Kandidaten mit den Gründen `index:folder` (Ordnername,
+  ohne Beachtung der Schreibweise), `index:curseforge`, `index:wago`,
+  `index:wowinterface` (TOC-ID passt zu `ids`) und `unreviewed` (Eintrag
+  nicht geprüft)
+- Schlägt das Laden eines konfigurierten Index fehl, schreiben `map`,
+  `add` und `adopt` eine Zeile
+  `warning: index not loaded, continuing without it: <Grund>` nach stderr
+  und arbeiten ohne Index weiter. Bei einer `index:<id>`-Referenz ist
+  das ein Fehler (`index not loaded` bzw. `no index configured`), ebenso
+  bei `index status` und `index search`. `check` und `update` lesen den
+  Index nicht
+
+Offene Punkte:
+
+- Der Index wird nur aus einer lokalen Datei gelesen, es gibt keinen
+  Abruf über das Netz
+- Kein Rollback-Schutz: wowtui merkt sich die Erzeugungszeit eines
+  früheren Index nicht und akzeptiert auch eine ältere, gültig
+  signierte Datei
+- Die TUI nutzt den Index nicht
+- Index-Kandidaten in `map` und `add index:<id>` werden nicht nach dem
+  Spieltyp des Flavors gefiltert oder geprüft
+- Im Repository liegt kein fertiger Index, nur ein Test-Fixture
+
+#### Index-Builder (`tools/indexbuild`)
+
+Wartungswerkzeug, nicht Teil des Binaries:
+
+```
+go run ./tools/indexbuild keygen   --out DIR
+go run ./tools/indexbuild discover --registry FILE --out FILE --cache DIR [--review FILE] [--mirror-owners LIST]
+go run ./tools/indexbuild build    --candidates FILE --key FILE --out FILE
+```
+
+- `keygen` schreibt `signing.key` (0600) und `signing.pub` und
+  überschreibt nie vorhandene Dateien
+- `discover` liest aus einer wowtui-`registry.json` nur Ordnernamen und
+  TOC-Hints (keine Installationspfade). Ausgehend von Provider-IDs und
+  GitHub-URL-Hints sucht es per Code-Suche, Repository-, Contents- und
+  Release-Abfragen das GitHub-Repository je Addon, wählt es nach
+  Plausibilität und schreibt `candidates.json` samt Beleg je Paket sowie
+  eine Review-Datei (Standard: `--out` mit `.review.json`, oder
+  `--review`). Die Review-Datei nennt mehrdeutige, gefilterte,
+  unaufgelöste und widersprüchliche Funde, unbestätigte oder
+  abweichende Hints und API-Fehler sowie Ordner ohne ID.
+  `--mirror-owners` (Standard `hippuli`, leer für keine) nennt
+  GitHub-Konten, deren Repositories Kopien sind und nie als Original
+  gelten
+- `build` macht aus `candidates.json` die Dateien `index.json` und
+  `index.json.sig`. Pakete, die der Index nicht fassen kann (kein
+  sicherer Ordner, kein Spieltyp, Quelle nicht GitHub), werden
+  übersprungen und als Warnung ausgegeben. Der Spieltyp kommt aus
+  `release.json`, sonst aus den TOC-Interface-Nummern. Der Builder
+  schreibt immer `reviewed: false` und nur GitHub-Quellen. Er prüft das
+  Paar mit `index.Load`, bevor er etwas schreibt, und lehnt eine
+  Schlüsseldatei ab, auf die Gruppe oder andere zugreifen können
+- Zugriff auf GitHub nur über `gh api` mit GET. `gh` hält die
+  Zugangsdaten, das Werkzeug liest, speichert und übergibt nie ein Token
+- Jede Antwort, auch Fehlschläge und 404, liegt im `--cache`-Verzeichnis
+  (Dateien 0600, Verzeichnis 0700). Ein erneuter Lauf macht keine
+  wiederholten Aufrufe; frische Daten gibt es nach dem Löschen des
+  Verzeichnisses
+- Drosselung: Code-Suchen mindestens 7 Sekunden Abstand. Bei einer
+  Rate-Limit-Antwort (`403` oder `429` mit `Retry-After` oder
+  `X-RateLimit-Remaining: 0`) wartet das Werkzeug bis zum Reset, höchstens
+  15 Minuten je Wartezeit und sechs Wartezeiten je Anfrage. Serverfehler
+  (5xx) werden bis zu viermal im Abstand von 10 Sekunden wiederholt
+- Deterministische Ausgabe: Pakete, Ordner und IDs sind sortiert, die
+  Eintrags-IDs hängen nur von der Menge der Repositories ab,
+  `generated_at` ist die neueste Abrufzeit einer verwendeten Antwort
+  (auf Sekunden gekürzt), und ed25519 ist deterministisch. Gleiche
+  Eingabe und gleicher Schlüssel ergeben byteidentische Dateien
 
 ### Datenmodell
 
@@ -683,9 +914,27 @@ Grober Aufbau (Addons-Tab mit offener Hinweisleiste):
 Tasten im Addons-Tab: `s` neu scannen, `r` auf Updates prüfen, `u`
 gewähltes Addon aktualisieren, `U` alle verwalteten Addons
 aktualisieren, `a` Add-Dialog, `f` suchen, `i`/`I` Filter für
-Spielversion und Installation, `d`/`enter` Details, `tab` oder
-`1`/`2`/`3` Tabs wechseln, `q` beenden. `s` und `U` stehen nicht in
-der Tastenhilfe.
+Spielversion und Installation, `d`/`enter` Details, `tab` oder `2`
+öffnet Explore, `3` die Settings, `q` beendet. `s` und `U` stehen nicht
+in der Tastenhilfe. In den Settings führen `tab`, `esc` und `1` zurück
+zu Addons, `2` öffnet Explore.
+
+Getippte Tasten bleiben im fokussierten Eingabefeld:
+
+- Explore öffnet mit fokussiertem Suchfeld. Dort sind `q`, `a`, `d`,
+  `/`, `1` und `3` Text; nur `enter` (suchen, bei leerem Feld den Fokus
+  setzen), `esc` (Feld leeren und verlassen), `tab`, `shift+tab` und
+  `ctrl+c` wirken. Ohne Fokus gelten die Tabellentasten: `a` installiert
+  das gewählte Ergebnis, `d` zeigt Details, `/` fokussiert das Feld,
+  `tab` öffnet die Settings, `shift+tab` oder `1` die Addons, `q`
+  beendet. `a` wird ignoriert, solange eine Operation läuft
+- Im Add-Dialog nimmt das Referenzfeld jede Taste, auch `q`. `q`
+  beendet nur aus den anderen Feldern; `ctrl+c` beendet immer, `esc`
+  schließt den Dialog
+- Die Suche (`f`) im Addons-Tab nimmt Tasten bis `enter` oder `esc`
+  an
+
+Die TUI nutzt den Index nicht.
 
 Screens: Addons, Explore (Suche in den Provider-Katalogen), Settings,
 dazu Details und der Add-Dialog.
@@ -711,8 +960,14 @@ wowtui check         # auf Updates prüfen
 wowtui update WeakAuras
 wowtui update --all
 wowtui update --all --dry-run
+wowtui add index:weakauras   # Referenz aus dem konfigurierten Index
 wowtui map           # Provider-Kandidaten für nicht verwaltete Addons
+wowtui map --adoptable   # nur Kandidaten mit aktivem Provider
 wowtui adopt <install-path> <folder> <reference>
+wowtui adopt <install-path> <folder> index:<id>
+wowtui index status  # konfigurierten Index prüfen
+wowtui index search <text>
+wowtui index use --path <file> --public-key <key>
 wowtui providers     # Status und Reihenfolge
 wowtui providers enable|disable <name>
 wowtui providers order <name>...
@@ -764,6 +1019,7 @@ gebunden, ein Key wird nie mitgeliefert.
 | Flavor-Mismatch | Falsches Release für Classic/PTR | Provider wählen nach dem GameType des Flavors, Test-Clients teilen den Spieltyp ihres Basis-Clients |
 | bwrap nicht verfügbar oder User-Namespaces deaktiviert | Sandbox fehlt | Fallback auf internen Extractor, Warnung, Strict Mode |
 | CurseForge-ToS | Provider rechtlich/technisch instabil | Nur mit eigenem API-Key des Users, kein mitgelieferter Key, ToS-Einhaltung bleibt Sache von User und Projekt |
+| Manipulierter oder veralteter Index | Falsche Zuordnung, fremde Quelle | Signatur vor dem Parsen, strenge Validierung, nur Quellverweise ohne Download-URL, Releases immer von der Quelle; ältere gültig signierte Datei wird noch akzeptiert (kein Rollback-Schutz) |
 | Mehrere Ordner pro Paket | Falsche Zuordnung bei Updates | Paket-Modell statt Ordner-Modell, Registry-Metadaten |
 
 ## 12. Teststrategie

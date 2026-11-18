@@ -24,20 +24,20 @@ const (
 // Dispatch handles the private invocations before any dotenv, CLI or test
 // initialization. args excludes the executable name.
 func Dispatch(args []string, in io.Reader, out, diagnostics io.Writer) (handled bool, code int) {
-	if len(args) != 1 {
+	if len(args) != 1 || (args[0] != ProbeArgument && args[0] != Argument) {
 		return false, 0
 	}
-	switch args[0] {
-	case ProbeArgument:
-		return true, 0
-	case Argument:
+	if err := CloseInherited(); err != nil {
+		fmt.Fprintln(diagnostics, "isolate extraction worker descriptors:", err)
+		return true, 1
+	}
+	if args[0] == Argument {
 		if err := Serve(in, out); err != nil {
 			fmt.Fprintln(diagnostics, "extraction worker protocol:", err)
 			return true, 1
 		}
-		return true, 0
 	}
-	return false, 0
+	return true, 0
 }
 
 type request struct {

@@ -346,3 +346,88 @@ func TestSavePersistsCredentialSetByCaller(t *testing.T) {
 		t.Errorf("github token = %q, want caller value", loaded.Providers.GitHub.Token)
 	}
 }
+
+func TestIndexIsOffWithoutSection(t *testing.T) {
+	clearCredentialEnv(t)
+	for name, path := range map[string]string{
+		"missing file": filepath.Join(t.TempDir(), "nope.toml"),
+		"no section":   writeConfig(t, "[wow]\npaths = []\n"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			cfg, err := Load(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.Index.Configured() {
+				t.Errorf("index = %+v, want not configured", cfg.Index)
+			}
+		})
+	}
+}
+
+func TestLoadIndexSection(t *testing.T) {
+	clearCredentialEnv(t)
+	path := writeConfig(t, `
+[index]
+path = "/data/index.json"
+public_key = "dummy-public-key"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Index.Path != "/data/index.json" || cfg.Index.PublicKey != "dummy-public-key" {
+		t.Errorf("index = %+v", cfg.Index)
+	}
+	if !cfg.Index.Configured() {
+		t.Error("index with path and key should be configured")
+	}
+}
+
+func TestIndexWithOneFieldCountsAsConfigured(t *testing.T) {
+	for _, index := range []Index{{Path: "/data/index.json"}, {PublicKey: "dummy-public-key"}} {
+		if !index.Configured() {
+			t.Errorf("%+v should count as configured so a load reports the missing field", index)
+		}
+	}
+}
+
+func TestSaveIndexSectionKeepsEnvCredentialsOut(t *testing.T) {
+	clearCredentialEnv(t)
+	path := writeConfig(t, "[wow]\npaths = [\"/games/wow\"]\n")
+	t.Setenv("WOWTUI_GITHUB_TOKEN", "dummy-env-token")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Index = Index{Path: "/data/index.json", PublicKey: "dummy-public-key"}
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	if raw := readConfigFile(t, path); strings.Contains(raw, "dummy-env-token") {
+		t.Errorf("config file contains env credential:\n%s", raw)
+	}
+
+	clearCredentialEnv(t)
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Index != cfg.Index {
+		t.Errorf("index = %+v, want %+v", loaded.Index, cfg.Index)
+	}
+	if len(loaded.WoW.Paths) != 1 || loaded.WoW.Paths[0] != "/games/wow" {
+		t.Errorf("wow.paths = %v, want kept", loaded.WoW.Paths)
+	}
+}
+
+func TestSaveWithoutIndexWritesNoIndexSection(t *testing.T) {
+	clearCredentialEnv(t)
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := Save(path, &Config{}); err != nil {
+		t.Fatal(err)
+	}
+	if raw := readConfigFile(t, path); strings.Contains(raw, "[index]") {
+		t.Errorf("config without index has an index section:\n%s", raw)
+	}
+}

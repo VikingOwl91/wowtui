@@ -77,6 +77,8 @@ func TestMapUnmanagedRejectsNonRepositoryHints(t *testing.T) {
 		{"x-source-repo", "https://git.example.org/team"},
 		{"x-source-repo", "ssh://git@git.example.org"},
 		{"x-source-repo", "ssh://git@github.com/BigWigsMods"},
+		{"x-website", "index:bossmods"},
+		{"x-source-repo", "index:bossmods"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.key+" "+tc.value, func(t *testing.T) {

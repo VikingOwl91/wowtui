@@ -130,3 +130,33 @@ func TestParseReferenceLegacyCurseForgeHostIsNeverDirect(t *testing.T) {
 		}
 	}
 }
+
+func TestParseReferenceIndexID(t *testing.T) {
+	for _, id := range []string{"bossmods", "bossmods-classic-extras", "0day", "a.b_c-1"} {
+		ref, err := ParseReference("index:" + id)
+		if err != nil {
+			t.Fatalf("index:%s: %v", id, err)
+		}
+		if ref != (Reference{Provider: "index", ID: id}) {
+			t.Errorf("index:%s: got %+v", id, ref)
+		}
+	}
+}
+
+func TestParseReferenceRejectsInvalidIndexID(t *testing.T) {
+	for _, in := range []string{
+		"index:",
+		"index:BossMods",
+		"index:-bossmods",
+		"index:.bossmods",
+		"index:_bossmods",
+		"index:boss mods",
+		"index:owner/repo",
+		"index:bossmods:extra",
+		"index:bössmods",
+	} {
+		if ref, err := ParseReference(in); err == nil {
+			t.Errorf("%q: got %+v, want error", in, ref)
+		}
+	}
+}

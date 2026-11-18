@@ -16,6 +16,7 @@ type Reference struct {
 var ownerRepoPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$`)
 var gitLabProjectPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+$`)
 var numericIDPattern = regexp.MustCompile(`^[1-9][0-9]*$`)
+var indexIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 
 func ParseReference(s string) (Reference, error) {
 	s = strings.TrimSpace(s)
@@ -49,6 +50,13 @@ func ParseReference(s string) (Reference, error) {
 			return Reference{}, fmt.Errorf("invalid CurseForge reference %q", s)
 		}
 		return Reference{Provider: "curseforge", ID: rest}, nil
+	}
+
+	if rest, ok := strings.CutPrefix(s, "index:"); ok {
+		if !indexIDPattern.MatchString(rest) {
+			return Reference{}, fmt.Errorf("invalid index reference %q, want a lowercase index id", s)
+		}
+		return Reference{Provider: "index", ID: rest}, nil
 	}
 
 	if rest, ok := strings.CutPrefix(s, "git:"); ok {

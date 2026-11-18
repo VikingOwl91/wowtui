@@ -327,6 +327,38 @@ func TestNewOperationClearsNotices(t *testing.T) {
 	}
 }
 
+func TestExploreAddIgnoredWhileOperationRuns(t *testing.T) {
+	mm := loadedModel(t, 120, 30)
+	mm.exploreResults = []provider.RemoteAddon{{Name: "WeakAuras", Provider: "github", ID: "WeakAuras/WeakAuras2"}}
+	mm.Update(tea.KeyMsg{Type: tea.KeyTab})
+	mm.exploreInput.Blur()
+
+	mm.busyMsg = "updating all addons..."
+	startTestOp(t, mm, nil)
+	events := mm.eventChan
+
+	_, cmd := mm.Update(keyMsg("a"))
+	if cmd != nil {
+		t.Error("a returned a command while an operation runs")
+	}
+	if mm.opKind != opUpdateAll || mm.eventChan != events {
+		t.Errorf("a replaced the running operation: opKind = %v", mm.opKind)
+	}
+	if mm.errMsg != "" {
+		t.Errorf("errMsg = %q, want none", mm.errMsg)
+	}
+	if footer := mm.footerView(); !strings.Contains(footer, "updating all addons...") {
+		t.Errorf("footer = %q, want running operation", footer)
+	}
+
+	mm.Update(opClosedMsg{})
+	if _, cmd := mm.Update(keyMsg("a")); cmd == nil || mm.opKind != opAdd {
+		t.Errorf("a after the operation finished: opKind = %v, want add", mm.opKind)
+	}
+	for range mm.eventChan {
+	}
+}
+
 func multiAddonError(n int) error {
 	lines := []string{fmt.Sprintf("update failed for %d addons:", n)}
 	for i := 1; i <= n; i++ {

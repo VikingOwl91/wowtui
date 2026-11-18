@@ -1,10 +1,13 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -31,14 +34,25 @@ type UpdateStatus struct {
 }
 
 type MappingCandidate struct {
-	InstallPath string
-	Flavor      string
-	Folder      string
-	Version     string
-	Provider    string
-	Reference   string
-	Reason      string
+	InstallPath  string
+	Flavor       string
+	Folder       string
+	Version      string
+	Provider     string
+	Reference    string
+	Reason       string
+	Availability Availability
 }
+
+type Availability string
+
+const (
+	AvailabilityActive      Availability = "active"
+	AvailabilityPaused      Availability = "paused"
+	AvailabilityNeedsAPIKey Availability = "needs-api-key"
+	AvailabilityDisabled    Availability = "disabled"
+	AvailabilityUnsupported Availability = "unsupported"
+)
 
 var extractLimits = installer.Limits{
 	MaxFiles:     20000,
@@ -165,7 +179,10 @@ func (s *Service) SetInstallTitle(path, title string) error {
 	return fmt.Errorf("installation %s not found in registry", path)
 }
 
-func (s *Service) MapUnmanaged() ([]MappingCandidate, error) {
+// MapUnmanaged marks a candidate active when s.Providers has its provider.
+// inactive gives the availability of any other provider; nil marks them
+// unsupported.
+func (s *Service) MapUnmanaged(inactive func(provider string) Availability) ([]MappingCandidate, error) {
 	reg, err := registry.Load(s.RegistryPath)
 	if err != nil {
 		return nil, err
@@ -177,11 +194,30 @@ func (s *Service) MapUnmanaged() ([]MappingCandidate, error) {
 				continue
 			}
 			for _, candidate := range mapFolderHints(installation, folder) {
+				candidate.Availability = s.mappingAvailability(candidate.Provider, inactive)
 				candidates = append(candidates, candidate)
 			}
 		}
 	}
+	slices.SortFunc(candidates, func(a, b MappingCandidate) int {
+		return cmp.Or(
+			cmp.Compare(a.InstallPath, b.InstallPath),
+			cmp.Compare(a.Folder, b.Folder),
+			cmp.Compare(a.Provider, b.Provider),
+			cmp.Compare(a.Reference, b.Reference),
+		)
+	})
 	return candidates, nil
+}
+
+func (s *Service) mappingAvailability(name string, inactive func(string) Availability) Availability {
+	if _, ok := s.Providers[name]; ok {
+		return AvailabilityActive
+	}
+	if inactive == nil {
+		return AvailabilityUnsupported
+	}
+	return inactive(name)
 }
 
 func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref provider.Reference) error {
@@ -238,32 +274,72 @@ func (s *Service) Adopt(ctx context.Context, installPath, folderName string, ref
 }
 
 func mapFolderHints(installation registry.Installation, folder registry.Folder) []MappingCandidate {
-	makeCandidate := func(providerName, ref, reason string) MappingCandidate {
-		return MappingCandidate{InstallPath: installation.Path, Flavor: installation.Flavor, Folder: folder.Name, Version: folder.Version, Provider: providerName, Reference: ref, Reason: reason}
-	}
 	var candidates []MappingCandidate
-	for key, providerName := range map[string]string{
-		"x-source-repo": "git",
-		"x-website":     "git",
-	} {
+	add := func(providerName, ref, reason string) {
+		for i := range candidates {
+			if candidates[i].Provider == providerName && candidates[i].Reference == ref {
+				candidates[i].Reason += "," + reason
+				return
+			}
+		}
+		candidates = append(candidates, MappingCandidate{InstallPath: installation.Path, Flavor: installation.Flavor, Folder: folder.Name, Version: folder.Version, Provider: providerName, Reference: ref, Reason: reason})
+	}
+	for _, key := range []string{"x-source-repo", "x-website"} {
 		if value := folder.Hints[key]; value != "" {
-			if ref, err := provider.ParseReference(value); err == nil {
-				candidates = append(candidates, makeCandidate(ref.Provider, ref.ID, key))
-			} else {
-				candidates = append(candidates, makeCandidate(providerName, value, key))
+			if ref, ok := hintReference(key, value); ok {
+				add(ref.Provider, ref.ID, key)
 			}
 		}
 	}
 	if id := folder.Hints["x-wowi-id"]; id != "" {
-		candidates = append(candidates, makeCandidate("wowinterface", "wowinterface:"+id, "x-wowi-id"))
+		add("wowinterface", "wowinterface:"+id, "x-wowi-id")
 	}
 	if id := folder.Hints["x-wago-id"]; id != "" {
-		candidates = append(candidates, makeCandidate("wago", "wago:"+id, "x-wago-id"))
+		add("wago", "wago:"+id, "x-wago-id")
 	}
 	if id := folder.Hints["x-curse-project-id"]; id != "" {
-		candidates = append(candidates, makeCandidate("curseforge", "curseforge:"+id, "x-curse-project-id"))
+		add("curseforge", "curseforge:"+id, "x-curse-project-id")
 	}
 	return candidates
+}
+
+func hintReference(key, value string) (provider.Reference, bool) {
+	value = strings.TrimSpace(value)
+	ref, err := provider.ParseReference(value)
+	if err == nil {
+		switch ref.Provider {
+		case "github", "gitlab", "wowuphub":
+			return ref, true
+		case "curseforge":
+			_, err := provider.ParseReference("curseforge:" + ref.ID)
+			return ref, err == nil
+		}
+	}
+	if key != "x-source-repo" {
+		return provider.Reference{}, false
+	}
+	gitURL := value
+	if err == nil {
+		gitURL = ref.ID
+	} else if u, parseErr := url.Parse(value); parseErr != nil || (u.Scheme != "ssh" && u.Scheme != "git") {
+		// ParseReference has no syntax for bare ssh and git URLs. Any other
+		// URL it rejects is malformed, plain http, or names no addon on a
+		// catalog host.
+		return provider.Reference{}, false
+	}
+	return gitRepositoryReference(gitURL)
+}
+
+func gitRepositoryReference(rawURL string) (provider.Reference, bool) {
+	ref, err := provider.ParseReference("git:" + rawURL)
+	if err != nil {
+		return provider.Reference{}, false
+	}
+	u, err := url.Parse(ref.ID)
+	if err != nil || len(strings.FieldsFunc(u.Path, func(r rune) bool { return r == '/' })) < 2 {
+		return provider.Reference{}, false
+	}
+	return ref, true
 }
 
 func (s *Service) Add(ctx context.Context, ref provider.Reference, flavor wow.GameFlavor, install wow.Installation, source string) error {

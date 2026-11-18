@@ -56,6 +56,9 @@ func (m *Model) handleExploreKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.startSearch(m.exploreQuery)
 	case "a":
+		if m.busy {
+			return m, nil
+		}
 		remote, ok := m.selectedRemote()
 		if !ok {
 			m.errMsg = "select an addon result first"

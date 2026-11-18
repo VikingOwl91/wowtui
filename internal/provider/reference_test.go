@@ -110,3 +110,23 @@ func TestParseReferenceInvalid(t *testing.T) {
 		}
 	}
 }
+
+func TestParseReferenceLegacyCurseForgeHostIsNeverDirect(t *testing.T) {
+	ref, err := ParseReference("https://wow.curseforge.com/projects/tidy-plates-threat-plates")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ref.Provider != "curseforge" || ref.ID != "tidy-plates-threat-plates" {
+		t.Errorf("got %+v, want curseforge tidy-plates-threat-plates", ref)
+	}
+
+	for _, in := range []string{
+		"https://wow.curseforge.com",
+		"https://wow.curseforge.com/projects",
+		"https://wow.curseforge.com/addons/foo",
+	} {
+		if ref, err := ParseReference(in); err == nil {
+			t.Errorf("%s: got %+v, want error", in, ref)
+		}
+	}
+}

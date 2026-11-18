@@ -704,7 +704,7 @@ func TestMapAndAdoptUnmanagedAddon(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(candidates) != 1 || candidates[0].Provider != "github" || candidates[0].Reference != "Owner/MyAddon" {
+	if len(candidates) != 1 || candidates[0].Provider != "github" || candidates[0].Reference != "github:Owner/MyAddon" {
 		t.Errorf("candidates = %+v", candidates)
 	}
 

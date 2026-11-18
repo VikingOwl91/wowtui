@@ -287,7 +287,7 @@ func mapFolderHints(installation registry.Installation, folder registry.Folder) 
 	for _, key := range []string{"x-source-repo", "x-website"} {
 		if value := folder.Hints[key]; value != "" {
 			if ref, ok := hintReference(key, value); ok {
-				add(ref.Provider, ref.ID, key)
+				add(ref.Provider, provider.FormatReference(ref), key)
 			}
 		}
 	}

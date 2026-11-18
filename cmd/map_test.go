@@ -68,12 +68,12 @@ func mapRows(t *testing.T, out, installPath string) [][]string {
 }
 
 var (
-	rowHub        = []string{"Hub", "retail", "wowuphub", "paused", "123", "x-website"}
+	rowHub        = []string{"Hub", "retail", "wowuphub", "paused", "wowup:123", "x-website"}
 	rowCurse      = []string{"Questie", "retail", "curseforge", "needs-api-key", "curseforge:12345", "x-curse-project-id"}
 	rowWowi       = []string{"Questie", "retail", "wowinterface", "unsupported", "wowinterface:6789", "x-wowi-id"}
-	rowGit        = []string{"SelfHosted", "retail", "git", "active", "https://git.example.org/team/addon.git", "x-source-repo"}
-	rowGitHub     = []string{"WeakAuras", "retail", "github", "active", "WeakAuras/WeakAuras2", "x-website"}
-	rowGitHubOff  = []string{"WeakAuras", "retail", "github", "disabled", "WeakAuras/WeakAuras2", "x-website"}
+	rowGit        = []string{"SelfHosted", "retail", "git", "active", "git:https://git.example.org/team/addon.git", "x-source-repo"}
+	rowGitHub     = []string{"WeakAuras", "retail", "github", "active", "github:WeakAuras/WeakAuras2", "x-website"}
+	rowGitHubOff  = []string{"WeakAuras", "retail", "github", "disabled", "github:WeakAuras/WeakAuras2", "x-website"}
 	rowWago       = []string{"WeakAuras", "retail", "wago", "paused", "wago:abc", "x-wago-id"}
 	junkMapValues = []string{"raider.io", "foreverdb.net", "curseforge.com", "BigWigsMods", "wowup.io", "direct"}
 )

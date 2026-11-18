@@ -131,6 +131,18 @@ func ParseReference(s string) (Reference, error) {
 	return Reference{}, fmt.Errorf("unrecognized addon reference %q", s)
 }
 
+// FormatReference returns the prefixed text form of ref that ParseReference
+// reads back, such as github:Owner/Repo, gitlab:group/project, wowup:123 or
+// git:https://host/team/repo.git. Other providers, such as the informational
+// wago and wowinterface hints, print as provider:id.
+func FormatReference(ref Reference) string {
+	prefix := ref.Provider
+	if prefix == "wowuphub" {
+		prefix = "wowup"
+	}
+	return prefix + ":" + ref.ID
+}
+
 func validateDirectURL(s string) error {
 	u, err := url.Parse(s)
 	if err != nil || u.Host == "" {

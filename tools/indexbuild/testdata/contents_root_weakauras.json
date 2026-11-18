@@ -1,0 +1,6 @@
+[
+  {"name": ".editorconfig", "path": ".editorconfig", "sha": "dc52b98baf05cac3c0aab3cfa414979bae1a780f", "size": 393, "type": "file"},
+  {"name": ".pkgmeta", "path": ".pkgmeta", "sha": "1111111111111111111111111111111111111111", "size": 3229, "type": "file"},
+  {"name": "WeakAuras", "path": "WeakAuras", "sha": "2222222222222222222222222222222222222222", "size": 0, "type": "dir"},
+  {"name": "WeakAurasOptions", "path": "WeakAurasOptions", "sha": "3333333333333333333333333333333333333333", "size": 0, "type": "dir"}
+]

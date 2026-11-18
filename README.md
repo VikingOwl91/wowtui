@@ -1,6 +1,6 @@
 # wowtui
 
-[![Go](https://img.shields.io/badge/Go-1.26.5-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![Go](https://img.shields.io/badge/Go-1.26.11-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange.svg)](#status)
 
@@ -581,14 +581,20 @@ candidates and key give byte-identical `index.json` and `index.json.sig`.
 
 ## Development
 
-The project uses test-driven development. Run the local gates with:
+The project uses test-driven development and requires Go 1.26.11 or later.
+The `govulncheck` version is pinned in `go.mod`. Run these checks from the
+repository root.
 
 ```bash
 gofmt -l .
 go vet ./...
 go test ./...
-govulncheck ./...
+go tool govulncheck ./...
 ```
+
+On pull requests and pushes to `main`, CI requires the vulnerability scan to
+pass before either native acceptance job starts. A reachable advisory or a
+scanner error fails the check.
 
 The M3 native acceptance job runs the following command independently on Linux
 amd64 and arm64, on hosts with working Bubblewrap, user namespaces, and seccomp:

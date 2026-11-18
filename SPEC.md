@@ -1027,6 +1027,9 @@ gebunden, ein Key wird nie mitgeliefert.
 
 ## 12. Teststrategie
 
+- Vor der nativen Abnahme muss `go tool govulncheck ./...` erfolgreich
+  durchlaufen. Die Werkzeugversion steht in `go.mod`. Die CI prüft jeden
+  Pull Request und jeden Push auf `main`.
 - Service-Schicht ohne Terminal testbar (Interface-basiert)
 - Fixture-Archive: Zip-Slip-Pfade, Symlinks, Hardlinks, leere Archive,
   Archive über den Größenlimits, verschachtelte Strukturen

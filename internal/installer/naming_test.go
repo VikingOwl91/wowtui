@@ -168,3 +168,31 @@ func TestNamingKeepsWrapperForUnsafeTocNames(t *testing.T) {
 		})
 	}
 }
+
+func TestSafeFolderName(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"MyAddon", true},
+		{"My Addon", true},
+		{"DBM-Core", true},
+		{"Addon..Name", true},
+		{"Addon.", true},
+		{"", false},
+		{".", false},
+		{"..", false},
+		{".hidden", false},
+		{"a/b", false},
+		{`a\b`, false},
+		{"a\x00b", false},
+	}
+	for _, tt := range tests {
+		if got := SafeFolderName(tt.name); got != tt.want {
+			t.Errorf("SafeFolderName(%q) = %v, want %v", tt.name, got, tt.want)
+		}
+		if got := safeFolderName(tt.name); got != tt.want {
+			t.Errorf("safeFolderName(%q) = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
